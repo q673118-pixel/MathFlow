@@ -41,7 +41,7 @@ class ExpressionEngineTest {
 
     @Test fun trigUsesDegreeModeByDefault() {
         val result = engine.calculate("sin(30)")
-        assertEquals("0.5", result.decimalValue)
+        assertEquals(0.5, result.decimalValue.toDouble(), 1e-9)
     }
 
     @Test
