@@ -11,6 +11,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      MATHFLOW_KEYSTORE_PASSWORD: ${{ secrets.MATHFLOW_KEYSTORE_PASSWORD }}
+      MATHFLOW_KEY_ALIAS: ${{ secrets.MATHFLOW_KEY_ALIAS }}
+      MATHFLOW_KEY_PASSWORD: ${{ secrets.MATHFLOW_KEY_PASSWORD }}
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -33,6 +37,18 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
+
+      - name: Prepare stable APK signing key
+        env:
+          MATHFLOW_KEYSTORE_BASE64: ${{ secrets.MATHFLOW_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$MATHFLOW_KEYSTORE_BASE64" ]; then
+            printf '%s' "$MATHFLOW_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mathflow-signing.jks"
+            echo "MATHFLOW_KEYSTORE_PATH=$RUNNER_TEMP/mathflow-signing.jks" >> "$GITHUB_ENV"
+            echo "Stable MathFlow signing key configured."
+          else
+            echo "::warning::Stable signing secrets are not configured. This APK will use the temporary runner debug key and may not update an APK from another workflow run."
+          fi
 
       - name: Run unit tests and build debug APK
         run: gradle --no-daemon testDebugUnitTest assembleDebug
