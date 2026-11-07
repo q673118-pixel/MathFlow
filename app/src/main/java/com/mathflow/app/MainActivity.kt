@@ -1214,11 +1214,10 @@ private fun SettingsPage(
                 val selected = AppIconOptions.firstOrNull { it.id == pendingIconId } ?: AppIconOptions.first()
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Image(
-                            painter = painterResource(selected.drawable),
+                        LauncherIconPreview(
+                            drawable = selected.drawable,
                             contentDescription = selected.title,
-                            modifier = Modifier.size(68.dp),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                            modifier = Modifier.size(68.dp)
                         )
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
@@ -1271,6 +1270,30 @@ private fun SettingsPage(
 }
 
 @Composable
+private fun LauncherIconPreview(
+    drawable: Int,
+    contentDescription: String,
+    modifier: Modifier = Modifier
+) {
+    // Launcher icons are layer-list drawables. Android ImageView supports them;
+    // Compose painterResource does not support this drawable type.
+    androidx.compose.ui.viewinterop.AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            android.widget.ImageView(context).apply {
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+                this.contentDescription = contentDescription
+                setImageResource(drawable)
+            }
+        },
+        update = { imageView ->
+            imageView.contentDescription = contentDescription
+            imageView.setImageResource(drawable)
+        }
+    )
+}
+
+@Composable
 private fun SettingsEntry(
     title: String,
     subtitle: String,
@@ -1313,11 +1336,10 @@ private fun IconOptionCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(7.dp)
     ) {
-        Image(
-            painter = painterResource(option.drawable),
+        LauncherIconPreview(
+            drawable = option.drawable,
             contentDescription = option.title,
-            modifier = Modifier.size(70.dp),
-            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+            modifier = Modifier.size(70.dp)
         )
         Text(option.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1)
         Text(
