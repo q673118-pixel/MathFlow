@@ -15,7 +15,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -73,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -333,8 +333,11 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
             ) {
                 val itemWidth = maxWidth / Page.values().size
                 val indicatorSize = 44.dp
-                val indicatorOffset by animateDpAsState(
-                    targetValue = itemWidth * current.ordinal + (itemWidth - indicatorSize) / 2,
+                val density = LocalDensity.current
+                val indicatorOffsetPx by animateFloatAsState(
+                    targetValue = with(density) {
+                        (itemWidth * current.ordinal + (itemWidth - indicatorSize) / 2).toPx()
+                    },
                     animationSpec = tween(
                         durationMillis = NAV_TRANSITION_DURATION_MS,
                         easing = FastOutSlowInEasing
@@ -342,11 +345,11 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
                     label = "MathFlowActiveTabPosition"
                 )
 
-                // The active pill is the only selection feedback. It moves in sync
-                // with the screen transition; taps themselves have no ripple.
+                // Animate only the draw-layer translation, avoiding a layout pass
+                // on every animation frame. Taps themselves have no ripple.
                 Box(
                     Modifier
-                        .offset(x = indicatorOffset)
+                        .graphicsLayer { translationX = indicatorOffsetPx }
                         .size(indicatorSize)
                         .clip(CircleShape)
                         .background(p.navActive)
