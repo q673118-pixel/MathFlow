@@ -1,11 +1,56 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:label="MathFlow" android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar" android:usesCleartextTraffic="false">
-        <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustResize">
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/launcher_vanilla"
+        android:roundIcon="@drawable/launcher_vanilla"
+        android:label="MathFlow"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:usesCleartextTraffic="false">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity-alias
+            android:name=".LauncherVanilla"
+            android:targetActivity=".MainActivity"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/launcher_vanilla"
+            android:label="MathFlow">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias android:name=".LauncherBlack" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_black" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherWhite" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_white" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherPurple" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_purple" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherOcean" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_ocean" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherEmerald" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_emerald" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherSunset" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_sunset" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherRose" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_rose" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherMidnight" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_midnight" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".LauncherGraphite" android:targetActivity=".MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/launcher_graphite" android:label="MathFlow">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+        </activity-alias>
     </application>
 </manifest>
