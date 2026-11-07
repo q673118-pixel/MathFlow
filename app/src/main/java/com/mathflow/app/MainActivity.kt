@@ -196,7 +196,7 @@ private val ThemeOptions = listOf(
 private fun themeFor(id: String): ThemeOption =
     ThemeOptions.firstOrNull { it.id == id } ?: ThemeOptions.first()
 
-private val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { DarkPalette }
+private val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
