@@ -9,14 +9,20 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,7 +32,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -236,38 +241,66 @@ private fun MathFlowApp() {
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
                     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                        Box(Modifier.weight(1f).fillMaxWidth()) {
-                            when (page) {
-                                Page.HOME -> CalculatorHome { expression, result, steps ->
-                                    history = HistoryStore.add(context, expression, result, steps)
+                        AnimatedContent(
+                            targetState = page,
+                            transitionSpec = {
+                                val duration = 320
+                                val easing = FastOutSlowInEasing
+                                if (targetState.ordinal > initialState.ordinal) {
+                                    (slideInHorizontally(
+                                        animationSpec = tween(durationMillis = duration, easing = easing),
+                                        initialOffsetX = { fullWidth -> fullWidth }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing, initialAlpha = 0.82f))) togetherWith
+                                        (slideOutHorizontally(
+                                            animationSpec = tween(durationMillis = duration, easing = easing),
+                                            targetOffsetX = { fullWidth -> -fullWidth / 5 }
+                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing, targetAlpha = 0.72f)))
+                                } else {
+                                    (slideInHorizontally(
+                                        animationSpec = tween(durationMillis = duration, easing = easing),
+                                        initialOffsetX = { fullWidth -> -fullWidth }
+                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing, initialAlpha = 0.82f))) togetherWith
+                                        (slideOutHorizontally(
+                                            animationSpec = tween(durationMillis = duration, easing = easing),
+                                            targetOffsetX = { fullWidth -> fullWidth / 5 }
+                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing, targetAlpha = 0.72f)))
                                 }
-                                Page.TOOLS -> ToolsPage()
-                                Page.SOLVER -> EquationSolverPage()
-                                Page.HISTORY -> HistoryPage(history) {
-                                    HistoryStore.clear(context)
-                                    history = emptyList()
-                                }
-                                Page.SETTINGS -> SettingsPage(
-                                    darkMode = darkMode,
-                                    fontScale = fontScale,
-                                    fontPath = fontPath,
-                                    onTheme = { dark ->
-                                        darkMode = dark
-                                        prefs.edit().putBoolean("dark_mode", dark).apply()
-                                    },
-                                    onFontScale = {
-                                        fontScale = it
-                                        prefs.edit().putFloat("font_scale", it).apply()
-                                    },
-                                    onFontSelected = { path ->
-                                        fontPath = path
-                                        prefs.edit().putString("font_path", path).apply()
-                                    },
-                                    onResetFont = {
-                                        fontPath = null
-                                        prefs.edit().remove("font_path").apply()
+                            },
+                            label = "MathFlowScreenTransition"
+                        ) { targetPage ->
+                            Box(Modifier.fillMaxSize()) {
+                                when (targetPage) {
+                                    Page.HOME -> CalculatorHome { expression, result, steps ->
+                                        history = HistoryStore.add(context, expression, result, steps)
                                     }
-                                )
+                                    Page.TOOLS -> ToolsPage()
+                                    Page.SOLVER -> EquationSolverPage()
+                                    Page.HISTORY -> HistoryPage(history) {
+                                        HistoryStore.clear(context)
+                                        history = emptyList()
+                                    }
+                                    Page.SETTINGS -> SettingsPage(
+                                        darkMode = darkMode,
+                                        fontScale = fontScale,
+                                        fontPath = fontPath,
+                                        onTheme = { dark ->
+                                            darkMode = dark
+                                            prefs.edit().putBoolean("dark_mode", dark).apply()
+                                        },
+                                        onFontScale = {
+                                            fontScale = it
+                                            prefs.edit().putFloat("font_scale", it).apply()
+                                        },
+                                        onFontSelected = { path ->
+                                            fontPath = path
+                                            prefs.edit().putString("font_path", path).apply()
+                                        },
+                                        onResetFont = {
+                                            fontPath = null
+                                            prefs.edit().remove("font_path").apply()
+                                        }
+                                    )
+                                }
                             }
                         }
                         BottomNav(page) { page = it }
@@ -282,51 +315,42 @@ private fun MathFlowApp() {
 private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
     val p = LocalPalette.current
     Box(
-        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp, vertical = 8.dp),
+        Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 28.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(shape = RoundedCornerShape(26.dp), color = p.surface) {
-            BoxWithConstraints(
-                Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                val itemWidth = maxWidth / Page.values().size
-                val indicatorX by animateDpAsState(
-                    targetValue = itemWidth * current.ordinal + (itemWidth - 52.dp) / 2,
-                    animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f),
-                    label = "liquidNavigationIndicator"
-                )
-
-                // A single matte capsule travels between destinations. The spring
-                // gives it a soft liquid-like settle without glow, blur or gradients.
-                Box(
-                    Modifier
-                        .offset(x = indicatorX)
-                        .size(width = 52.dp, height = 38.dp)
-                        .clip(RoundedCornerShape(19.dp))
-                        .background(p.navActive)
-                )
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Page.values().forEach { item ->
-                        val selected = item == current
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .height(42.dp)
-                                .clip(RoundedCornerShape(19.dp))
-                                .clickable { onSelect(item) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                item.icon,
-                                contentDescription = item.title,
-                                tint = if (selected) p.accent else p.muted,
-                                modifier = Modifier.size(if (selected) 26.dp else 24.dp)
-                            )
-                        }
+                Page.values().forEach { item ->
+                    val selected = item == current
+                    val tint by animateColorAsState(
+                        targetValue = if (selected) p.accent else p.muted,
+                        animationSpec = tween(
+                            durationMillis = 320,
+                            easing = FastOutSlowInEasing
+                        ),
+                        label = "MathFlowNavigationIconTint"
+                    )
+                    Box(
+                        Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clickable { if (!selected) onSelect(item) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.title,
+                            tint = tint,
+                            modifier = Modifier.size(26.dp)
+                        )
                     }
                 }
             }
