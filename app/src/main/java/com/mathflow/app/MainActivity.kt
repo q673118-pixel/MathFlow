@@ -256,7 +256,7 @@ private fun MathFlowApp() {
                                         initialOffsetX = { fullWidth -> fullWidth }
                                     ) togetherWith slideOutHorizontally(
                                         animationSpec = tween(durationMillis = duration, easing = easing),
-                                        targetOffsetX = { fullWidth -> -fullWidth / 5 }
+                                        targetOffsetX = { fullWidth -> -fullWidth }
                                     )
                                 } else {
                                     slideInHorizontally(
@@ -264,7 +264,7 @@ private fun MathFlowApp() {
                                         initialOffsetX = { fullWidth -> -fullWidth }
                                     ) togetherWith slideOutHorizontally(
                                         animationSpec = tween(durationMillis = duration, easing = easing),
-                                        targetOffsetX = { fullWidth -> fullWidth / 5 }
+                                        targetOffsetX = { fullWidth -> fullWidth }
                                     )
                                 }
                             },
