@@ -260,11 +260,11 @@ private fun MathFlowApp() {
                                     (slideInHorizontally(
                                         animationSpec = tween(durationMillis = duration, easing = easing),
                                         initialOffsetX = { fullWidth -> -fullWidth }
-                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing, initialAlpha = 0.82f))) togetherWith
+                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing))) togetherWith
                                         (slideOutHorizontally(
                                             animationSpec = tween(durationMillis = duration, easing = easing),
                                             targetOffsetX = { fullWidth -> fullWidth / 5 }
-                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing, targetAlpha = 0.72f)))
+                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing)))
                                 }
                             },
                             label = "MathFlowScreenTransition"
