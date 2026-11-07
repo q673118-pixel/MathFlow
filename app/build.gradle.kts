@@ -4,6 +4,17 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val distributionStorePath = System.getenv("MATHFLOW_KEYSTORE_PATH")
+val distributionStorePassword = System.getenv("MATHFLOW_KEYSTORE_PASSWORD")
+val distributionKeyAlias = System.getenv("MATHFLOW_KEY_ALIAS")
+val distributionKeyPassword = System.getenv("MATHFLOW_KEY_PASSWORD")
+val useDistributionSigning = listOf(
+    distributionStorePath,
+    distributionStorePassword,
+    distributionKeyAlias,
+    distributionKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.mathflow.app"
     compileSdk = 35
@@ -14,6 +25,25 @@ android {
         targetSdk = 35
         versionCode = 9
         versionName = "1.4.0"
+    }
+
+    signingConfigs {
+        if (useDistributionSigning) {
+            create("distribution") {
+                storeFile = file(distributionStorePath!!)
+                storePassword = distributionStorePassword
+                keyAlias = distributionKeyAlias
+                keyPassword = distributionKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (useDistributionSigning) {
+                signingConfig = signingConfigs.getByName("distribution")
+            }
+        }
     }
 
     compileOptions {
