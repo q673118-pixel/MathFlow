@@ -11,18 +11,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -32,10 +33,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -245,26 +248,24 @@ private fun MathFlowApp() {
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                             targetState = page,
                             transitionSpec = {
-                                val duration = 320
+                                val duration = NAV_TRANSITION_DURATION_MS
                                 val easing = FastOutSlowInEasing
                                 if (targetState.ordinal > initialState.ordinal) {
-                                    (slideInHorizontally(
+                                    slideInHorizontally(
                                         animationSpec = tween(durationMillis = duration, easing = easing),
                                         initialOffsetX = { fullWidth -> fullWidth }
-                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing))) togetherWith
-                                        (slideOutHorizontally(
-                                            animationSpec = tween(durationMillis = duration, easing = easing),
-                                            targetOffsetX = { fullWidth -> -fullWidth / 5 }
-                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing)))
+                                    ) togetherWith slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = duration, easing = easing),
+                                        targetOffsetX = { fullWidth -> -fullWidth / 5 }
+                                    )
                                 } else {
-                                    (slideInHorizontally(
+                                    slideInHorizontally(
                                         animationSpec = tween(durationMillis = duration, easing = easing),
                                         initialOffsetX = { fullWidth -> -fullWidth }
-                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing))) togetherWith
-                                        (slideOutHorizontally(
-                                            animationSpec = tween(durationMillis = duration, easing = easing),
-                                            targetOffsetX = { fullWidth -> fullWidth / 5 }
-                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing)))
+                                    ) togetherWith slideOutHorizontally(
+                                        animationSpec = tween(durationMillis = duration, easing = easing),
+                                        targetOffsetX = { fullWidth -> fullWidth / 5 }
+                                    )
                                 }
                             },
                             label = "MathFlowScreenTransition"
@@ -312,6 +313,8 @@ private fun MathFlowApp() {
     }
 }
 
+private const val NAV_TRANSITION_DURATION_MS = 280
+
 @Composable
 private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
     val p = LocalPalette.current
@@ -323,35 +326,64 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Surface(shape = RoundedCornerShape(26.dp), color = p.surface) {
-            Row(
+            BoxWithConstraints(
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
-                Page.values().forEach { item ->
-                    val selected = item == current
-                    val tint by animateColorAsState(
-                        targetValue = if (selected) p.accent else p.muted,
-                        animationSpec = tween(
-                            durationMillis = 320,
-                            easing = FastOutSlowInEasing
-                        ),
-                        label = "MathFlowNavigationIconTint"
-                    )
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(48.dp)
-                            .clickable { if (!selected) onSelect(item) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.title,
-                            tint = tint,
-                            modifier = Modifier.size(26.dp)
+                val itemWidth = maxWidth / Page.values().size
+                val indicatorSize = 44.dp
+                val indicatorOffset by animateDpAsState(
+                    targetValue = itemWidth * current.ordinal + (itemWidth - indicatorSize) / 2,
+                    animationSpec = tween(
+                        durationMillis = NAV_TRANSITION_DURATION_MS,
+                        easing = FastOutSlowInEasing
+                    ),
+                    label = "MathFlowActiveTabPosition"
+                )
+
+                // The active pill is the only selection feedback. It moves in sync
+                // with the screen transition; taps themselves have no ripple.
+                Box(
+                    Modifier
+                        .offset(x = indicatorOffset)
+                        .size(indicatorSize)
+                        .clip(CircleShape)
+                        .background(p.navActive)
+                )
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Page.values().forEach { item ->
+                        val selected = item == current
+                        val tint by animateColorAsState(
+                            targetValue = if (selected) p.accent else p.muted,
+                            animationSpec = tween(
+                                durationMillis = NAV_TRANSITION_DURATION_MS,
+                                easing = FastOutSlowInEasing
+                            ),
+                            label = "MathFlowNavigationIconTint"
                         )
+                        val interactionSource = remember(item) { MutableInteractionSource() }
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null
+                                ) { if (!selected) onSelect(item) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.title,
+                                tint = tint,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
                     }
                 }
             }
