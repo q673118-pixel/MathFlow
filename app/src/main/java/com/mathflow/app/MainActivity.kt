@@ -5,36 +5,77 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.material3.LocalTextStyle
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -42,29 +83,105 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent { MathFlowApp() }
     }
 }
 
-private enum class Page(val title: String) {
-    HOME("Главная"), TOOLS("Инструменты"), SOLVER("Решатель"), HISTORY("История"), SETTINGS("Настройки")
+private enum class Page(val title: String, val icon: ImageVector) {
+    HOME("Главная", Icons.Default.Calculate),
+    TOOLS("Инструменты", Icons.Default.Build),
+    SOLVER("Решатель", Icons.Default.Functions),
+    HISTORY("История", Icons.Default.History),
+    SETTINGS("Настройки", Icons.Default.Settings)
 }
+
+// ---------------------------------------------------------------- palette
+
+private class Palette(
+    val background: Color,
+    val surface: Color,
+    val key: Color,
+    val keyAccent: Color,
+    val keyEquals: Color,
+    val onKeyEquals: Color,
+    val text: Color,
+    val muted: Color,
+    val accent: Color,
+    val navActive: Color,
+    val error: Color,
+    val dark: Boolean
+)
+
+private val DarkPalette = Palette(
+    background = Color(0xFF0C0B10),
+    surface = Color(0xFF16141C),
+    key = Color(0xFF211F29),
+    keyAccent = Color(0xFF54447F),
+    keyEquals = Color(0xFF6A5AA3),
+    onKeyEquals = Color(0xFFFFFFFF),
+    text = Color(0xFFE9E5F3),
+    muted = Color(0xFF9A94AB),
+    accent = Color(0xFFB9A8F0),
+    navActive = Color(0xFF2E2942),
+    error = Color(0xFFFF8A80),
+    dark = true
+)
+
+private val LightPalette = Palette(
+    background = Color(0xFFF3F0F8),
+    surface = Color(0xFFFFFFFF),
+    key = Color(0xFFE4DFEC),
+    keyAccent = Color(0xFFD3C7F0),
+    keyEquals = Color(0xFF6750A4),
+    onKeyEquals = Color(0xFFFFFFFF),
+    text = Color(0xFF1D1A24),
+    muted = Color(0xFF625B71),
+    accent = Color(0xFF6750A4),
+    navActive = Color(0xFFE2D9F5),
+    error = Color(0xFFB3261E),
+    dark = false
+)
+
+private val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { DarkPalette }
+
+private fun typographyFor(family: FontFamily): Typography {
+    val base = Typography()
+    return Typography(
+        displayLarge = base.displayLarge.copy(fontFamily = family),
+        displayMedium = base.displayMedium.copy(fontFamily = family),
+        displaySmall = base.displaySmall.copy(fontFamily = family),
+        headlineLarge = base.headlineLarge.copy(fontFamily = family),
+        headlineMedium = base.headlineMedium.copy(fontFamily = family),
+        headlineSmall = base.headlineSmall.copy(fontFamily = family),
+        titleLarge = base.titleLarge.copy(fontFamily = family),
+        titleMedium = base.titleMedium.copy(fontFamily = family),
+        titleSmall = base.titleSmall.copy(fontFamily = family),
+        bodyLarge = base.bodyLarge.copy(fontFamily = family),
+        bodyMedium = base.bodyMedium.copy(fontFamily = family),
+        bodySmall = base.bodySmall.copy(fontFamily = family),
+        labelLarge = base.labelLarge.copy(fontFamily = family),
+        labelMedium = base.labelMedium.copy(fontFamily = family),
+        labelSmall = base.labelSmall.copy(fontFamily = family)
+    )
+}
+
+// ---------------------------------------------------------------- root
 
 @Composable
 private fun MathFlowApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
-    var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", false)) }
+    var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", true)) }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
     var fontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
 
-    val customFont = remember(fontPath) {
+    val customFont: FontFamily? = remember(fontPath) {
         fontPath?.let { path ->
             runCatching {
                 val file = File(path)
@@ -72,124 +189,84 @@ private fun MathFlowApp() {
             }.getOrNull()
         }
     }
+    val family = customFont ?: FontFamily.Default
+    val palette = if (darkMode) DarkPalette else LightPalette
+
     val baseDensity = LocalDensity.current
-    val adjustedDensity = remember(baseDensity, fontScale) {
+    val density = remember(baseDensity, fontScale) {
         Density(baseDensity.density, baseDensity.fontScale * fontScale)
     }
 
-    val light = lightColorScheme(
-        primary = androidx.compose.ui.graphics.Color(0xFF6750A4),
-        primaryContainer = androidx.compose.ui.graphics.Color(0xFFEADDFF),
-        onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF21005D),
-        background = androidx.compose.ui.graphics.Color(0xFFF7F2FA),
-        surface = androidx.compose.ui.graphics.Color(0xFFFFFBFE),
-        surfaceVariant = androidx.compose.ui.graphics.Color(0xFFE7E0EC)
-    )
-    val dark = darkColorScheme(
-        primary = androidx.compose.ui.graphics.Color(0xFFD0BCFF),
-        primaryContainer = androidx.compose.ui.graphics.Color(0xFF4F378B),
-        onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFFEADDFF),
-        background = androidx.compose.ui.graphics.Color(0xFF111016),
-        surface = androidx.compose.ui.graphics.Color(0xFF19161F),
-        surfaceVariant = androidx.compose.ui.graphics.Color(0xFF302B38)
-    )
+    val colors = if (darkMode) {
+        darkColorScheme(
+            primary = palette.accent, onPrimary = Color(0xFF1D1530),
+            background = palette.background, onBackground = palette.text,
+            surface = palette.surface, onSurface = palette.text,
+            surfaceVariant = palette.key, onSurfaceVariant = palette.muted,
+            outline = palette.muted, outlineVariant = palette.key, error = palette.error
+        )
+    } else {
+        lightColorScheme(
+            primary = palette.accent, onPrimary = Color.White,
+            background = palette.background, onBackground = palette.text,
+            surface = palette.surface, onSurface = palette.text,
+            surfaceVariant = palette.key, onSurfaceVariant = palette.muted,
+            outline = palette.muted, outlineVariant = palette.key, error = palette.error
+        )
+    }
 
-    CompositionLocalProvider(
-        LocalDensity provides adjustedDensity,
-        LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = customFont ?: FontFamily.Default)
-    ) {
-        MaterialTheme(colorScheme = if (darkMode) dark else light) {
-            Scaffold(
-                containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = {
-                    NavigationBar {
-                        listOf(Page.HOME, Page.TOOLS, Page.SOLVER, Page.HISTORY, Page.SETTINGS).forEach { destination ->
-                            NavigationBarItem(
-                                selected = page == destination,
-                                onClick = { page = destination },
-                                icon = {
-                                    Icon(
-                                        when (destination) {
-                                            Page.HOME -> Icons.Default.Calculate
-                                            Page.TOOLS, Page.SOLVER -> Icons.Default.Functions
-                                            Page.HISTORY -> Icons.Default.History
-                                            Page.SETTINGS -> Icons.Default.Settings
-                                        },
-                                        contentDescription = destination.title
-                                    )
-                                },
-                                label = { Text(destination.title, fontSize = 10.sp) }
-                            )
-                        }
-                    }
-                }
-            ) { insets ->
-                Column(Modifier.fillMaxSize().padding(insets).padding(horizontal = 18.dp)) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 18.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text("MathFlow", fontSize = 27.sp, fontWeight = FontWeight.Bold)
-                            Text("Математика без ограничений", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Surface(
-                            onClick = {
-                                darkMode = !darkMode
-                                prefs.edit().putBoolean("dark_mode", darkMode).apply()
-                            },
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.size(46.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(if (darkMode) "☀" else "☾", fontSize = 22.sp)
-                            }
-                        }
-                    }
-                    AnimatedContent(
-                        targetState = page,
-                        transitionSpec = { androidx.compose.animation.fadeIn(spring()) togetherWith androidx.compose.animation.fadeOut(spring()) },
-                        label = "page"
-                    ) { selected ->
-                        when (selected) {
-                            Page.HOME -> CalculatorHome(
-                                onCalculationSaved = { expression, result, steps ->
+    val view = LocalView.current
+    SideEffect {
+        val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
+        val controller = WindowCompat.getInsetsController(window, view)
+        controller.isAppearanceLightStatusBars = !darkMode
+        controller.isAppearanceLightNavigationBars = !darkMode
+    }
+
+    CompositionLocalProvider(LocalDensity provides density, LocalPalette provides palette) {
+        MaterialTheme(colorScheme = colors, typography = typographyFor(family)) {
+            // Text() reads LocalTextStyle, not the theme typography, so the custom
+            // family has to be provided here too for it to reach every label.
+            CompositionLocalProvider(
+                androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = family)
+            ) {
+                Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
+                    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                            when (page) {
+                                Page.HOME -> CalculatorHome { expression, result, steps ->
                                     history = HistoryStore.add(context, expression, result, steps)
                                 }
-                            )
-                            Page.TOOLS -> ToolsPage()
-                            Page.SOLVER -> EquationSolverPage()
-                            Page.HISTORY -> HistoryPage(
-                                entries = history,
-                                onClear = {
+                                Page.TOOLS -> ToolsPage()
+                                Page.SOLVER -> EquationSolverPage()
+                                Page.HISTORY -> HistoryPage(history) {
                                     HistoryStore.clear(context)
                                     history = emptyList()
                                 }
-                            )
-                            Page.SETTINGS -> SettingsPage(
-                                darkMode = darkMode,
-                                fontScale = fontScale,
-                                fontPath = fontPath,
-                                onThemeChange = {
-                                    darkMode = !darkMode
-                                    prefs.edit().putBoolean("dark_mode", darkMode).apply()
-                                },
-                                onFontScaleChange = {
-                                    fontScale = it
-                                    prefs.edit().putFloat("font_scale", it).apply()
-                                },
-                                onFontSelected = { path ->
-                                    fontPath = path
-                                    prefs.edit().putString("font_path", path).apply()
-                                },
-                                onResetFont = {
-                                    fontPath = null
-                                    prefs.edit().remove("font_path").apply()
-                                }
-                            )
+                                Page.SETTINGS -> SettingsPage(
+                                    darkMode = darkMode,
+                                    fontScale = fontScale,
+                                    fontPath = fontPath,
+                                    onTheme = { dark ->
+                                        darkMode = dark
+                                        prefs.edit().putBoolean("dark_mode", dark).apply()
+                                    },
+                                    onFontScale = {
+                                        fontScale = it
+                                        prefs.edit().putFloat("font_scale", it).apply()
+                                    },
+                                    onFontSelected = { path ->
+                                        fontPath = path
+                                        prefs.edit().putString("font_path", path).apply()
+                                    },
+                                    onResetFont = {
+                                        fontPath = null
+                                        prefs.edit().remove("font_path").apply()
+                                    }
+                                )
+                            }
                         }
+                        BottomNav(page) { page = it }
                     }
                 }
             }
@@ -198,106 +275,217 @@ private fun MathFlowApp() {
 }
 
 @Composable
-private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) -> Unit) {
-    var expression by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf("0") }
-    var explanation by remember { mutableStateOf("Введите математическое выражение") }
-    var calculationSteps by remember { mutableStateOf(emptyList<String>()) }
-    val keys = listOf(
-        "sin", "cos", "tan", "ln",
-        "log", "abs", "e", "AC",
-        "(", ")", "⌫", "÷",
-        "7", "8", "9", "×",
-        "4", "5", "6", "−",
-        "1", "2", "3", "+",
-        "%", "0", ".", "=",
-        "√", "x²", "π"
-    )
-    Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(13.dp)
+private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
+    val p = LocalPalette.current
+    Box(
+        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Card(shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.End) {
-                Text("ВЫРАЖЕНИЕ", Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                Text(expression.ifBlank { "0" }, Modifier.fillMaxWidth().padding(top = 12.dp), fontSize = 27.sp, maxLines = 2)
-                Text(result, Modifier.fillMaxWidth().padding(top = 7.dp), fontSize = 40.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-                HorizontalDivider(Modifier.padding(vertical = 12.dp))
-                Text("Решение", Modifier.fillMaxWidth(), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                Text(explanation, Modifier.fillMaxWidth().padding(top = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                if (calculationSteps.isNotEmpty()) {
-                    calculationSteps.forEachIndexed { index, step ->
-                        Text(
-                            "${index + 1}. $step",
-                            Modifier.fillMaxWidth().padding(top = 3.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp,
-                            lineHeight = 15.sp
+        Surface(shape = RoundedCornerShape(26.dp), color = p.surface) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Page.values().forEach { item ->
+                    val selected = item == current
+                    Box(
+                        Modifier
+                            .size(width = 52.dp, height = 38.dp)
+                            .clip(RoundedCornerShape(19.dp))
+                            .background(if (selected) p.navActive else Color.Transparent)
+                            .clickable { onSelect(item) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            item.icon,
+                            contentDescription = item.title,
+                            tint = if (selected) p.accent else p.muted,
+                            modifier = Modifier.size(26.dp)
                         )
                     }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Клавиатура", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-            Text("НАУЧНЫЙ РЕЖИМ", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+    }
+}
+
+// ---------------------------------------------------------------- calculator
+
+private val OPERATORS = setOf("÷", "×", "−", "+")
+
+@Composable
+private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) -> Unit) {
+    val p = LocalPalette.current
+    var expression by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf("0") }
+    var message by remember { mutableStateOf<String?>(null) }
+    var steps by remember { mutableStateOf(emptyList<String>()) }
+    var showSteps by remember { mutableStateOf(true) }
+    var scientific by remember { mutableStateOf(false) }
+    var degrees by remember { mutableStateOf(true) }
+    var finished by remember { mutableStateOf(false) }
+    var continuation by remember { mutableStateOf("") }
+
+    fun clearAll() {
+        expression = ""; result = "0"; message = null; steps = emptyList()
+        finished = false; continuation = ""
+    }
+
+    fun append(text: String, continuesResult: Boolean) {
+        if (finished) {
+            expression = if (continuesResult && continuation.isNotEmpty()) continuation + text else text
+            finished = false
+            message = null
+            steps = emptyList()
+        } else {
+            expression += text
         }
-        keys.chunked(4).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                row.forEach { key ->
-                    val operator = key in listOf("÷", "×", "−", "+", "=")
-                    val utility = key in listOf("AC", "⌫", "√", "x²", "π", "%", "(", ")", "sin", "cos", "tan", "ln", "log", "abs", "e")
-                    val background = when {
-                        key == "=" -> MaterialTheme.colorScheme.primary
-                        operator -> MaterialTheme.colorScheme.primaryContainer
-                        utility -> MaterialTheme.colorScheme.secondaryContainer
-                        else -> MaterialTheme.colorScheme.surface
+    }
+
+    fun evaluate() {
+        if (expression.isBlank()) return
+        try {
+            var source = expression
+            val open = source.count { it == '(' } - source.count { it == ')' }
+            if (open > 0) source += ")".repeat(open)
+            val r = ExpressionEngine(if (degrees) AngleMode.DEGREES else AngleMode.RADIANS).calculate(source)
+            result = r.displayValue
+            steps = r.steps
+            message = null
+            continuation = r.exactValue?.let {
+                if (it.isInteger()) it.numerator.toString() else "(${it.numerator}/${it.denominator})"
+            } ?: r.displayValue
+            finished = true
+            onCalculationSaved(source, r.displayValue, r.steps)
+            expression = source
+        } catch (e: IllegalArgumentException) {
+            result = "Ошибка"
+            message = when {
+                e.message?.contains("Division by zero") == true -> "Деление на ноль"
+                else -> e.message ?: "Проверьте выражение"
+            }
+            steps = emptyList()
+        } catch (_: Exception) {
+            result = "Ошибка"
+            message = "Не удалось вычислить выражение"
+            steps = emptyList()
+        }
+    }
+
+    fun press(key: String) {
+        when (key) {
+            "AC" -> clearAll()
+            "⌫" -> {
+                if (finished) clearAll() else {
+                    expression = when {
+                        expression.endsWith("sqrt(") -> expression.dropLast(5)
+                        expression.endsWith("pi") -> expression.dropLast(2)
+                        expression.length >= 4 && Regex("(sin|cos|tan|abs|log)\\($").containsMatchIn(expression) ->
+                            expression.dropLast(4)
+                        expression.endsWith("ln(") -> expression.dropLast(3)
+                        else -> expression.dropLast(1)
                     }
-                    val foreground = if (key == "=") MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                    Surface(
-                        modifier = Modifier.weight(1f).height(52.dp).clickable {
-                            when (key) {
-                                "AC" -> {
-                                    expression = ""
-                                    result = "0"
-                                    explanation = "Введите математическое выражение"
-                                    calculationSteps = emptyList()
-                                }
-                                "⌫" -> expression = expression.dropLast(1)
-                                "=" -> {
-                                    try {
-                                        val calculation = ExpressionEngine().calculate(expression)
-                                        result = calculation.displayValue
-                                        calculationSteps = calculation.steps
-                                        onCalculationSaved(expression, calculation.displayValue, calculation.steps)
-                                        explanation = if (calculation.steps.isEmpty())
-                                            "$expression = ${calculation.displayValue}"
-                                        else "Промежуточные вычисления:"
-                                    } catch (error: IllegalArgumentException) {
-                                        result = "Ошибка"
-                                        explanation = error.message ?: "Проверьте выражение"
-                                        calculationSteps = emptyList()
-                                    } catch (_: Exception) {
-                                        result = "Ошибка"
-                                        explanation = "Не удалось вычислить выражение"
-                                        calculationSteps = emptyList()
-                                    }
-                                }
-                                "√" -> expression += "sqrt("
-                                "x²" -> expression += "^2"
-                                "π" -> expression += "pi"
-                                " " -> Unit
-                                "e" -> expression += "e"
-                                "sin", "cos", "tan", "ln", "log", "abs" -> expression += "$key("
-                                else -> expression += key
-                            }
+                    if (expression.isEmpty()) { result = "0"; message = null }
+                }
+            }
+            "=" -> evaluate()
+            "√" -> append("sqrt(", false)
+            "x²" -> append("^2", true)
+            "xʸ" -> append("^", true)
+            "π" -> append("pi", false)
+            "%" -> append("%", true)
+            "sin", "cos", "tan", "ln", "log", "abs" -> append("$key(", false)
+            else -> append(key, key in OPERATORS)
+        }
+    }
+
+    val mainRows = listOf(
+        listOf("AC", "(", ")", "÷"),
+        listOf("7", "8", "9", "×"),
+        listOf("4", "5", "6", "−"),
+        listOf("1", "2", "3", "+"),
+        listOf("%", "0", ".", "=")
+    )
+    val sciRows = listOf(
+        listOf("sin", "cos", "tan", "ln"),
+        listOf("log", "abs", "π", "e"),
+        listOf("√", "x²", "xʸ", "⌫")
+    )
+
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Surface(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), color = p.surface) {
+            Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Row(
+                    Modifier.align(Alignment.TopStart),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Chip("f(x)", scientific) { scientific = !scientific }
+                    if (scientific) Chip(if (degrees) "DEG" else "RAD", false) { degrees = !degrees }
+                    if (steps.isNotEmpty()) Chip("Решение", showSteps) { showSteps = !showSteps }
+                }
+                Box(
+                    Modifier.align(Alignment.TopEnd).size(40.dp).clip(RoundedCornerShape(20.dp))
+                        .clickable { press("⌫") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Backspace, "Удалить", tint = p.muted, modifier = Modifier.size(22.dp))
+                }
+                Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState(), reverseScrolling = true), horizontalArrangement = Arrangement.End) {
+                        Text(
+                            expression.replace("sqrt", "√").replace("pi", "π").ifEmpty { " " },
+                            fontSize = 24.sp,
+                            color = p.muted,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                    Text(
+                        result,
+                        fontSize = when {
+                            result.length > 16 -> 24.sp
+                            result.length > 11 -> 32.sp
+                            result.length > 8 -> 40.sp
+                            else -> 52.sp
                         },
-                        shape = RoundedCornerShape(19.dp),
-                        color = background
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(key, fontSize = if (key.length > 2) 13.sp else 19.sp, fontWeight = FontWeight.Medium, color = foreground)
-                        }
+                        fontWeight = FontWeight.Medium,
+                        color = if (result == "Ошибка") p.error else p.text,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    message?.let {
+                        Text(it, fontSize = 13.sp, color = p.error, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        }
+
+        if (steps.isNotEmpty() && showSteps) {
+            Surface(Modifier.fillMaxWidth().heightIn(max = 96.dp), shape = RoundedCornerShape(20.dp), color = p.surface) {
+                Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    steps.forEachIndexed { index, step ->
+                        Text("${index + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
+                    }
+                }
+            }
+        }
+
+        val rows = if (scientific) sciRows + mainRows else mainRows
+        Column(
+            Modifier.fillMaxWidth().weight(if (scientific) 2.5f else 1.7f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            rows.forEach { row ->
+                Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { key ->
+                        CalcKey(key, Modifier.weight(1f).fillMaxSize(), compact = scientific) { press(key) }
                     }
                 }
             }
@@ -305,325 +493,328 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
     }
 }
 
+@Composable
+private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    Box(
+        Modifier.height(32.dp).clip(RoundedCornerShape(16.dp))
+            .background(if (active) p.navActive else p.key)
+            .clickable(onClick = onClick).padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (active) p.accent else p.muted)
+    }
+}
 
+@Composable
+private fun CalcKey(key: String, modifier: Modifier, compact: Boolean, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val operator = key in OPERATORS
+    val equals = key == "="
+    val background = when {
+        equals -> p.keyEquals
+        operator || key == "AC" -> p.keyAccent
+        else -> p.key
+    }
+    val foreground = if (equals) p.onKeyEquals else p.text
+    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(50), color = background, contentColor = foreground) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                key,
+                fontSize = when {
+                    key.length > 1 && key != "AC" -> if (compact) 18.sp else 20.sp
+                    else -> if (compact) 22.sp else 28.sp
+                },
+                fontWeight = FontWeight.Normal,
+                color = foreground,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------- shared pieces
+
+@Composable
+private fun PageColumn(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val p = LocalPalette.current
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+        content()
+    }
+}
+
+@Composable
+private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val p = LocalPalette.current
+    Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = p.surface) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
+    }
+}
+
+@Composable
+private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
+    val p = LocalPalette.current
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.key).padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        options.forEach { option ->
+            val active = option == selected
+            Box(
+                Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(19.dp))
+                    .background(if (active) p.keyEquals else Color.Transparent)
+                    .clickable { onSelect(option) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    option, fontSize = 13.sp, maxLines = 1, fontWeight = FontWeight.Medium,
+                    color = if (active) p.onKeyEquals else p.muted
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Field(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, numeric: Boolean = true) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label, maxLines = 1) },
+        modifier = modifier,
+        singleLine = true,
+        shape = RoundedCornerShape(16.dp),
+        keyboardOptions = KeyboardOptions(keyboardType = if (numeric) KeyboardType.Decimal else KeyboardType.Text),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp)
+    )
+}
+
+@Composable
+private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    Surface(onClick = onClick, modifier = modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(25.dp), color = p.keyEquals) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
+        }
+    }
+}
+
+@Composable
+private fun ResultBox(text: String, error: String?) {
+    val p = LocalPalette.current
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = p.key) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (error != null) Text(error, color = p.error, fontSize = 14.sp)
+            else Text(text, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 22.sp)
+        }
+    }
+}
+
+// ---------------------------------------------------------------- tools
+
+@Composable
+private fun ToolsPage() {
+    var tool by remember { mutableStateOf("Дроби") }
+
+    var fractionA by remember { mutableStateOf("3/4") }
+    var fractionB by remember { mutableStateOf("2/5") }
+    var fractionResult by remember { mutableStateOf("") }
+    var fractionError by remember { mutableStateOf<String?>(null) }
+
+    var percentMode by remember { mutableStateOf("% от числа") }
+    var percentA by remember { mutableStateOf("15") }
+    var percentB by remember { mutableStateOf("240") }
+    var percentResult by remember { mutableStateOf("") }
+    var percentError by remember { mutableStateOf<String?>(null) }
+
+    var shape by remember { mutableStateOf("Прямоугольник") }
+    var sideA by remember { mutableStateOf("5") }
+    var sideB by remember { mutableStateOf("3") }
+    var sideC by remember { mutableStateOf("4") }
+    var geometryResult by remember { mutableStateOf("") }
+    var geometryError by remember { mutableStateOf<String?>(null) }
+
+    PageColumn("Инструменты") {
+        Segmented(listOf("Дроби", "Проценты", "Геометрия"), tool) { tool = it }
+        Panel {
+            when (tool) {
+                "Дроби" -> {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Field(fractionA, { fractionA = it }, "Дробь 1", Modifier.weight(1f), numeric = false)
+                        Field(fractionB, { fractionB = it }, "Дробь 2", Modifier.weight(1f), numeric = false)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("+", "−", "×", "÷").forEach { op ->
+                            Box(Modifier.weight(1f)) {
+                                ActionButton(op) {
+                                    runCatching { FractionTools.calculate(fractionA, fractionB, op) }
+                                        .onSuccess { fractionResult = it; fractionError = null }
+                                        .onFailure { fractionError = friendly(it, "Проверьте дроби"); fractionResult = "" }
+                                }
+                            }
+                        }
+                    }
+                    if (fractionResult.isNotEmpty() || fractionError != null) ResultBox(fractionResult, fractionError)
+                }
+                "Проценты" -> {
+                    Segmented(listOf("% от числа", "Сколько %", "± на %"), percentMode) { percentMode = it }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Field(
+                            percentA, { percentA = it },
+                            when (percentMode) { "Сколько %" -> "Часть"; "± на %" -> "Число"; else -> "Процент" },
+                            Modifier.weight(1f)
+                        )
+                        Field(
+                            percentB, { percentB = it },
+                            when (percentMode) { "Сколько %" -> "Целое"; "± на %" -> "Процент (− уменьшить)"; else -> "Число" },
+                            Modifier.weight(1f)
+                        )
+                    }
+                    ActionButton("Вычислить") {
+                        runCatching {
+                            when (percentMode) {
+                                "Сколько %" -> PercentTools.whatPercent(percentA, percentB)
+                                "± на %" -> {
+                                    val rate = percentB.trim().replace(',', '.').toBigDecimalOrNull()
+                                        ?: throw IllegalArgumentException("Некорректное число: $percentB")
+                                    if (rate.signum() < 0) PercentTools.changeByPercent(percentA, rate.abs().toPlainString(), false)
+                                    else PercentTools.changeByPercent(percentA, percentB, true)
+                                }
+                                else -> PercentTools.percentOf(percentA, percentB)
+                            }
+                        }.onSuccess { percentResult = it; percentError = null }
+                            .onFailure { percentError = friendly(it, "Проверьте значения"); percentResult = "" }
+                    }
+                    if (percentResult.isNotEmpty() || percentError != null) ResultBox(percentResult, percentError)
+                }
+                else -> {
+                    Segmented(listOf("Прямоугольник", "Круг", "Треугольник"), shape) { shape = it }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Field(sideA, { sideA = it }, if (shape == "Круг") "Радиус" else "Сторона a", Modifier.weight(1f))
+                        if (shape != "Круг") Field(sideB, { sideB = it }, "Сторона b", Modifier.weight(1f))
+                        if (shape == "Треугольник") Field(sideC, { sideC = it }, "Сторона c", Modifier.weight(1f))
+                    }
+                    ActionButton("Рассчитать") {
+                        runCatching {
+                            when (shape) {
+                                "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
+                                "Круг" -> GeometryTools.circle(sideA)
+                                else -> GeometryTools.triangle(sideA, sideB, sideC)
+                            }
+                        }.onSuccess { geometryResult = it; geometryError = null }
+                            .onFailure { geometryError = friendly(it, "Проверьте размеры"); geometryResult = "" }
+                    }
+                    if (geometryResult.isNotEmpty() || geometryError != null) ResultBox(geometryResult, geometryError)
+                }
+            }
+        }
+    }
+}
+
+private fun friendly(error: Throwable, fallback: String): String = when {
+    error.message?.contains("Division by zero") == true -> "Деление на ноль"
+    error is IllegalArgumentException || error is ArithmeticException -> error.message ?: fallback
+    else -> fallback
+}
+
+// ---------------------------------------------------------------- solver
 
 @Composable
 private fun EquationSolverPage() {
-    var equation by remember { mutableStateOf("2x + 3 = 11") }
-    var answer by remember { mutableStateOf("Введите уравнение и нажмите «Решить»") }
+    val p = LocalPalette.current
+    var equation by remember { mutableStateOf("") }
+    var answer by remember { mutableStateOf<String?>(null) }
     var steps by remember { mutableStateOf(emptyList<String>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text("Решатель уравнений", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Text(
-            "Линейные и квадратные уравнения с одной переменной x",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 13.sp
-        )
-        OutlinedTextField(
-            value = equation,
-            onValueChange = { equation = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Уравнение") },
-            placeholder = { Text("Например: x² − 5x + 6 = 0") },
-            singleLine = true
-        )
-        Button(
-            onClick = {
+    PageColumn("Решатель") {
+        Panel {
+            Field(equation, { equation = it }, "Например: x² − 5x + 6 = 0", Modifier.fillMaxWidth(), numeric = false)
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf("x", "x²", "(", ")", "+", "−", "×", "÷", "=").forEach { symbol ->
+                    Chip(symbol, false) { equation += symbol }
+                }
+            }
+            ActionButton("Решить") {
                 try {
                     val solved = AlgebraSolver().solve(equation)
                     answer = solved.answer
                     steps = solved.steps
                     error = null
                 } catch (e: IllegalArgumentException) {
-                    answer = "Не удалось решить"
+                    answer = null
                     steps = emptyList()
-                    error = e.message ?: "Проверьте запись"
+                    error = friendly(e, "Проверьте запись уравнения")
                 }
-            },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Решить уравнение")
+            }
         }
-        error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
-        }
-        Card(
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Text("Ответ", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                Text(answer, color = MaterialTheme.colorScheme.primary, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        error?.let { Text(it, color = p.error, fontSize = 14.sp) }
+        answer?.let { text ->
+            Panel {
+                Text(text, color = p.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 if (steps.isNotEmpty()) {
-                    HorizontalDivider(Modifier.padding(vertical = 5.dp))
-                    Text("Пошаговое решение", fontWeight = FontWeight.SemiBold)
+                    HorizontalDivider(color = p.key)
                     steps.forEachIndexed { index, step ->
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Text("${index + 1}.", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                            Text(step, fontSize = 13.sp, lineHeight = 18.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("${index + 1}.", color = p.accent, fontSize = 14.sp)
+                            Text(step, fontSize = 14.sp, lineHeight = 20.sp)
                         }
                     }
                 }
             }
         }
         Text(
-            "Поддерживаются x, числа, скобки, +, −, ×, ÷ и степени до x². Деление на выражение с x и уравнения выше второй степени пока не поддерживаются.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 11.sp,
-            lineHeight = 15.sp
+            "Линейные и квадратные уравнения с одной переменной x. Деление на выражение с x и степени выше второй не поддерживаются.",
+            color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
         )
     }
 }
 
-@Composable
-private fun ToolsPage() {
-    var fractionA by remember { mutableStateOf("3/4") }
-    var fractionB by remember { mutableStateOf("2/5") }
-    var fractionResult by remember { mutableStateOf("Выберите операцию") }
-    var fractionError by remember { mutableStateOf<String?>(null) }
-
-    var percentMode by remember { mutableStateOf("Процент от числа") }
-    var percentValue by remember { mutableStateOf("15") }
-    var percentBase by remember { mutableStateOf("240") }
-    var percentResult by remember { mutableStateOf("Результат появится здесь") }
-    var percentError by remember { mutableStateOf<String?>(null) }
-
-    var geometryMode by remember { mutableStateOf("Прямоугольник") }
-    var sideA by remember { mutableStateOf("5") }
-    var sideB by remember { mutableStateOf("3") }
-    var sideC by remember { mutableStateOf("4") }
-    var geometryResult by remember { mutableStateOf("Введите размеры фигуры") }
-    var geometryError by remember { mutableStateOf<String?>(null) }
-
-    Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Text("Математические инструменты", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Text(
-            "Отдельные калькуляторы для дробей, процентов и геометрии.",
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 13.sp
-        )
-
-        Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Обыкновенные дроби", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text("Вводите дроби как 3/4 или десятичные числа.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedTextField(value = fractionA, onValueChange = { fractionA = it }, label = { Text("Первая дробь") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                OutlinedTextField(value = fractionB, onValueChange = { fractionB = it }, label = { Text("Вторая дробь") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    listOf("+" , "−", "×", "÷").forEach { op ->
-                        FilledTonalButton(
-                            onClick = {
-                                runCatching {
-                                    fractionResult = FractionTools.calculate(fractionA, fractionB, op)
-                                    fractionError = null
-                                }.onFailure {
-                                    fractionError = it.message ?: "Проверьте дроби"
-                                    fractionResult = "Ошибка"
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(vertical = 10.dp)
-                        ) { Text(op, fontSize = 18.sp) }
-                    }
-                }
-                ToolResult(fractionResult)
-                fractionError?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
-            }
-        }
-
-        Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Проценты", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text("Три режима: найти процент, долю от целого или изменить число на процент.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Процент от числа", "Какой процент", "Изменить число").forEach { mode ->
-                        if (percentMode == mode) {
-                            Button(onClick = { percentMode = mode }, modifier = Modifier.fillMaxWidth()) {
-                                Text(mode)
-                            }
-                        } else {
-                            OutlinedButton(onClick = { percentMode = mode }, modifier = Modifier.fillMaxWidth()) {
-                                Text(mode)
-                            }
-                        }
-                    }
-                }
-                OutlinedTextField(
-                    value = percentValue,
-                    onValueChange = { percentValue = it },
-                    label = {
-                        Text(
-                            when (percentMode) {
-                                "Какой процент" -> "Часть"
-                                "Изменить число" -> "Исходное число"
-                                else -> "Процент (%)"
-                            }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = percentBase,
-                    onValueChange = { percentBase = it },
-                    label = {
-                        Text(
-                            when (percentMode) {
-                                "Какой процент" -> "Целое"
-                                "Изменить число" -> "Процент изменения (%)"
-                                else -> "Число"
-                            }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Button(
-                    onClick = {
-                        runCatching {
-                            percentResult = when (percentMode) {
-                                "Какой процент" -> PercentTools.whatPercent(percentValue, percentBase)
-                                "Изменить число" -> {
-                                    val rate = percentBase.trim().replace(',', '.').toBigDecimal()
-                                    when {
-                                        rate.signum() < 0 -> PercentTools.changeByPercent(percentValue, rate.abs().toPlainString(), false)
-                                        else -> PercentTools.changeByPercent(percentValue, percentBase, true)
-                                    }
-                                }
-                                else -> PercentTools.percentOf(percentValue, percentBase)
-                            }
-                            percentError = null
-                        }.onFailure {
-                            percentError = it.message ?: "Проверьте значения"
-                            percentResult = "Ошибка"
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Вычислить") }
-                ToolResult(percentResult)
-                percentError?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
-            }
-        }
-
-        Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Геометрия", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Прямоугольник", "Круг", "Треугольник").forEach { mode ->
-                        val selected = geometryMode == mode
-                        if (selected) {
-                            Button(onClick = { geometryMode = mode }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)) {
-                                Text(mode, fontSize = 10.sp, maxLines = 1)
-                            }
-                        } else {
-                            OutlinedButton(onClick = { geometryMode = mode }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)) {
-                                Text(mode, fontSize = 10.sp, maxLines = 1)
-                            }
-                        }
-                    }
-                }
-                OutlinedTextField(value = sideA, onValueChange = { sideA = it }, label = { Text(if (geometryMode == "Круг") "Радиус" else "Сторона a") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                if (geometryMode != "Круг") {
-                    OutlinedTextField(value = sideB, onValueChange = { sideB = it }, label = { Text(if (geometryMode == "Прямоугольник") "Сторона b" else "Сторона b") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                }
-                if (geometryMode == "Треугольник") {
-                    OutlinedTextField(value = sideC, onValueChange = { sideC = it }, label = { Text("Сторона c") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                }
-                Button(
-                    onClick = {
-                        runCatching {
-                            geometryResult = when (geometryMode) {
-                                "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
-                                "Круг" -> GeometryTools.circle(sideA)
-                                else -> GeometryTools.triangle(sideA, sideB, sideC)
-                            }
-                            geometryError = null
-                        }.onFailure {
-                            geometryError = it.message ?: "Проверьте размеры"
-                            geometryResult = "Ошибка"
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text("Рассчитать") }
-                ToolResult(geometryResult)
-                geometryError?.let { Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
-                Text("Единицы измерения результата: квадратные и линейные единицы исходных размеров.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-            }
-        }
-    }
-}
+// ---------------------------------------------------------------- history
 
 @Composable
-private fun ToolResult(value: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer
-    ) {
-        Text(
-            value,
-            Modifier.padding(13.dp),
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
-        )
-    }
-}
-
-@Composable
-private fun HistoryPage(
-    entries: List<HistoryEntry>,
-    onClear: () -> Unit
-) {
-    Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("История вычислений", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-            TextButton(onClick = onClear, enabled = entries.isNotEmpty()) { Text("Очистить") }
-        }
+private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
+    val p = LocalPalette.current
+    PageColumn("История") {
         if (entries.isEmpty()) {
-            Card(shape = RoundedCornerShape(22.dp)) {
-                Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("История пока пуста", fontWeight = FontWeight.SemiBold)
-                    Text("Результаты обычного калькулятора будут автоматически сохраняться здесь.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
-                }
-            }
+            Text("Здесь появятся результаты основного калькулятора.", color = p.muted, fontSize = 14.sp)
         } else {
-            entries.forEach { entry ->
-                Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(entry.expression, fontWeight = FontWeight.Medium, fontSize = 15.sp)
-                        Text("= ${entry.result}", color = MaterialTheme.colorScheme.primary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        Text(entry.dateLabel, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
-                        if (entry.steps.isNotEmpty()) {
-                            var expanded by remember(entry.id) { mutableStateOf(false) }
-                            TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
-                                Text(if (expanded) "Скрыть решение" else "Показать решение")
-                            }
+            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = p.surface) {
+                Column(Modifier.padding(vertical = 4.dp)) {
+                    entries.forEachIndexed { index, entry ->
+                        var expanded by remember(entry.id) { mutableStateOf(false) }
+                        Column(
+                            Modifier.fillMaxWidth()
+                                .clickable(enabled = entry.steps.isNotEmpty()) { expanded = !expanded }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(entry.expression, fontSize = 15.sp, color = p.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text("= ${entry.result}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
+                            Text(
+                                entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) "  ·  скрыть решение" else "  ·  показать решение") else "",
+                                fontSize = 12.sp, color = p.muted
+                            )
                             if (expanded) {
-                                entry.steps.forEachIndexed { index, step ->
-                                    Text("${index + 1}. $step", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                entry.steps.forEachIndexed { i, step ->
+                                    Text("${i + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
                                 }
                             }
                         }
+                        if (index != entries.lastIndex) HorizontalDivider(color = p.key, modifier = Modifier.padding(horizontal = 16.dp))
                     }
                 }
             }
-            Text("Хранятся последние 100 вычислений.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+            TextButton(onClick = onClear, modifier = Modifier.align(Alignment.End)) {
+                Text("Очистить историю", color = p.accent)
+            }
         }
     }
 }
@@ -651,23 +842,20 @@ private object HistoryStore {
             (0 until array.length()).mapNotNull { index ->
                 val item = array.optJSONObject(index) ?: return@mapNotNull null
                 val stepsJson = item.optJSONArray("steps") ?: JSONArray()
-                val steps = (0 until stepsJson.length()).map { stepsJson.optString(it) }
                 HistoryEntry(
                     id = item.optLong("id"),
                     expression = item.optString("expression"),
                     result = item.optString("result"),
                     timestamp = item.optLong("timestamp"),
-                    steps = steps
+                    steps = (0 until stepsJson.length()).map { stepsJson.optString(it) }
                 )
             }.sortedByDescending { it.timestamp }
         }.getOrDefault(emptyList())
     }
 
     fun add(context: Context, expression: String, result: String, steps: List<String>): List<HistoryEntry> {
-        val entries = (
-            listOf(HistoryEntry(System.currentTimeMillis(), expression, result, System.currentTimeMillis(), steps)) +
-                load(context)
-            ).take(LIMIT)
+        val now = System.currentTimeMillis()
+        val entries = (listOf(HistoryEntry(now, expression, result, now, steps)) + load(context)).take(LIMIT)
         save(context, entries)
         return entries
     }
@@ -694,21 +882,25 @@ private object HistoryStore {
     }
 }
 
+// ---------------------------------------------------------------- settings
+
 @Composable
 private fun SettingsPage(
     darkMode: Boolean,
     fontScale: Float,
     fontPath: String?,
-    onThemeChange: () -> Unit,
-    onFontScaleChange: (Float) -> Unit,
+    onTheme: (Boolean) -> Unit,
+    onFontScale: (Float) -> Unit,
     onFontSelected: (String) -> Unit,
     onResetFont: () -> Unit
 ) {
+    val p = LocalPalette.current
     val context = LocalContext.current
     var fontMessage by remember { mutableStateOf<String?>(null) }
-    val fontPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
+    val version = remember {
+        runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+    }
+    val fontPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
             runCatching {
                 val displayName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
@@ -718,89 +910,72 @@ private fun SettingsPage(
                 val extension = displayName.substringAfterLast('.', "").lowercase(Locale.ROOT)
                 require(extension == "ttf" || extension == "otf") { "Выберите файл TTF или OTF" }
                 val fontDir = File(context.filesDir, "fonts").apply { mkdirs() }
-                val target = File(fontDir, "mathflow_custom.$extension")
+                val target = File(fontDir, "mathflow_custom_${System.currentTimeMillis()}.$extension")
                 context.contentResolver.openInputStream(uri).use { input ->
                     requireNotNull(input) { "Не удалось открыть файл шрифта" }
                     target.outputStream().use { output -> input.copyTo(output) }
                 }
                 require(target.length() > 0L) { "Файл шрифта пустой" }
-                // Validate that Android can parse the selected font before applying it.
+                // Make sure Android can actually parse the file before applying it.
                 android.graphics.Typeface.createFromFile(target)
+                fontDir.listFiles()?.filter { it != target }?.forEach { it.delete() }
                 onFontSelected(target.absolutePath)
-                fontMessage = "Шрифт установлен: $displayName"
+                fontMessage = "Шрифт применён: $displayName"
             }.onFailure {
                 fontMessage = it.message ?: "Не удалось установить шрифт"
             }
         }
     }
 
-    Column(
-        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(13.dp)
-    ) {
-        Text("Настройки", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Row(Modifier.fillMaxWidth().clickable(onClick = onThemeChange).padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Тёмная тема", fontWeight = FontWeight.SemiBold)
-                    Text(if (darkMode) "Включена" else "Выключена", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                }
-                Switch(checked = darkMode, onCheckedChange = { onThemeChange() })
-            }
+    PageColumn("Настройки") {
+        Panel {
+            Text("Тема", fontSize = 15.sp, color = p.muted)
+            Segmented(listOf("Тёмная", "Светлая"), if (darkMode) "Тёмная" else "Светлая") { onTheme(it == "Тёмная") }
         }
-        Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                Text("Шрифт приложения", fontWeight = FontWeight.SemiBold)
-                Text(
-                    fontPath?.let { "Пользовательский шрифт установлен" } ?: "Используется системный шрифт",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/octet-stream")) }) {
-                        Text("Выбрать TTF / OTF")
-                    }
-                    if (fontPath != null) {
-                        OutlinedButton(onClick = {
-                            onResetFont()
-                            fontMessage = "Возвращён системный шрифт"
-                        }) { Text("Сбросить") }
+        Panel {
+            Text("Шрифт", fontSize = 15.sp, color = p.muted)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.weight(1f)) {
+                    ActionButton("Выбрать TTF / OTF") {
+                        fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
                     }
                 }
-                fontMessage?.let { Text(it, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary) }
-                Text("Файл копируется во внутреннюю память приложения. Доступ к хранилищу целиком не запрашивается.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Размер текста", fontWeight = FontWeight.SemiBold)
-                Text(
-                    when {
-                        fontScale < 0.95f -> "Маленький"
-                        fontScale > 1.05f -> "Большой"
-                        else -> "Стандартный"
-                    },
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 12.sp
-                )
-                Slider(
-                    value = fontScale,
-                    onValueChange = onFontScaleChange,
-                    valueRange = 0.85f..1.20f,
-                    steps = 6
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Меньше", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Больше", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (fontPath != null) {
+                    Surface(
+                        onClick = { onResetFont(); fontMessage = "Возвращён стандартный шрифт" },
+                        modifier = Modifier.height(50.dp), shape = RoundedCornerShape(25.dp), color = p.key
+                    ) {
+                        Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+                            Text("Сброс", fontSize = 15.sp, color = p.text)
+                        }
+                    }
                 }
             }
+            fontMessage?.let { Text(it, fontSize = 13.sp, color = p.accent) }
         }
-        Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
-            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text("О приложении", fontWeight = FontWeight.SemiBold)
-                Text("MathFlow 0.5.0", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                Text("Настройки сохраняются после закрытия приложения. История ограничена последними 100 вычислениями.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        Panel {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Размер текста", fontSize = 15.sp, color = p.muted)
+                Text("${(fontScale * 100).toInt()}%", fontSize = 15.sp, color = p.text)
             }
+            Slider(
+                value = fontScale,
+                onValueChange = { onFontScale(Math.round(it * 20f) / 20f) },
+                valueRange = 0.85f..1.25f,
+                steps = 7,
+                colors = SliderDefaults.colors(
+                    thumbColor = p.accent, activeTrackColor = p.accent,
+                    inactiveTrackColor = p.key, activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent
+                )
+            )
+        }
+        Panel {
+            Text("MathFlow", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text("Версия $version", fontSize = 14.sp, color = p.accent)
+            Text(
+                "Научный калькулятор, дроби, проценты, геометрия и решатель уравнений. Всё считается на устройстве, без интернета.",
+                fontSize = 13.sp, color = p.muted, lineHeight = 18.sp
+            )
         }
     }
 }
