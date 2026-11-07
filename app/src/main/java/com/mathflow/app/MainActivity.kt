@@ -274,7 +274,7 @@ private fun MathFlowApp() {
         )
     }
 
-    } }
+    }
 
     val typography = remember(family) { typographyFor(family) }
 
