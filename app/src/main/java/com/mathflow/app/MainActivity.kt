@@ -22,6 +22,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,6 +79,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -233,7 +235,7 @@ private fun MathFlowApp() {
     var fontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
-    val palette = themeFor(themeId).palette
+    val palette = remember(themeId) { themeFor(themeId).palette }
 
     LaunchedEffect(Unit) {
         setLauncherIcon(context, selectedIconId)
@@ -254,7 +256,7 @@ private fun MathFlowApp() {
         Density(baseDensity.density, baseDensity.fontScale * fontScale)
     }
 
-    val colors = if (palette.dark) {
+    val colors = remember(palette) { if (palette.dark) {
         darkColorScheme(
             primary = palette.accent, onPrimary = Color(0xFF1D1530),
             background = palette.background, onBackground = palette.text,
@@ -272,6 +274,10 @@ private fun MathFlowApp() {
         )
     }
 
+    } }
+
+    val typography = remember(family) { typographyFor(family) }
+
     val view = LocalView.current
     SideEffect {
         val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
@@ -281,7 +287,7 @@ private fun MathFlowApp() {
     }
 
     CompositionLocalProvider(LocalDensity provides density, LocalPalette provides palette) {
-        MaterialTheme(colorScheme = colors, typography = typographyFor(family)) {
+        MaterialTheme(colorScheme = colors, typography = typography) {
             // Text() reads LocalTextStyle, not the theme typography, so the custom
             // family has to be provided here too for it to reach every label.
             CompositionLocalProvider(
@@ -697,22 +703,42 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
 @Composable
 private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
     val p = LocalPalette.current
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.key).padding(3.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.key).padding(3.dp)
     ) {
-        options.forEach { option ->
-            val active = option == selected
-            Box(
-                Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(19.dp))
-                    .background(if (active) p.keyEquals else Color.Transparent)
-                    .clickable { onSelect(option) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    option, fontSize = 13.sp, maxLines = 1, fontWeight = FontWeight.Medium,
-                    color = if (active) p.onKeyEquals else p.muted
+        val itemWidth = maxWidth / options.size
+        val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
+        val density = LocalDensity.current
+        val indicatorOffset by animateFloatAsState(
+            targetValue = with(density) { (itemWidth * selectedIndex).toPx() },
+            animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
+            label = "SegmentedIndicatorPosition"
+        )
+        Box(
+            Modifier.align(Alignment.CenterStart)
+                .graphicsLayer { translationX = indicatorOffset }
+                .size(width = itemWidth, height = 38.dp)
+                .clip(RoundedCornerShape(19.dp))
+                .background(p.keyEquals)
+        )
+        Row(Modifier.fillMaxWidth()) {
+            options.forEach { option ->
+                val active = option == selected
+                val tint by animateColorAsState(
+                    targetValue = if (active) p.onKeyEquals else p.muted,
+                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
+                    label = "SegmentedLabelColor"
                 )
+                val interaction = remember(option) { MutableInteractionSource() }
+                Box(
+                    Modifier.weight(1f).height(38.dp)
+                        .clickable(interactionSource = interaction, indication = null) {
+                            if (!active) onSelect(option)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(option, fontSize = 13.sp, maxLines = 1, fontWeight = FontWeight.Medium, color = tint)
+                }
             }
         }
     }
@@ -1113,16 +1139,40 @@ private fun SettingsPage(
         }
     }
 
+    var horizontalDrag by remember { mutableFloatStateOf(0f) }
+    val swipeThreshold = with(LocalDensity.current) { 64.dp.toPx() }
     androidx.compose.animation.AnimatedContent(
+        modifier = Modifier.fillMaxSize().pointerInput(section) {
+            detectHorizontalDragGestures(
+                onDragStart = { horizontalDrag = 0f },
+                onHorizontalDrag = { change, dragAmount ->
+                    horizontalDrag += dragAmount
+                    change.consume()
+                },
+                onDragEnd = {
+                    if (section != SettingsSection.MAIN && horizontalDrag > swipeThreshold) {
+                        section = SettingsSection.MAIN
+                    }
+                    horizontalDrag = 0f
+                },
+                onDragCancel = { horizontalDrag = 0f }
+            )
+        },
         targetState = section,
         transitionSpec = {
-            val forward = targetState != SettingsSection.MAIN
+            val forward = initialState == SettingsSection.MAIN && targetState != SettingsSection.MAIN
             if (forward) {
-                slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { it / 5 } togetherWith
-                    slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 5 }
+                slideInHorizontally(
+                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
+                ) { it } togetherWith slideOutHorizontally(
+                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
+                ) { -it }
             } else {
-                slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 5 } togetherWith
-                    slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it / 5 }
+                slideInHorizontally(
+                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
+                ) { -it } togetherWith slideOutHorizontally(
+                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
+                ) { it }
             }
         },
         label = "SettingsSubpageTransition"
