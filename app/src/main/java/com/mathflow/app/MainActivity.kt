@@ -332,11 +332,14 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
                     .padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
                 val itemWidth = maxWidth / Page.values().size
-                val indicatorSize = 44.dp
+                // Wide, softly rounded active capsule (the original MathFlow shape),
+                // centered inside each tab rather than a small circular dot.
+                val indicatorWidth = 72.dp
+                val indicatorHeight = 44.dp
                 val density = LocalDensity.current
                 val indicatorOffsetPx by animateFloatAsState(
                     targetValue = with(density) {
-                        (itemWidth * current.ordinal + (itemWidth - indicatorSize) / 2).toPx()
+                        (itemWidth * current.ordinal + (itemWidth - indicatorWidth) / 2).toPx()
                     },
                     animationSpec = tween(
                         durationMillis = NAV_TRANSITION_DURATION_MS,
@@ -349,9 +352,10 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
                 // on every animation frame. Taps themselves have no ripple.
                 Box(
                     Modifier
+                        .align(Alignment.CenterStart)
                         .graphicsLayer { translationX = indicatorOffsetPx }
-                        .size(indicatorSize)
-                        .clip(CircleShape)
+                        .size(width = indicatorWidth, height = indicatorHeight)
+                        .clip(RoundedCornerShape(percent = 50))
                         .background(p.navActive)
                 )
 
