@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -1192,6 +1193,7 @@ private fun SettingsPage(
             }
 
             SettingsSection.ICONS -> PageColumn("Иконки приложения") {
+                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("Выберите вариант. Изменения вступят в силу после нажатия «Применить».", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 }
@@ -1232,6 +1234,7 @@ private fun SettingsPage(
             }
 
             SettingsSection.THEMES -> PageColumn("Темы оформления") {
+                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
                 Text("Тема не зависит от выбранной иконки приложения.", color = p.muted, fontSize = 13.sp)
                 ThemeOptions.chunked(2).forEach { pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
