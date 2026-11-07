@@ -242,6 +242,7 @@ private fun MathFlowApp() {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
                     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
                         AnimatedContent(
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
                             targetState = page,
                             transitionSpec = {
                                 val duration = 320
