@@ -10,13 +10,13 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -251,11 +251,11 @@ private fun MathFlowApp() {
                                     (slideInHorizontally(
                                         animationSpec = tween(durationMillis = duration, easing = easing),
                                         initialOffsetX = { fullWidth -> fullWidth }
-                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing, initialAlpha = 0.82f))) togetherWith
+                                    ) + fadeIn(animationSpec = tween(durationMillis = duration, easing = easing))) togetherWith
                                         (slideOutHorizontally(
                                             animationSpec = tween(durationMillis = duration, easing = easing),
                                             targetOffsetX = { fullWidth -> -fullWidth / 5 }
-                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing, targetAlpha = 0.72f)))
+                                        ) + fadeOut(animationSpec = tween(durationMillis = duration, easing = easing)))
                                 } else {
                                     (slideInHorizontally(
                                         animationSpec = tween(durationMillis = duration, easing = easing),
