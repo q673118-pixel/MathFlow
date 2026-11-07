@@ -17,7 +17,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
@@ -61,6 +63,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -77,6 +80,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -128,35 +132,68 @@ private class Palette(
     val dark: Boolean
 )
 
-private val DarkPalette = Palette(
-    background = Color(0xFF0C0B10),
-    surface = Color(0xFF16141C),
-    key = Color(0xFF211F29),
-    keyAccent = Color(0xFF54447F),
-    keyEquals = Color(0xFF6A5AA3),
-    onKeyEquals = Color(0xFFFFFFFF),
-    text = Color(0xFFE9E5F3),
-    muted = Color(0xFF9A94AB),
-    accent = Color(0xFFB9A8F0),
-    navActive = Color(0xFF2E2942),
-    error = Color(0xFFFF8A80),
-    dark = true
+private data class ThemeOption(
+    val id: String,
+    val title: String,
+    val description: String,
+    val palette: Palette
 )
 
-private val LightPalette = Palette(
-    background = Color(0xFFF3F0F8),
-    surface = Color(0xFFFFFFFF),
-    key = Color(0xFFE4DFEC),
-    keyAccent = Color(0xFFD3C7F0),
-    keyEquals = Color(0xFF6750A4),
-    onKeyEquals = Color(0xFFFFFFFF),
-    text = Color(0xFF1D1A24),
-    muted = Color(0xFF625B71),
-    accent = Color(0xFF6750A4),
-    navActive = Color(0xFFE2D9F5),
-    error = Color(0xFFB3261E),
-    dark = false
+private val ThemeOptions = listOf(
+    ThemeOption("vanilla", "Vanilla", "Фирменная фиолетовая палитра MathFlow.", Palette(
+        Color(0xFF0C0B10), Color(0xFF16141C), Color(0xFF211F29), Color(0xFF54447F),
+        Color(0xFF6A5AA3), Color.White, Color(0xFFE9E5F3), Color(0xFF9A94AB),
+        Color(0xFFB9A8F0), Color(0xFF2E2942), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("black", "Black", "Почти чёрный интерфейс с нейтральными поверхностями.", Palette(
+        Color(0xFF08090D), Color(0xFF12141A), Color(0xFF20232B), Color(0xFF343945),
+        Color(0xFFB7A0FF), Color(0xFF1A1327), Color(0xFFF4F2FA), Color(0xFF9296A3),
+        Color(0xFFC9B8FF), Color(0xFF252833), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("white", "White", "Светлая тема с чистыми белыми поверхностями.", Palette(
+        Color(0xFFF7F6FA), Color.White, Color(0xFFECEAF2), Color(0xFFE1D8F3),
+        Color(0xFF6A1B9A), Color.White, Color(0xFF17131F), Color(0xFF686274),
+        Color(0xFF7428B2), Color(0xFFE8DDF5), Color(0xFFB3261E), false
+    )),
+    ThemeOption("purple", "Purple", "Глубокий фиолетовый с насыщенными акцентами.", Palette(
+        Color(0xFF10051B), Color(0xFF1C0C2B), Color(0xFF2C1240), Color(0xFF511C70),
+        Color(0xFF8A2CC2), Color.White, Color(0xFFF5E9FF), Color(0xFFB59BBF),
+        Color(0xFFD49AFF), Color(0xFF321343), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("ocean", "Ocean", "Холодные синие оттенки и яркий голубой акцент.", Palette(
+        Color(0xFF04142F), Color(0xFF081E43), Color(0xFF102D58), Color(0xFF075C9B),
+        Color(0xFF139EE0), Color.White, Color(0xFFEAF7FF), Color(0xFF8FB7D4),
+        Color(0xFF39C7FF), Color(0xFF0B3157), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("emerald", "Emerald", "Тёмно-зелёная палитра с мятными акцентами.", Palette(
+        Color(0xFF031D17), Color(0xFF082B22), Color(0xFF104336), Color(0xFF14664C),
+        Color(0xFF13A67A), Color.White, Color(0xFFE8FFF6), Color(0xFF90C9B3),
+        Color(0xFF4BE2B2), Color(0xFF0D3A2C), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("sunset", "Sunset", "Тёплые оттенки заката: коралл, оранжевый и розовый.", Palette(
+        Color(0xFF24101C), Color(0xFF351729), Color(0xFF4C2035), Color(0xFFB34B37),
+        Color(0xFFFF6D49), Color.White, Color(0xFFFFF2EA), Color(0xFFD3A6A0),
+        Color(0xFFFF9A66), Color(0xFF51243B), Color(0xFFFFB4AB), true
+    )),
+    ThemeOption("rose", "Rose", "Мягкая розовая тема с ярким малиновым акцентом.", Palette(
+        Color(0xFFFFF3F8), Color.White, Color(0xFFF8DDEB), Color(0xFFF5BBD5),
+        Color(0xFFE50070), Color.White, Color(0xFF39182B), Color(0xFF9C6B83),
+        Color(0xFFD60069), Color(0xFFF9D7E9), Color(0xFFB3261E), false
+    )),
+    ThemeOption("midnight", "Midnight", "Ночная фиолетовая палитра с мягкими лавандовыми акцентами.", Palette(
+        Color(0xFF100521), Color(0xFF1A0B31), Color(0xFF2A124A), Color(0xFF6331A1),
+        Color(0xFFA66BFF), Color.White, Color(0xFFF6EDFF), Color(0xFFB5A0D1),
+        Color(0xFFC69AFF), Color(0xFF321957), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("graphite", "Graphite", "Спокойные графитовые оттенки с холодным светлым акцентом.", Palette(
+        Color(0xFF222431), Color(0xFF2D3040), Color(0xFF3A3D4F), Color(0xFF4A4D62),
+        Color(0xFFAEB4D8), Color(0xFF222431), Color(0xFFF1F2FF), Color(0xFFB0B4C9),
+        Color(0xFFD1D5FF), Color(0xFF3C4056), Color(0xFFFF8A80), true
+    ))
 )
+
+private fun themeFor(id: String): ThemeOption =
+    ThemeOptions.firstOrNull { it.id == id } ?: ThemeOptions.first()
 
 private val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { DarkPalette }
 
@@ -187,11 +224,19 @@ private fun typographyFor(family: FontFamily): Typography {
 private fun MathFlowApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
-    var darkMode by remember { mutableStateOf(prefs.getBoolean("dark_mode", true)) }
+    var themeId by remember {
+        mutableStateOf(prefs.getString("app_theme", if (prefs.getBoolean("dark_mode", true)) "vanilla" else "white") ?: "vanilla")
+    }
+    var selectedIconId by remember { mutableStateOf(prefs.getString("app_icon", "vanilla") ?: "vanilla") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
     var fontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
+    val palette = themeFor(themeId).palette
+
+    LaunchedEffect(Unit) {
+        setLauncherIcon(context, selectedIconId)
+    }
 
     val customFont: FontFamily? = remember(fontPath) {
         fontPath?.let { path ->
@@ -202,14 +247,13 @@ private fun MathFlowApp() {
         }
     }
     val family = customFont ?: FontFamily.Default
-    val palette = if (darkMode) DarkPalette else LightPalette
 
     val baseDensity = LocalDensity.current
     val density = remember(baseDensity, fontScale) {
         Density(baseDensity.density, baseDensity.fontScale * fontScale)
     }
 
-    val colors = if (darkMode) {
+    val colors = if (palette.dark) {
         darkColorScheme(
             primary = palette.accent, onPrimary = Color(0xFF1D1530),
             background = palette.background, onBackground = palette.text,
@@ -231,8 +275,8 @@ private fun MathFlowApp() {
     SideEffect {
         val window = (view.context as? android.app.Activity)?.window ?: return@SideEffect
         val controller = WindowCompat.getInsetsController(window, view)
-        controller.isAppearanceLightStatusBars = !darkMode
-        controller.isAppearanceLightNavigationBars = !darkMode
+        controller.isAppearanceLightStatusBars = !palette.dark
+        controller.isAppearanceLightNavigationBars = !palette.dark
     }
 
     CompositionLocalProvider(LocalDensity provides density, LocalPalette provides palette) {
@@ -282,13 +326,19 @@ private fun MathFlowApp() {
                                         history = emptyList()
                                     }
                                     Page.SETTINGS -> SettingsPage(
-                                        darkMode = darkMode,
+                                        selectedThemeId = themeId,
+                                        selectedIconId = selectedIconId,
+                                        onThemeSelected = { id ->
+                                            themeId = id
+                                            prefs.edit().putString("app_theme", id).apply()
+                                        },
+                                        onIconSelected = { id ->
+                                            selectedIconId = id
+                                            prefs.edit().putString("app_icon", id).apply()
+                                            setLauncherIcon(context, id)
+                                        },
                                         fontScale = fontScale,
                                         fontPath = fontPath,
-                                        onTheme = { dark ->
-                                            darkMode = dark
-                                            prefs.edit().putBoolean("dark_mode", dark).apply()
-                                        },
                                         onFontScale = {
                                             fontScale = it
                                             prefs.edit().putFloat("font_scale", it).apply()
@@ -972,18 +1022,66 @@ private object HistoryStore {
 
 // ---------------------------------------------------------------- settings
 
+private data class AppIconOption(
+    val id: String,
+    val title: String,
+    val description: String,
+    val drawable: Int,
+    val previewBackground: Color
+)
+
+private val AppIconOptions = listOf(
+    AppIconOption("vanilla", "Vanilla", "Оригинальная фиолетовая иконка MathFlow.", R.drawable.launcher_vanilla, Color(0xFF6A1B9A)),
+    AppIconOption("black", "Black", "Чёрный фон и белый фирменный знак.", R.drawable.launcher_black, Color(0xFF090A0F)),
+    AppIconOption("white", "White", "Белый фон с фиолетовым знаком.", R.drawable.launcher_white, Color(0xFFFFFFFF)),
+    AppIconOption("purple", "Purple", "Тёмный фон с насыщенным фиолетовым знаком.", R.drawable.launcher_purple, Color(0xFF08070D)),
+    AppIconOption("ocean", "Ocean", "Глубокий синий фон и яркий голубой знак.", R.drawable.launcher_ocean, Color(0xFF061A5B)),
+    AppIconOption("emerald", "Emerald", "Тёмно-зелёный фон и мятный знак.", R.drawable.launcher_emerald, Color(0xFF003021)),
+    AppIconOption("sunset", "Sunset", "Градиент заката с белым фирменным знаком.", R.drawable.launcher_sunset, Color(0xFFF04A66)),
+    AppIconOption("rose", "Rose", "Нежно-розовый фон и малиновый знак.", R.drawable.launcher_rose, Color(0xFFF4A9D1)),
+    AppIconOption("midnight", "Midnight", "Глубокий ночной фон и лавандовый знак.", R.drawable.launcher_midnight, Color(0xFF19002F)),
+    AppIconOption("graphite", "Graphite", "Графитовый фон и светлый холодный знак.", R.drawable.launcher_graphite, Color(0xFF292B3A))
+)
+
+private fun setLauncherIcon(context: Context, iconId: String) {
+    val packageManager = context.packageManager
+    val selected = AppIconOptions.firstOrNull { it.id == iconId } ?: AppIconOptions.first()
+    val aliases = AppIconOptions
+    val selectedComponent = android.content.ComponentName(context, "${context.packageName}.Launcher${selected.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}")
+    packageManager.setComponentEnabledSetting(
+        selectedComponent,
+        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+        android.content.pm.PackageManager.DONT_KILL_APP
+    )
+    aliases.filterNot { it.id == selected.id }.forEach { option ->
+        val component = android.content.ComponentName(context, "${context.packageName}.Launcher${option.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}")
+        packageManager.setComponentEnabledSetting(
+            component,
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            android.content.pm.PackageManager.DONT_KILL_APP
+        )
+    }
+}
+
+private enum class SettingsSection { MAIN, ICONS, THEMES }
+
 @Composable
 private fun SettingsPage(
-    darkMode: Boolean,
+    selectedThemeId: String,
+    selectedIconId: String,
+    onThemeSelected: (String) -> Unit,
+    onIconSelected: (String) -> Unit,
     fontScale: Float,
     fontPath: String?,
-    onTheme: (Boolean) -> Unit,
     onFontScale: (Float) -> Unit,
     onFontSelected: (String) -> Unit,
     onResetFont: () -> Unit
 ) {
     val p = LocalPalette.current
     val context = LocalContext.current
+    var section by remember { mutableStateOf(SettingsSection.MAIN) }
+    var pendingIconId by remember(selectedIconId) { mutableStateOf(selectedIconId) }
+    var pendingThemeId by remember(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var fontMessage by remember { mutableStateOf<String?>(null) }
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
@@ -1004,7 +1102,6 @@ private fun SettingsPage(
                     target.outputStream().use { output -> input.copyTo(output) }
                 }
                 require(target.length() > 0L) { "Файл шрифта пустой" }
-                // Make sure Android can actually parse the file before applying it.
                 android.graphics.Typeface.createFromFile(target)
                 fontDir.listFiles()?.filter { it != target }?.forEach { it.delete() }
                 onFontSelected(target.absolutePath)
@@ -1015,55 +1112,263 @@ private fun SettingsPage(
         }
     }
 
-    PageColumn("Настройки") {
-        Panel {
-            Text("Тема", fontSize = 15.sp, color = p.muted)
-            Segmented(listOf("Тёмная", "Светлая"), if (darkMode) "Тёмная" else "Светлая") { onTheme(it == "Тёмная") }
-        }
-        Panel {
-            Text("Шрифт", fontSize = 15.sp, color = p.muted)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.weight(1f)) {
-                    ActionButton("Выбрать TTF / OTF") {
-                        fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
-                    }
+    androidx.compose.animation.AnimatedContent(
+        targetState = section,
+        transitionSpec = {
+            val forward = targetState != SettingsSection.MAIN
+            if (forward) {
+                slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { it / 5 } togetherWith
+                    slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 5 }
+            } else {
+                slideInHorizontally(tween(220, easing = FastOutSlowInEasing)) { -it / 5 } togetherWith
+                    slideOutHorizontally(tween(220, easing = FastOutSlowInEasing)) { it / 5 }
+            }
+        },
+        label = "SettingsSubpageTransition"
+    ) { target ->
+        when (target) {
+            SettingsSection.MAIN -> PageColumn("Настройки") {
+                Panel {
+                    SettingsEntry(
+                        title = "Иконки приложения",
+                        subtitle = "Выберите значок MathFlow на рабочем столе",
+                        icon = Icons.Default.Build,
+                        onClick = { pendingIconId = selectedIconId; section = SettingsSection.ICONS }
+                    )
                 }
-                if (fontPath != null) {
-                    Surface(
-                        onClick = { onResetFont(); fontMessage = "Возвращён стандартный шрифт" },
-                        modifier = Modifier.height(50.dp), shape = RoundedCornerShape(25.dp), color = p.key
-                    ) {
-                        Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
-                            Text("Сброс", fontSize = 15.sp, color = p.text)
+                Panel {
+                    SettingsEntry(
+                        title = "Темы оформления",
+                        subtitle = "Цвета интерфейса, независимо от иконки",
+                        icon = Icons.Default.Settings,
+                        onClick = { pendingThemeId = selectedThemeId; section = SettingsSection.THEMES }
+                    )
+                }
+                Panel {
+                    Text("Шрифт", fontSize = 15.sp, color = p.muted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(Modifier.weight(1f)) {
+                            ActionButton("Выбрать TTF / OTF") {
+                                fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
+                            }
+                        }
+                        if (fontPath != null) {
+                            Surface(
+                                onClick = { onResetFont(); fontMessage = "Возвращён стандартный шрифт" },
+                                modifier = Modifier.height(50.dp), shape = RoundedCornerShape(25.dp), color = p.key
+                            ) {
+                                Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+                                    Text("Сброс", fontSize = 15.sp, color = p.text)
+                                }
+                            }
                         }
                     }
+                    fontMessage?.let { Text(it, fontSize = 13.sp, color = p.accent) }
+                }
+                Panel {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Размер текста", fontSize = 15.sp, color = p.muted)
+                        Text("${(fontScale * 100).toInt()}%", fontSize = 15.sp, color = p.text)
+                    }
+                    Slider(
+                        value = fontScale,
+                        onValueChange = { onFontScale(Math.round(it * 20f) / 20f) },
+                        valueRange = 0.85f..1.25f,
+                        steps = 7,
+                        colors = SliderDefaults.colors(
+                            thumbColor = p.accent, activeTrackColor = p.accent,
+                            inactiveTrackColor = p.key, activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent
+                        )
+                    )
+                }
+                Panel {
+                    Text("MathFlow", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Версия $version", fontSize = 14.sp, color = p.accent)
+                    Text(
+                        "Научный калькулятор, дроби, проценты, геометрия и решатель уравнений. Всё считается на устройстве, без интернета.",
+                        fontSize = 13.sp, color = p.muted, lineHeight = 18.sp
+                    )
                 }
             }
-            fontMessage?.let { Text(it, fontSize = 13.sp, color = p.accent) }
-        }
-        Panel {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Размер текста", fontSize = 15.sp, color = p.muted)
-                Text("${(fontScale * 100).toInt()}%", fontSize = 15.sp, color = p.text)
+
+            SettingsSection.ICONS -> PageColumn("Иконки приложения") {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Выберите вариант. Изменения вступят в силу после нажатия «Применить».", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                }
+                AppIconOptions.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        pair.forEach { option ->
+                            IconOptionCard(
+                                option = option,
+                                selected = pendingIconId == option.id,
+                                applied = selectedIconId == option.id,
+                                modifier = Modifier.weight(1f),
+                                onClick = { pendingIconId = option.id }
+                            )
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                val selected = AppIconOptions.firstOrNull { it.id == pendingIconId } ?: AppIconOptions.first()
+                Panel {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Image(
+                            painter = painterResource(selected.drawable),
+                            contentDescription = selected.title,
+                            modifier = Modifier.size(68.dp),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                        )
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+                            Text(selected.description, fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
+                        }
+                    }
+                    ApplySelectionButton(
+                        text = if (pendingIconId == selectedIconId) "Уже применяется" else "Применить",
+                        enabled = pendingIconId != selectedIconId,
+                        onClick = { onIconSelected(pendingIconId) }
+                    )
+                }
             }
-            Slider(
-                value = fontScale,
-                onValueChange = { onFontScale(Math.round(it * 20f) / 20f) },
-                valueRange = 0.85f..1.25f,
-                steps = 7,
-                colors = SliderDefaults.colors(
-                    thumbColor = p.accent, activeTrackColor = p.accent,
-                    inactiveTrackColor = p.key, activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent
-                )
-            )
+
+            SettingsSection.THEMES -> PageColumn("Темы оформления") {
+                Text("Тема не зависит от выбранной иконки приложения.", color = p.muted, fontSize = 13.sp)
+                ThemeOptions.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        pair.forEach { option ->
+                            ThemeOptionCard(
+                                option = option,
+                                selected = pendingThemeId == option.id,
+                                applied = selectedThemeId == option.id,
+                                modifier = Modifier.weight(1f),
+                                onClick = { pendingThemeId = option.id }
+                            )
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                val selected = themeFor(pendingThemeId)
+                Panel {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(selected.palette.background).border(1.dp, p.key, RoundedCornerShape(16.dp)))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+                            Text(selected.description, fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
+                        }
+                    }
+                    ApplySelectionButton(
+                        text = if (pendingThemeId == selectedThemeId) "Уже применяется" else "Применить",
+                        enabled = pendingThemeId != selectedThemeId,
+                        onClick = { onThemeSelected(pendingThemeId) }
+                    )
+                }
+            }
         }
-        Panel {
-            Text("MathFlow", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Text("Версия $version", fontSize = 14.sp, color = p.accent)
-            Text(
-                "Научный калькулятор, дроби, проценты, геометрия и решатель уравнений. Всё считается на устройстве, без интернета.",
-                fontSize = 13.sp, color = p.muted, lineHeight = 18.sp
-            )
+    }
+}
+
+@Composable
+private fun SettingsEntry(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    val p = LocalPalette.current
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick).padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.key), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
+        }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.text)
+            Text(subtitle, fontSize = 12.sp, color = p.muted, lineHeight = 16.sp)
+        }
+        Text("›", color = p.muted, fontSize = 27.sp)
+    }
+}
+
+@Composable
+private fun IconOptionCard(
+    option: AppIconOption,
+    selected: Boolean,
+    applied: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val p = LocalPalette.current
+    val shape = RoundedCornerShape(20.dp)
+    Column(
+        modifier.clip(shape)
+            .background(p.surface)
+            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(7.dp)
+    ) {
+        Image(
+            painter = painterResource(option.drawable),
+            contentDescription = option.title,
+            modifier = Modifier.size(70.dp),
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit
+        )
+        Text(option.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1)
+        Text(
+            when { applied -> "Применяется"; selected -> "Выбрана"; else -> " " },
+            fontSize = 10.sp,
+            color = if (applied) p.accent else p.muted,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun ThemeOptionCard(
+    option: ThemeOption,
+    selected: Boolean,
+    applied: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val p = LocalPalette.current
+    val shape = RoundedCornerShape(20.dp)
+    Column(
+        modifier.clip(shape)
+            .background(p.surface)
+            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            listOf(option.palette.background, option.palette.surface, option.palette.keyEquals, option.palette.accent).forEach { color ->
+                Box(Modifier.size(18.dp).clip(CircleShape).background(color))
+            }
+        }
+        Text(option.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1)
+        Text(
+            when { applied -> "Применяется"; selected -> "Выбрана"; else -> " " },
+            fontSize = 10.sp,
+            color = if (applied) p.accent else p.muted,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun ApplySelectionButton(text: String, enabled: Boolean, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(50.dp).then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = RoundedCornerShape(25.dp),
+        color = if (enabled) p.keyEquals else p.key
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = if (enabled) p.onKeyEquals else p.muted)
         }
     }
 }
