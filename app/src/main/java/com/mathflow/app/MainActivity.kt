@@ -9,11 +9,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -282,27 +286,47 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Surface(shape = RoundedCornerShape(26.dp), color = p.surface) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+            BoxWithConstraints(
+                Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
-                Page.values().forEach { item ->
-                    val selected = item == current
-                    Box(
-                        Modifier
-                            .size(width = 52.dp, height = 38.dp)
-                            .clip(RoundedCornerShape(19.dp))
-                            .background(if (selected) p.navActive else Color.Transparent)
-                            .clickable { onSelect(item) },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            item.icon,
-                            contentDescription = item.title,
-                            tint = if (selected) p.accent else p.muted,
-                            modifier = Modifier.size(26.dp)
-                        )
+                val itemWidth = maxWidth / Page.values().size
+                val indicatorX by animateDpAsState(
+                    targetValue = itemWidth * current.ordinal + (itemWidth - 52.dp) / 2,
+                    animationSpec = spring(dampingRatio = 0.68f, stiffness = 420f),
+                    label = "liquidNavigationIndicator"
+                )
+
+                // A single matte capsule travels between destinations. The spring
+                // gives it a soft liquid-like settle without glow, blur or gradients.
+                Box(
+                    Modifier
+                        .offset(x = indicatorX)
+                        .size(width = 52.dp, height = 38.dp)
+                        .clip(RoundedCornerShape(19.dp))
+                        .background(p.navActive)
+                )
+
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Page.values().forEach { item ->
+                        val selected = item == current
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(42.dp)
+                                .clip(RoundedCornerShape(19.dp))
+                                .clickable { onSelect(item) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                item.icon,
+                                contentDescription = item.title,
+                                tint = if (selected) p.accent else p.muted,
+                                modifier = Modifier.size(if (selected) 26.dp else 24.dp)
+                            )
+                        }
                     }
                 }
             }
