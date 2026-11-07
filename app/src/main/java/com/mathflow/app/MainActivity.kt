@@ -72,6 +72,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -235,6 +237,7 @@ private fun MathFlowApp() {
     var fontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
+    val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
 
     LaunchedEffect(Unit) {
@@ -321,8 +324,9 @@ private fun MathFlowApp() {
                             },
                             label = "MathFlowScreenTransition"
                         ) { targetPage ->
-                            Box(Modifier.fillMaxSize()) {
-                                when (targetPage) {
+                            pageStateHolder.SaveableStateProvider(targetPage) {
+                                Box(Modifier.fillMaxSize()) {
+                                    when (targetPage) {
                                     Page.HOME -> CalculatorHome { expression, result, steps ->
                                         history = HistoryStore.add(context, expression, result, steps)
                                     }
@@ -359,6 +363,7 @@ private fun MathFlowApp() {
                                             prefs.edit().remove("font_path").apply()
                                         }
                                     )
+                                    }
                                 }
                             }
                         }
@@ -458,19 +463,31 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
 // ---------------------------------------------------------------- calculator
 
 private val OPERATORS = setOf("÷", "×", "−", "+")
+private val CALCULATOR_MAIN_ROWS = listOf(
+    listOf("AC", "(", ")", "÷"),
+    listOf("7", "8", "9", "×"),
+    listOf("4", "5", "6", "−"),
+    listOf("1", "2", "3", "+"),
+    listOf("%", "0", ".", "=")
+)
+private val CALCULATOR_SCIENTIFIC_ROWS = listOf(
+    listOf("sin", "cos", "tan", "ln"),
+    listOf("log", "abs", "π", "e"),
+    listOf("√", "x²", "xʸ", "⌫")
+) + CALCULATOR_MAIN_ROWS
 
 @Composable
 private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
-    var expression by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf("0") }
-    var message by remember { mutableStateOf<String?>(null) }
-    var steps by remember { mutableStateOf(emptyList<String>()) }
-    var showSteps by remember { mutableStateOf(true) }
-    var scientific by remember { mutableStateOf(false) }
-    var degrees by remember { mutableStateOf(true) }
-    var finished by remember { mutableStateOf(false) }
-    var continuation by remember { mutableStateOf("") }
+    var expression by rememberSaveable { mutableStateOf("") }
+    var result by rememberSaveable { mutableStateOf("0") }
+    var message by rememberSaveable { mutableStateOf<String?>(null) }
+    var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var showSteps by rememberSaveable { mutableStateOf(true) }
+    var scientific by rememberSaveable { mutableStateOf(false) }
+    var degrees by rememberSaveable { mutableStateOf(true) }
+    var finished by rememberSaveable { mutableStateOf(false) }
+    var continuation by rememberSaveable { mutableStateOf("") }
 
     fun clearAll() {
         expression = ""; result = "0"; message = null; steps = emptyList()
@@ -545,18 +562,6 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
         }
     }
 
-    val mainRows = listOf(
-        listOf("AC", "(", ")", "÷"),
-        listOf("7", "8", "9", "×"),
-        listOf("4", "5", "6", "−"),
-        listOf("1", "2", "3", "+"),
-        listOf("%", "0", ".", "=")
-    )
-    val sciRows = listOf(
-        listOf("sin", "cos", "tan", "ln"),
-        listOf("log", "abs", "π", "e"),
-        listOf("√", "x²", "xʸ", "⌫")
-    )
 
     Column(
         Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp),
@@ -622,7 +627,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
             }
         }
 
-        val rows = if (scientific) sciRows + mainRows else mainRows
+        val rows = if (scientific) CALCULATOR_SCIENTIFIC_ROWS else CALCULATOR_MAIN_ROWS
         Column(
             Modifier.fillMaxWidth().weight(if (scientific) 2.5f else 1.7f),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -783,25 +788,25 @@ private fun ResultBox(text: String, error: String?) {
 
 @Composable
 private fun ToolsPage() {
-    var tool by remember { mutableStateOf("Дроби") }
+    var tool by rememberSaveable { mutableStateOf("Дроби") }
 
-    var fractionA by remember { mutableStateOf("3/4") }
-    var fractionB by remember { mutableStateOf("2/5") }
-    var fractionResult by remember { mutableStateOf("") }
-    var fractionError by remember { mutableStateOf<String?>(null) }
+    var fractionA by rememberSaveable { mutableStateOf("3/4") }
+    var fractionB by rememberSaveable { mutableStateOf("2/5") }
+    var fractionResult by rememberSaveable { mutableStateOf("") }
+    var fractionError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    var percentMode by remember { mutableStateOf("% от числа") }
-    var percentA by remember { mutableStateOf("15") }
-    var percentB by remember { mutableStateOf("240") }
-    var percentResult by remember { mutableStateOf("") }
-    var percentError by remember { mutableStateOf<String?>(null) }
+    var percentMode by rememberSaveable { mutableStateOf("% от числа") }
+    var percentA by rememberSaveable { mutableStateOf("15") }
+    var percentB by rememberSaveable { mutableStateOf("240") }
+    var percentResult by rememberSaveable { mutableStateOf("") }
+    var percentError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    var shape by remember { mutableStateOf("Прямоугольник") }
-    var sideA by remember { mutableStateOf("5") }
-    var sideB by remember { mutableStateOf("3") }
-    var sideC by remember { mutableStateOf("4") }
-    var geometryResult by remember { mutableStateOf("") }
-    var geometryError by remember { mutableStateOf<String?>(null) }
+    var shape by rememberSaveable { mutableStateOf("Прямоугольник") }
+    var sideA by rememberSaveable { mutableStateOf("5") }
+    var sideB by rememberSaveable { mutableStateOf("3") }
+    var sideC by rememberSaveable { mutableStateOf("4") }
+    var geometryResult by rememberSaveable { mutableStateOf("") }
+    var geometryError by rememberSaveable { mutableStateOf<String?>(null) }
 
     PageColumn("Инструменты") {
         Segmented(listOf("Дроби", "Проценты", "Геометрия"), tool) { tool = it }
@@ -891,10 +896,10 @@ private fun friendly(error: Throwable, fallback: String): String = when {
 @Composable
 private fun EquationSolverPage() {
     val p = LocalPalette.current
-    var equation by remember { mutableStateOf("") }
-    var answer by remember { mutableStateOf<String?>(null) }
-    var steps by remember { mutableStateOf(emptyList<String>()) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var equation by rememberSaveable { mutableStateOf("") }
+    var answer by rememberSaveable { mutableStateOf<String?>(null) }
+    var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
 
     PageColumn("Решатель") {
         Panel {
@@ -1106,10 +1111,10 @@ private fun SettingsPage(
 ) {
     val p = LocalPalette.current
     val context = LocalContext.current
-    var section by remember { mutableStateOf(SettingsSection.MAIN) }
-    var pendingIconId by remember(selectedIconId) { mutableStateOf(selectedIconId) }
-    var pendingThemeId by remember(selectedThemeId) { mutableStateOf(selectedThemeId) }
-    var fontMessage by remember { mutableStateOf<String?>(null) }
+    var section by rememberSaveable { mutableStateOf(SettingsSection.MAIN) }
+    var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
+    var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
+    var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
