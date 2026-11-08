@@ -125,7 +125,7 @@ import kotlinx.coroutines.sync.Mutex
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splashScreen = installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent { MathFlowApp() }
@@ -141,6 +141,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
     val firstBounceY = with(density) { (-25).dp.toPx() }
     val secondBounceY = with(density) { (-8).dp.toPx() }
     val dotY = remember { Animatable(startY) }
+    val dotAlpha = remember { Animatable(0f) }
     val dotScaleX = remember { Animatable(1f) }
     val dotScaleY = remember { Animatable(1f) }
     val splashAlpha = remember { Animatable(1f) }
@@ -154,6 +155,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
             })
         )
         mScale.animateTo(1f, spring(dampingRatio = 0.48f, stiffness = 430f))
+        dotAlpha.snapTo(1f)
 
         val fall = keyframes<Float> {
             startY at 0
@@ -212,6 +214,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
             contentDescription = null,
             modifier = Modifier.size(108.dp).graphicsLayer {
                 translationY = dotY.value
+                alpha = dotAlpha.value
                 scaleX = dotScaleX.value
                 scaleY = dotScaleY.value
                 transformOrigin = TransformOrigin(0.5f, 0.308f)
