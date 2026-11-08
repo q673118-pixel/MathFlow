@@ -67,6 +67,21 @@ class AlgebraSolverTest {
         assertEquals("no_real_roots", solver.solve("x^4 + 1 = 0").kind)
     }
 
+    @Test fun acceptsSuperscriptCubicInput() {
+        val result = solver.solve("x³ = 8")
+        assertEquals("polynomial_numeric", result.kind)
+        assertTrue(result.answer.contains("2"))
+    }
+
+    @Test fun rejectsPolynomialDegreeAboveFourExplicitly() {
+        try {
+            solver.solve("x^5 = 1")
+            throw AssertionError("Expected degree above four to be rejected")
+        } catch (_: IllegalArgumentException) {
+            // The solver must report the unsupported degree rather than guessing.
+        }
+    }
+
     @Test fun acceptsSuperscriptSquareAndUnicodeMinus() {
         val result = solver.solve("x² − 5x + 6 = 0")
         assertEquals("quadratic", result.kind)
