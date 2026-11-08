@@ -35,7 +35,10 @@ private val uiText = mapOf(
     "text_size" to listOf("Размер текста", "Text size", "Мәтін өлшемі"),
     "language_hint" to listOf("Выберите язык интерфейса. Выбор сохраняется на устройстве.", "Choose the interface language. Your choice is saved on this device.", "Интерфейс тілін таңдаңыз. Таңдау құрылғыда сақталады."),
     "theme_hint" to listOf("Тема не зависит от выбранной иконки приложения.", "The theme is independent of the selected app icon.", "Тақырып қолданба белгішесіне тәуелді емес."),
-    "icon_hint" to listOf("Выберите вариант. Изменения вступят в силу после нажатия «Применить».", "Choose an option. Changes take effect after tapping Apply.", "Нұсқаны таңдаңыз. Өзгерістер «Қолдану» батырмасын басқаннан кейін күшіне енеді.")
+    "icon_hint" to listOf("Выберите вариант. Изменения вступят в силу после нажатия «Применить».", "Choose an option. Changes take effect after tapping Apply.", "Нұсқаны таңдаңыз. Өзгерістер «Қолдану» батырмасын басқаннан кейін күшіне енеді."),
+    "steps" to listOf("Решение", "Steps", "Шешімі"),
+    "delete" to listOf("Удалить", "Delete", "Жою"),
+    "error" to listOf("Ошибка", "Error", "Қате")
 )
 
 @Composable
