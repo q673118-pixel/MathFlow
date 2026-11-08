@@ -109,24 +109,27 @@ internal fun MathFlowKeyButton(
     }
     val baseText = if (equals) palette.onKeyEquals else palette.text
     val flash = normalized.style == KeyAnimationStyle.FLASH && pressed
-    val background by animateColorAsState(
-        if (flash) palette.accent else baseColor,
-        tween(normalized.durationMs),
-        label = "MathFlowKeyFlash"
-    )
+    val background = baseColor
     val foreground by animateColorAsState(
         if (flash) palette.background else baseText,
         tween(normalized.durationMs),
         label = "MathFlowKeyFlashText"
     )
     val overlayAlpha by animateFloatAsState(
-        if (pressed && normalized.style != KeyAnimationStyle.FLASH && normalized.style != KeyAnimationStyle.RIPPLE) {
-            normalized.opacity * 0.22f
+        if (pressed) {
+            when (normalized.style) {
+                KeyAnimationStyle.FLASH -> normalized.opacity
+                KeyAnimationStyle.RIPPLE -> normalized.opacity * 0.12f
+                else -> normalized.opacity * 0.22f
+            }
         } else 0f,
         tween(normalized.durationMs),
         label = "MathFlowKeyOverlay"
     )
-    val overlayColor = if (palette.dark) Color.White else Color.Black
+    val overlayColor = when (normalized.style) {
+        KeyAnimationStyle.FLASH, KeyAnimationStyle.RIPPLE -> palette.accent
+        else -> if (palette.dark) Color.White else Color.Black
+    }
     val shape = RoundedCornerShape(50)
 
     Surface(
