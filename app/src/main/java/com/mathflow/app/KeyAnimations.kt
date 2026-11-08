@@ -77,7 +77,7 @@ internal fun MathFlowKeyButton(
         KeyAnimationStyle.PRESS -> if (pressed) 1f - amount * 0.45f else 1f
         KeyAnimationStyle.BOUNCE -> if (pressed) 1f - amount * 0.60f else 1f
         KeyAnimationStyle.SPRING -> if (pressed) 1f - amount else 1f
-        KeyAnimationStyle.FLASH -> if (pressed) 0.985f else 1f
+        KeyAnimationStyle.FLASH -> if (pressed) 1f - amount * 0.12f else 1f
         KeyAnimationStyle.RIPPLE -> 1f
     }
     val targetScaleY = when (normalized.style) {
@@ -92,8 +92,12 @@ internal fun MathFlowKeyButton(
     val springStyle = normalized.style == KeyAnimationStyle.SPRING ||
         normalized.style == KeyAnimationStyle.BOUNCE ||
         normalized.style == KeyAnimationStyle.ELASTIC
+    // Spring animations have no fixed duration; map the duration control to stiffness
+    // so the same slider still changes their perceived speed.
+    val durationFraction = ((normalized.durationMs - 70) / 330f).coerceIn(0f, 1f)
+    val springStiffness = 1200f - durationFraction * 1080f
     val scaleSpec = if (springStyle) {
-        spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium)
+        spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = springStiffness)
     } else {
         tween<Float>(durationMillis = normalized.durationMs)
     }
@@ -119,7 +123,7 @@ internal fun MathFlowKeyButton(
         if (pressed) {
             when (normalized.style) {
                 KeyAnimationStyle.FLASH -> normalized.opacity
-                KeyAnimationStyle.RIPPLE -> normalized.opacity * 0.12f
+                KeyAnimationStyle.RIPPLE -> normalized.opacity * (0.08f + normalized.intensity * 0.30f)
                 else -> normalized.opacity * 0.22f
             }
         } else 0f,
