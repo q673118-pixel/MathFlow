@@ -803,7 +803,7 @@ private fun BottomNav(
                     label = "MathFlowNavIndicatorAlpha"
                 )
                 val bloom = remember(current, style) { Animatable(0.72f) }
-                LaunchedEffect(current, style, settings.enabled, duration) {
+                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity) {
                     if (settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
                         bloom.snapTo(
                             if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.08f + settings.intensity * 0.34f
@@ -815,7 +815,7 @@ private fun BottomNav(
                     }
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
-                LaunchedEffect(current, style, settings.enabled, duration) {
+                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity) {
                     if (settings.enabled && style in setOf(BottomNavAnimationStyle.FLUID_PILL, BottomNavAnimationStyle.ELASTIC_SLIDE)) {
                         travelStretch.snapTo(
                             1f + settings.intensity * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.28f else 0.38f
