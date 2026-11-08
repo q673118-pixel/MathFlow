@@ -155,7 +155,8 @@ internal fun MathFlowKeyButton(
         ) {
             if (normalized.style == KeyAnimationStyle.RIPPLE) {
                 Canvas(Modifier.fillMaxSize()) {
-                    val radius = size.maxDimension * 0.78f * rippleProgress
+                    val rippleReach = 0.45f + normalized.intensity * 3.3f
+                    val radius = size.maxDimension * rippleReach * rippleProgress
                     if (radius > 0f) {
                         drawCircle(
                             color = palette.accent.copy(alpha = overlayAlpha),
