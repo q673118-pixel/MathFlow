@@ -235,6 +235,7 @@ private fun MathFlowApp() {
     var selectedIconId by remember { mutableStateOf(prefs.getString("app_icon", "vanilla") ?: "vanilla") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
     var fontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
+    var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
     val pageStateHolder = rememberSaveableStateHolder()
@@ -350,6 +351,11 @@ private fun MathFlowApp() {
                                         },
                                         fontScale = fontScale,
                                         fontPath = fontPath,
+                                        selectedLanguage = appLanguage,
+                                        onLanguageSelected = { tag ->
+                                            appLanguage = tag
+                                            prefs.edit().putString("app_language", tag).apply()
+                                        },
                                         onFontScale = {
                                             fontScale = it
                                             prefs.edit().putFloat("font_scale", it).apply()
@@ -1095,7 +1101,7 @@ private fun setLauncherIcon(context: Context, iconId: String) {
     }
 }
 
-private enum class SettingsSection { MAIN, ICONS, THEMES }
+private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE }
 
 @Composable
 private fun SettingsPage(
@@ -1107,7 +1113,9 @@ private fun SettingsPage(
     fontPath: String?,
     onFontScale: (Float) -> Unit,
     onFontSelected: (String) -> Unit,
-    onResetFont: () -> Unit
+    onResetFont: () -> Unit,
+    selectedLanguage: String,
+    onLanguageSelected: (String) -> Unit
 ) {
     val p = LocalPalette.current
     val context = LocalContext.current
@@ -1201,6 +1209,14 @@ private fun SettingsPage(
                     )
                 }
                 Panel {
+                    SettingsEntry(
+                        title = "Язык приложения",
+                        subtitle = AppLanguages.firstOrNull { it.tag == selectedLanguage }?.nativeName ?: "Русский",
+                        icon = Icons.Default.Functions,
+                        onClick = { section = SettingsSection.LANGUAGE }
+                    )
+                }
+                Panel {
                     Text("Шрифт", fontSize = 15.sp, color = p.muted)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(Modifier.weight(1f)) {
@@ -1285,6 +1301,33 @@ private fun SettingsPage(
                         onClick = { onIconSelected(pendingIconId) }
                     )
                 }
+            }
+
+            SettingsSection.LANGUAGE -> PageColumn("Язык приложения") {
+                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
+                Text("Выберите язык интерфейса. Выбор сохраняется на устройстве.", color = p.muted, fontSize = 13.sp)
+                AppLanguages.forEach { language ->
+                    val selected = selectedLanguage == language.tag
+                    val shape = RoundedCornerShape(18.dp)
+                    Row(
+                        Modifier.fillMaxWidth().clip(shape)
+                            .background(if (selected) p.navActive else p.surface)
+                            .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                            .clickable { onLanguageSelected(language.tag) }
+                            .padding(horizontal = 15.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(language.nativeName, color = p.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text(language.englishName, color = p.muted, fontSize = 12.sp)
+                        }
+                        if (selected) {
+                            Icon(Icons.Default.Calculate, contentDescription = "Выбран", tint = p.accent)
+                        }
+                    }
+                }
+                Text("Это первый этап локализации. Сейчас доступны языковые профили; перевод всех экранов подключается отдельно.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
             }
 
             SettingsSection.THEMES -> PageColumn("Темы оформления") {
