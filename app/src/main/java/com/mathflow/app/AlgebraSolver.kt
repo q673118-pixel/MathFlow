@@ -102,7 +102,9 @@ class AlgebraSolver {
         fun pow(exponent: Int): RationalExpression {
             require(exponent in -4..4) { "Поддерживаются степени от −4 до 4" }
             if (exponent >= 0) {
-                return RationalExpression(numerator.pow(exponent), denominatorFactors)
+                val poweredFactors = if (exponent <= 1) denominatorFactors
+                    else denominatorFactors.flatMap { factor -> List(exponent) { factor } }
+                return RationalExpression(numerator.pow(exponent), poweredFactors)
             }
             require(!numerator.isZero) { "Нельзя возвести ноль в отрицательную степень" }
             return RationalExpression(
