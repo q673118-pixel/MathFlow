@@ -713,6 +713,7 @@ private const val NAV_TRANSITION_DURATION_MS = 180
 private fun BottomNav(
     current: Page,
     settings: BottomNavAnimationSettings,
+    preview: Boolean = false,
     onSelect: (Page) -> Unit
 ) {
     val p = LocalPalette.current
@@ -724,7 +725,9 @@ private fun BottomNav(
         BottomNavAnimationStyle.ELASTIC_SLIDE
     )
     Box(
-        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth()
+            .then(if (preview) Modifier else Modifier.navigationBarsPadding())
+            .padding(horizontal = 28.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(shape = RoundedCornerShape(26.dp), color = p.surface) {
@@ -783,8 +786,8 @@ private fun BottomNav(
                 )
                 val bloom = remember(current, style) { Animatable(0.72f) }
                 LaunchedEffect(current, style, settings.enabled) {
-                    if (settings.enabled && style == BottomNavAnimationStyle.RIPPLE_BLOOM) {
-                        bloom.snapTo(0.18f)
+                    if (settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
+                        bloom.snapTo(if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.18f else 0.62f)
                         bloom.animateTo(1f, tween(duration, easing = FastOutSlowInEasing))
                     } else {
                         bloom.snapTo(1f)
@@ -795,7 +798,7 @@ private fun BottomNav(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 translationX = indicatorOffset
-                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) bloom.value else indicatorScaleX
+                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX
                                 alpha = indicatorAlpha
                             }
                             .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 18.dp else 0.dp)
@@ -1568,6 +1571,7 @@ private fun SettingsPage(
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
     var pendingNavAnimationSettings by remember(appliedNavAnimationSettings) { mutableStateOf(appliedNavAnimationSettings) }
+    var navPreviewPage by rememberSaveable { mutableStateOf(Page.HOME) }
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var savedFonts by remember {
         mutableStateOf(
@@ -1946,6 +1950,10 @@ private fun SettingsPage(
                                 }
                             }
                         }
+                    }
+                    Panel {
+                        Text("Предпросмотр нижней панели", color = p.muted, fontSize = 13.sp)
+                        BottomNav(navPreviewPage, pendingNavAnimationSettings, preview = true) { navPreviewPage = it }
                     }
                     Text("Длительность: ${pendingNavAnimationSettings.durationMs} мс", color = p.text, fontSize = 13.sp)
                     Slider(
