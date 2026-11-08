@@ -115,6 +115,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -250,6 +252,8 @@ private fun MathFlowApp() {
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
+    val historyScope = rememberCoroutineScope()
+    val historyMutex = remember { Mutex() }
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
 
@@ -334,13 +338,25 @@ private fun MathFlowApp() {
                             pageStateHolder.SaveableStateProvider(targetPage) {
                                 when (targetPage) {
                                     Page.HOME -> CalculatorHome { expression, result, steps ->
-                                        history = HistoryStore.add(context, expression, result, steps)
+                                        historyScope.launch {
+                                            historyMutex.withLock {
+                                                history = withContext(Dispatchers.IO) {
+                                                    HistoryStore.add(context, expression, result, steps)
+                                                }
+                                            }
+                                        }
                                     }
                                     Page.TOOLS -> ToolsPage()
                                     Page.SOLVER -> EquationSolverPage()
                                     Page.HISTORY -> HistoryPage(history) {
-                                        HistoryStore.clear(context)
-                                        history = emptyList()
+                                        historyScope.launch {
+                                            historyMutex.withLock {
+                                                withContext(Dispatchers.IO) {
+                                                    HistoryStore.clear(context)
+                                                }
+                                                history = emptyList()
+                                            }
+                                        }
                                     }
                                     Page.SETTINGS -> SettingsPage(
                                         selectedThemeId = themeId,
@@ -560,6 +576,10 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
     }
 
     fun press(key: String) {
+        if (key != "=") {
+            calculationJob?.cancel()
+            calculationJob = null
+        }
         when (key) {
             "AC" -> clearAll()
             "⌫" -> {
@@ -947,7 +967,11 @@ private fun EquationSolverPage() {
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 listOf("x", "x²", "(", ")", "+", "−", "×", "÷", "=").forEach { symbol ->
-                    Chip(symbol, false) { equation += symbol }
+                    Chip(symbol, false) {
+                        solveJob?.cancel()
+                        solveJob = null
+                        equation += symbol
+                    }
                 }
             }
             ActionButton(tx("solve")) {
