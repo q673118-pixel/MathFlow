@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -100,6 +101,33 @@ internal object MathFlowNoIndication : Indication {
             object : IndicationInstance {
                 override fun ContentDrawScope.drawIndication() {
                     drawContent()
+                }
+            }
+        }
+    }
+}
+
+internal class MathFlowPressIndication(
+    private val color: Color,
+    private val maxAlpha: Float
+) : Indication {
+    @Composable
+    override fun rememberUpdatedInstance(interactionSource: InteractionSource): IndicationInstance {
+        val pressed by interactionSource.collectIsPressedAsState()
+        val alpha by animateFloatAsState(
+            targetValue = if (pressed) maxAlpha.coerceIn(0f, 0.36f) else 0f,
+            animationSpec = tween(durationMillis = 125),
+            label = "MathFlowCustomPressColor"
+        )
+        val currentAlpha = rememberUpdatedState(alpha)
+        return remember(color) {
+            object : IndicationInstance {
+                override fun ContentDrawScope.drawIndication() {
+                    drawContent()
+                    val overlayAlpha = currentAlpha.value
+                    if (overlayAlpha > 0f) {
+                        drawRect(color.copy(alpha = overlayAlpha))
+                    }
                 }
             }
         }
