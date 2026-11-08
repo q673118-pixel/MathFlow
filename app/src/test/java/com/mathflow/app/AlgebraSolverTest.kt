@@ -99,7 +99,7 @@ class AlgebraSolverTest {
         val result = solver.solve("(x² - 1)/(x - 1) = 0")
         assertEquals("quadratic", result.kind)
         assertTrue(result.answer.contains("-1"))
-        assertTrue(!result.answer.contains("1"))
+        assertTrue(!result.answer.contains("x₂"))
     }
 
     @Test fun keepsConstantDenominatorScale() {
