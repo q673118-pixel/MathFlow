@@ -211,7 +211,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
 
         splashAlpha.animateTo(
             0f,
-            tween(1500, easing = androidx.compose.animation.core.LinearEasing)
+            tween(850, easing = FastOutSlowInEasing)
         )
         onFinished()
     }
@@ -1525,16 +1525,16 @@ private fun SettingsPage(
             SettingsSection.MAIN -> PageColumn(tx("settings")) {
                 Panel {
                     SettingsEntry(
-                        title = "Иконки приложения",
-                        subtitle = "Выберите значок MathFlow на рабочем столе",
+                        title = tx("app_icons"),
+                        subtitle = tx("icon_entry_subtitle"),
                         icon = Icons.Default.Build,
                         onClick = { pendingIconId = selectedIconId; section = SettingsSection.ICONS }
                     )
                 }
                 Panel {
                     SettingsEntry(
-                        title = "Темы оформления",
-                        subtitle = "Цвета интерфейса, независимо от иконки",
+                        title = tx("themes"),
+                        subtitle = tx("theme_entry_subtitle"),
                         icon = Icons.Default.Settings,
                         onClick = { pendingThemeId = selectedThemeId; section = SettingsSection.THEMES }
                     )
