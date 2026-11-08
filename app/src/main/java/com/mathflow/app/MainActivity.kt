@@ -22,6 +22,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -472,6 +473,7 @@ private fun MathFlowApp() {
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalKeyAnimationSettings provides keyAnimationSettings,
+        LocalIndication provides MathFlowNoIndication,
         LocalRippleConfiguration provides if (keyAnimationSettings.colorEffectEnabled) {
             RippleConfiguration(
                 color = if (keyAnimationSettings.pressColorArgb == 0L) palette.accent
@@ -789,7 +791,10 @@ private fun BottomNav(
                 val bloom = remember(current, style) { Animatable(0.72f) }
                 LaunchedEffect(current, style, settings.enabled, duration) {
                     if (settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
-                        bloom.snapTo(if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.18f else 0.62f)
+                        bloom.snapTo(
+                            if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.08f + settings.intensity * 0.34f
+                            else 0.38f + settings.intensity * 0.36f
+                        )
                         bloom.animateTo(1f, tween(duration, easing = FastOutSlowInEasing))
                     } else {
                         bloom.snapTo(1f)
@@ -798,7 +803,9 @@ private fun BottomNav(
                 val travelStretch = remember(current, style) { Animatable(1f) }
                 LaunchedEffect(current, style, settings.enabled, duration) {
                     if (settings.enabled && style in setOf(BottomNavAnimationStyle.FLUID_PILL, BottomNavAnimationStyle.ELASTIC_SLIDE)) {
-                        travelStretch.snapTo(if (style == BottomNavAnimationStyle.FLUID_PILL) 1.16f else 1.24f)
+                        travelStretch.snapTo(
+                            1f + settings.intensity * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.28f else 0.38f
+                        )
                         travelStretch.animateTo(
                             1f,
                             spring(
@@ -851,6 +858,13 @@ private fun BottomNav(
                                 else tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconScale"
                         )
+                        val focusAlpha by animateFloatAsState(
+                            targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
+                                settings.opacity * 0.72f
+                            } else 0f,
+                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
+                            label = "MathFlowNavSoftFocusAlpha"
+                        )
                         val interactionSource = remember(item) { MutableInteractionSource() }
                         Box(
                             Modifier.weight(1f).height(48.dp).clickable(
@@ -859,6 +873,14 @@ private fun BottomNav(
                             ) { if (!selected) onSelect(item) },
                             contentAlignment = Alignment.Center
                         ) {
+                            if (style == BottomNavAnimationStyle.SOFT_FOCUS && settings.enabled) {
+                                Box(
+                                    Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp)
+                                        .graphicsLayer { alpha = focusAlpha }
+                                        .clip(RoundedCornerShape(percent = 50))
+                                        .background(p.navActive)
+                                )
+                            }
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = displayText(item.title),
