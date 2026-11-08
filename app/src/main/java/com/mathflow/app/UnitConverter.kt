@@ -156,7 +156,7 @@ internal fun UnitConverterContent() {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Конвертер величин", fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+        Text(tx("converter_title"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             categories.forEach { item ->
                 FilterChip(
@@ -166,7 +166,7 @@ internal fun UnitConverterContent() {
                         fromId = item.units.first().id
                         toId = item.units.getOrElse(1) { item.units.first() }.id
                     },
-                    label = { Text(item.title, maxLines = 1) }
+                    label = { Text(displayText(item.title), maxLines = 1) }
                 )
             }
         }
@@ -174,23 +174,23 @@ internal fun UnitConverterContent() {
             value = input,
             onValueChange = { input = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Значение") },
+            label = { Text(tx("value")) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             shape = RoundedCornerShape(16.dp)
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            UnitSelector("Из", from, category.units, Modifier.weight(1f)) { fromId = it.id }
+            UnitSelector(tx("from"), from, category.units, Modifier.weight(1f)) { fromId = it.id }
             IconButton(onClick = { val previous = from.id; fromId = to.id; toId = previous }) {
-                Icon(Icons.Default.SwapVert, contentDescription = "Поменять единицы местами")
+                Icon(Icons.Default.SwapVert, contentDescription = tx("swap_units"))
             }
-            UnitSelector("В", to, category.units, Modifier.weight(1f)) { toId = it.id }
+            UnitSelector(tx("to"), to, category.units, Modifier.weight(1f)) { toId = it.id }
         }
         Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("РЕЗУЛЬТАТ", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tx("result"), fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (result == null) {
-                    Text("Введите значение", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(tx("enter_value"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     val value = result.getOrNull()
                     if (value != null) {
@@ -202,7 +202,7 @@ internal fun UnitConverterContent() {
                 }
             }
         }
-        Text("Пересчёт выполняется автоматически. Интернет не требуется.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+        Text(tx("offline_conversion"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
     }
 }
 
@@ -219,13 +219,13 @@ private fun UnitSelector(
         Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Box {
             OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-                Text(selected.label.substringBefore(" ("), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(displayText(selected.label.substringBefore(" (")), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Icon(Icons.Default.ArrowDropDown, contentDescription = null)
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 units.forEach { item ->
                     DropdownMenuItem(
-                        text = { Text(item.label) },
+                        text = { Text(displayText(item.label)) },
                         onClick = { onSelect(item); expanded = false }
                     )
                 }
