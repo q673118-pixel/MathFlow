@@ -5,6 +5,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Indication
+import androidx.compose.foundation.IndicationInstance
+import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -21,6 +24,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.ContentDrawScope
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -87,6 +91,19 @@ internal data class BottomNavAnimationSettings(
         iconScale = iconScale.coerceIn(0f, 0.20f),
         opacity = opacity.coerceIn(0f, 1f)
     )
+}
+
+internal object MathFlowNoIndication : Indication {
+    @Composable
+    override fun rememberUpdatedInstance(interactionSource: InteractionSource): IndicationInstance {
+        return remember {
+            object : IndicationInstance {
+                override fun ContentDrawScope.drawIndication() {
+                    drawContent()
+                }
+            }
+        }
+    }
 }
 
 internal val LocalKeyAnimationSettings = staticCompositionLocalOf { KeyAnimationSettings() }
