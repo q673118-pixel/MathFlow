@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -94,6 +95,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -290,7 +292,7 @@ private fun MathFlowApp() {
         controller.isAppearanceLightNavigationBars = !palette.dark
     }
 
-    CompositionLocalProvider(LocalLanguage provides appLanguage, LocalDensity provides density, LocalPalette provides palette) {
+    CompositionLocalProvider(\n        LocalLanguage provides appLanguage,\n        LocalDensity provides density,\n        LocalPalette provides palette,\n        LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr\n    ) {
         MaterialTheme(colorScheme = colors, typography = typography) {
             // Text() reads LocalTextStyle, not the theme typography, so the custom
             // family has to be provided here too for it to reach every label.
