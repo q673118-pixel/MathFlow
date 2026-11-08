@@ -1563,6 +1563,15 @@ private fun SettingsPage(
     var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
     var pendingNavAnimationSettings by remember(appliedNavAnimationSettings) { mutableStateOf(appliedNavAnimationSettings) }
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var savedFonts by remember {
+        mutableStateOf(
+            File(context.filesDir, "fonts").listFiles()
+                ?.filter { it.isFile && (it.extension.equals("ttf", true) || it.extension.equals("otf", true)) }
+                ?.map { it.absolutePath to it.name }
+                ?: emptyList()
+        )
+    }
+    var pendingFontPath by remember(fontPath) { mutableStateOf(fontPath) }
     var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
     val fontOpenError = tx("font_open_error")
@@ -1590,9 +1599,9 @@ private fun SettingsPage(
                 }
                 require(target.length() > 0L) { fontEmptyError }
                 android.graphics.Typeface.createFromFile(target)
-                fontDir.listFiles()?.filter { it != target }?.forEach { it.delete() }
-                onFontSelected(target.absolutePath)
-                fontMessage = "$fontAppliedLabel: $displayName"
+                savedFonts = (savedFonts + (target.absolutePath to displayName)).distinctBy { it.first }
+                pendingFontPath = target.absolutePath
+                fontMessage = "Добавлен шрифт: $displayName. Нажмите «Применить»."
             }.onFailure {
                 fontMessage = fontInstallError
             }
@@ -1675,25 +1684,16 @@ private fun SettingsPage(
                     )
                 }
                 Panel {
-                    Text(tx("font"), fontSize = 15.sp, color = p.muted)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.weight(1f)) {
-                            ActionButton(tx("choose_font")) {
-                                fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
-                            }
+                    SettingsEntry(
+                        title = "Шрифты",
+                        subtitle = if (fontPath == null) "Системный шрифт и ваша библиотека" else "Выбран пользовательский шрифт",
+                        icon = Icons.Default.Functions,
+                        onClick = {
+                            pendingFontPath = fontPath
+                            fontMessage = null
+                            section = SettingsSection.FONTS
                         }
-                        if (fontPath != null) {
-                            Surface(
-                                onClick = { onResetFont(); fontMessage = defaultFontLabel },
-                                modifier = Modifier.height(50.dp), shape = RoundedCornerShape(25.dp), color = p.key
-                            ) {
-                                Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
-                                    Text(tx("reset"), fontSize = 15.sp, color = p.text)
-                                }
-                            }
-                        }
-                    }
-                    fontMessage?.let { Text(it, fontSize = 13.sp, color = p.accent) }
+                    )
                 }
                 Panel {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -1976,6 +1976,75 @@ private fun SettingsPage(
                         onClick = { onNavAnimationSettingsApplied(pendingNavAnimationSettings.normalized()) }
                     )
                 }
+            SettingsSection.FONTS -> PageColumn("Шрифты") {
+                TextButton(onClick = { section = SettingsSection.MAIN }) {
+                    Text("← ${tx("settings")}", color = p.accent)
+                }
+                Text("Добавляйте шрифты из памяти устройства. Импортированные файлы сохраняются в библиотеке MathFlow.", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                Panel {
+                    ActionButton("Выбрать шрифт") {
+                        fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
+                    }
+                    fontMessage?.let { Text(it, fontSize = 12.sp, color = p.accent, lineHeight = 17.sp) }
+                }
+                if (savedFonts.isEmpty()) {
+                    Panel {
+                        Text("Пока нет импортированных шрифтов.", color = p.muted, fontSize = 13.sp)
+                    }
+                } else {
+                    savedFonts.forEach { (path, name) ->
+                        val selected = pendingFontPath == path
+                        val active = fontPath == path
+                        Panel {
+                            Row(
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                    .background(if (selected) p.navActive else Color.Transparent)
+                                    .clickable { pendingFontPath = path }
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(name, color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                    Text(
+                                        when { active -> "Применён"; selected -> "Выбран"; else -> "Сохранён" },
+                                        color = if (active || selected) p.accent else p.muted,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                                if (selected) Icon(Icons.Default.Calculate, contentDescription = null, tint = p.accent)
+                            }
+                        }
+                    }
+                }
+                Panel {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                            .clickable { pendingFontPath = null }
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Системный", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(if (pendingFontPath == null) "Выбран" else "Стандартный шрифт Android", color = p.muted, fontSize = 11.sp)
+                        }
+                        if (pendingFontPath == null) Icon(Icons.Default.Calculate, contentDescription = null, tint = p.accent)
+                    }
+                    ApplySelectionButton(
+                        text = when {
+                            pendingFontPath == fontPath -> tx("already_applied")
+                            else -> tx("apply")
+                        },
+                        enabled = pendingFontPath != fontPath,
+                        onClick = {
+                            if (pendingFontPath == null) onResetFont() else onFontSelected(pendingFontPath!!)
+                            fontMessage = "Шрифт применён."
+                        }
+                    )
+                }
+            }
+
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
                 Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
