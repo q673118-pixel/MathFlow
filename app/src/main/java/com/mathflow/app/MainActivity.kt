@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -58,6 +59,8 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -212,13 +215,22 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
 
         splashAlpha.animateTo(
             0f,
-            tween(850, easing = LinearOutSlowInEasing)
+            tween(1000, easing = LinearOutSlowInEasing)
         )
         onFinished()
     }
 
     Box(
-        Modifier.fillMaxSize().background(palette.background).graphicsLayer { alpha = splashAlpha.value },
+        Modifier.fillMaxSize()
+            .background(palette.background)
+            .graphicsLayer { alpha = splashAlpha.value }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        awaitPointerEvent().changes.forEach { it.consume() }
+                    }
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         Image(
@@ -358,6 +370,7 @@ private fun typographyFor(family: FontFamily): Typography {
 
 // ---------------------------------------------------------------- root
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MathFlowApp() {
     val context = LocalContext.current
@@ -375,7 +388,21 @@ private fun MathFlowApp() {
                 style = KeyAnimationStyle.fromId(prefs.getString("key_animation_style", "spring") ?: "spring"),
                 durationMs = prefs.getInt("key_animation_duration", 140),
                 opacity = prefs.getFloat("key_animation_opacity", 0.72f),
-                intensity = prefs.getFloat("key_animation_intensity", 0.10f)
+                intensity = prefs.getFloat("key_animation_intensity", 0.10f),
+                colorEffectEnabled = prefs.getBoolean("key_animation_color_enabled", false),
+                pressColorArgb = prefs.getLong("key_animation_press_color", 0L)
+            ).normalized()
+        )
+    }
+    var bottomNavAnimationSettings by remember {
+        mutableStateOf(
+            BottomNavAnimationSettings(
+                enabled = prefs.getBoolean("nav_animation_enabled", true),
+                style = BottomNavAnimationStyle.fromId(prefs.getString("nav_animation_style", "fluid_pill") ?: "fluid_pill"),
+                durationMs = prefs.getInt("nav_animation_duration", 280),
+                intensity = prefs.getFloat("nav_animation_intensity", 0.65f),
+                iconScale = prefs.getFloat("nav_animation_icon_scale", 0.08f),
+                opacity = prefs.getFloat("nav_animation_opacity", 0.85f)
             ).normalized()
         )
     }
@@ -442,6 +469,7 @@ private fun MathFlowApp() {
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalKeyAnimationSettings provides keyAnimationSettings,
+        LocalRippleConfiguration provides null,
         LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
         MaterialTheme(colorScheme = colors, typography = typography) {
@@ -537,6 +565,8 @@ private fun MathFlowApp() {
                                                         .putInt("key_animation_duration", normalized.durationMs)
                                                         .putFloat("key_animation_opacity", normalized.opacity)
                                                         .putFloat("key_animation_intensity", normalized.intensity)
+                                                        .putBoolean("key_animation_color_enabled", normalized.colorEffectEnabled)
+                                                        .putLong("key_animation_press_color", normalized.pressColorArgb)
                                                         .apply()
                                                 },
                                                 appliedNavAnimationSettings = bottomNavAnimationSettings,
@@ -557,7 +587,7 @@ private fun MathFlowApp() {
                                     }
                                 }
                             }
-                            BottomNav(page) { page = it }
+                            BottomNav(page, bottomNavAnimationSettings) { page = it }
                         }
                         if (showWelcome && splashFinished) {
                             FirstLaunchWelcome(
