@@ -83,6 +83,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -91,6 +92,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -254,6 +256,8 @@ private fun MathFlowApp() {
     val historyMutex = remember { Mutex() }
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
+    var showSplash by remember { mutableStateOf(true) }
+    var showWelcome by remember { mutableStateOf(!prefs.getBoolean("welcome_seen", false)) }
 
     LaunchedEffect(Unit) {
         setLauncherIcon(context, selectedIconId)
@@ -317,89 +321,224 @@ private fun MathFlowApp() {
                 androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = family)
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
-                    Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                        // Keep only one full page tree composed on low-memory devices.
-                        key(page) {
-                            pageStateHolder.SaveableStateProvider(page) {
-                                val enterProgress = remember { Animatable(0f) }
-                                LaunchedEffect(Unit) {
-                                    enterProgress.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(150, easing = FastOutSlowInEasing)
-                                    )
-                                }
-                                Box(
-                                    Modifier.weight(1f).fillMaxWidth().graphicsLayer {
-                                        alpha = enterProgress.value
-                                        translationX = (1f - enterProgress.value) * 8.dp.toPx()
-                                    }
-                                ) {
-                                    when (page) {
-                                        Page.HOME -> CalculatorHome { expression, result, steps ->
-                                            historyScope.launch {
-                                                historyMutex.lock()
-                                                try {
-                                                    history = withContext(Dispatchers.IO) {
-                                                        HistoryStore.add(context, expression, result, steps)
-                                                    }
-                                                } finally {
-                                                    historyMutex.unlock()
-                                                }
-                                            }
-                                        }
-                                        Page.TOOLS -> ToolsPage()
-                                        Page.SOLVER -> EquationSolverPage()
-                                        Page.HISTORY -> HistoryPage(history) {
-                                            historyScope.launch {
-                                                historyMutex.lock()
-                                                try {
-                                                    withContext(Dispatchers.IO) {
-                                                        HistoryStore.clear(context)
-                                                    }
-                                                    history = emptyList()
-                                                } finally {
-                                                    historyMutex.unlock()
-                                                }
-                                            }
-                                        }
-                                        Page.SETTINGS -> SettingsPage(
-                                            selectedThemeId = themeId,
-                                            selectedIconId = selectedIconId,
-                                            onThemeSelected = { id ->
-                                                themeId = id
-                                                prefs.edit().putString("app_theme", id).apply()
-                                            },
-                                            onIconSelected = { id ->
-                                                selectedIconId = id
-                                                prefs.edit().putString("app_icon", id).apply()
-                                                setLauncherIcon(context, id)
-                                            },
-                                            fontScale = fontScale,
-                                            fontPath = fontPath,
-                                            selectedLanguage = appLanguage,
-                                            onLanguageSelected = { tag ->
-                                                appLanguage = tag
-                                                prefs.edit().putString("app_language", tag).apply()
-                                            },
-                                            onFontScale = {
-                                                fontScale = it
-                                                prefs.edit().putFloat("font_scale", it).apply()
-                                            },
-                                            onFontSelected = { path ->
-                                                fontPath = path
-                                                prefs.edit().putString("font_path", path).apply()
-                                            },
-                                            onResetFont = {
-                                                fontPath = null
-                                                prefs.edit().remove("font_path").apply()
-                                            }
+                    Box(Modifier.fillMaxSize()) {
+                        Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
+                            // Keep only one full page tree composed on low-memory devices.
+                            key(page) {
+                                pageStateHolder.SaveableStateProvider(page) {
+                                    val enterProgress = remember { Animatable(0f) }
+                                    LaunchedEffect(Unit) {
+                                        enterProgress.animateTo(
+                                            targetValue = 1f,
+                                            animationSpec = tween(150, easing = FastOutSlowInEasing)
                                         )
+                                    }
+                                    Box(
+                                        Modifier.weight(1f).fillMaxWidth().graphicsLayer {
+                                            alpha = enterProgress.value
+                                            translationX = (1f - enterProgress.value) * 8.dp.toPx()
+                                        }
+                                    ) {
+                                        when (page) {
+                                            Page.HOME -> CalculatorHome { expression, result, steps ->
+                                                historyScope.launch {
+                                                    historyMutex.lock()
+                                                    try {
+                                                        history = withContext(Dispatchers.IO) {
+                                                            HistoryStore.add(context, expression, result, steps)
+                                                        }
+                                                    } finally {
+                                                        historyMutex.unlock()
+                                                    }
+                                                }
+                                            }
+                                            Page.TOOLS -> ToolsPage()
+                                            Page.SOLVER -> EquationSolverPage()
+                                            Page.HISTORY -> HistoryPage(history) {
+                                                historyScope.launch {
+                                                    historyMutex.lock()
+                                                    try {
+                                                        withContext(Dispatchers.IO) {
+                                                            HistoryStore.clear(context)
+                                                        }
+                                                        history = emptyList()
+                                                    } finally {
+                                                        historyMutex.unlock()
+                                                    }
+                                                }
+                                            }
+                                            Page.SETTINGS -> SettingsPage(
+                                                selectedThemeId = themeId,
+                                                selectedIconId = selectedIconId,
+                                                onThemeSelected = { id ->
+                                                    themeId = id
+                                                    prefs.edit().putString("app_theme", id).apply()
+                                                },
+                                                onIconSelected = { id ->
+                                                    selectedIconId = id
+                                                    prefs.edit().putString("app_icon", id).apply()
+                                                    setLauncherIcon(context, id)
+                                                },
+                                                fontScale = fontScale,
+                                                fontPath = fontPath,
+                                                selectedLanguage = appLanguage,
+                                                onLanguageSelected = { tag ->
+                                                    appLanguage = tag
+                                                    prefs.edit().putString("app_language", tag).apply()
+                                                },
+                                                onFontScale = {
+                                                    fontScale = it
+                                                    prefs.edit().putFloat("font_scale", it).apply()
+                                                },
+                                                onFontSelected = { path ->
+                                                    fontPath = path
+                                                    prefs.edit().putString("font_path", path).apply()
+                                                },
+                                                onResetFont = {
+                                                    fontPath = null
+                                                    prefs.edit().remove("font_path").apply()
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
+                            BottomNav(page) { page = it }
                         }
-                        BottomNav(page) { page = it }
+                        if (showSplash) {
+                            MathFlowSplash(palette = palette) { showSplash = false }
+                        }
+                        if (!showSplash && showWelcome) {
+                            FirstLaunchWelcome(
+                                palette = palette,
+                                language = appLanguage,
+                                onConfirm = {
+                                    prefs.edit().putBoolean("welcome_seen", true).apply()
+                                    showWelcome = false
+                                }
+                            )
+                        }
                     }
+                }
+            }
+        }
+    }
+}
+
+ 
+@Composable
+private fun MathFlowSplash(palette: Palette, onFinished: () -> Unit) {
+    val scale = remember { Animatable(0.72f) }
+    val alpha = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        launch { alpha.animateTo(1f, tween(210, easing = FastOutSlowInEasing)) }
+        scale.animateTo(1.12f, tween(280, easing = FastOutSlowInEasing))
+        launch { alpha.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
+        scale.animateTo(0.72f, tween(300, easing = FastOutSlowInEasing))
+        onFinished()
+    }
+    Box(
+        Modifier.fillMaxSize().background(palette.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.mark_black),
+            contentDescription = "MathFlow",
+            modifier = Modifier.size(224.dp).graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+                this.alpha = alpha.value
+            },
+            colorFilter = ColorFilter.tint(if (palette.dark) Color.White else Color(0xFF17131F))
+        )
+    }
+}
+
+@Composable
+private fun FirstLaunchWelcome(
+    palette: Palette,
+    language: String,
+    onConfirm: () -> Unit
+) {
+    val title = when (language) {
+        "ru" -> "Добро пожаловать в MathFlow"
+        "kk" -> "MathFlow қолданбасына қош келдіңіз"
+        "es" -> "Te damos la bienvenida a MathFlow"
+        "fr" -> "Bienvenue dans MathFlow"
+        "de" -> "Willkommen bei MathFlow"
+        "pt" -> "Boas-vindas ao MathFlow"
+        "it" -> "Benvenuto in MathFlow"
+        "tr" -> "MathFlow'a hoş geldiniz"
+        "ar" -> "مرحبًا بك في MathFlow"
+        "hi" -> "MathFlow में आपका स्वागत है"
+        "zh" -> "欢迎使用 MathFlow"
+        "ja" -> "MathFlow へようこそ"
+        "ko" -> "MathFlow에 오신 것을 환영합니다"
+        "uz" -> "MathFlow ilovasiga xush kelibsiz"
+        else -> "Welcome to MathFlow"
+    }
+    val message = when (language) {
+        "ru" -> "Спасибо, что скачали MathFlow. Мы надеемся, что приложение сделает работу с математикой удобнее и понятнее."
+        "kk" -> "MathFlow қолданбасын жүктегеніңізге рақмет. Бұл қолданба математиканы түсінікті әрі ыңғайлы етуге көмектеседі деп сенеміз."
+        "es" -> "Gracias por descargar MathFlow. Esperamos que la aplicación haga que trabajar con matemáticas sea más fácil y claro."
+        "fr" -> "Merci d’avoir téléchargé MathFlow. Nous espérons rendre les mathématiques plus simples et plus claires."
+        "de" -> "Danke, dass du MathFlow heruntergeladen hast. Wir hoffen, dass Mathematik damit einfacher und verständlicher wird."
+        "pt" -> "Obrigado por baixar o MathFlow. Esperamos tornar o trabalho com matemática mais simples e claro."
+        "it" -> "Grazie per aver scaricato MathFlow. Speriamo che usare la matematica diventi più semplice e chiaro."
+        "tr" -> "MathFlow'u indirdiğiniz için teşekkürler. Matematikle çalışmayı daha kolay ve anlaşılır hâle getirmeyi umuyoruz."
+        "ar" -> "شكرًا لتنزيل MathFlow. نأمل أن يجعل التطبيق التعامل مع الرياضيات أسهل وأكثر وضوحًا."
+        "hi" -> "MathFlow डाउनलोड करने के लिए धन्यवाद। हमें उम्मीद है कि यह गणित को आसान और स्पष्ट बनाएगा।"
+        "zh" -> "感谢下载 MathFlow。希望这款应用让数学学习和计算更轻松、更清晰。"
+        "ja" -> "MathFlow をダウンロードしていただきありがとうございます。数学をより簡単で分かりやすくすることを目指しています。"
+        "ko" -> "MathFlow를 다운로드해 주셔서 감사합니다. 수학을 더 쉽고 명확하게 사용할 수 있도록 돕겠습니다."
+        "uz" -> "MathFlow'ni yuklab olganingiz uchun rahmat. Ilova matematika bilan ishlashni osonroq va tushunarliroq qiladi deb umid qilamiz."
+        else -> "Thanks for downloading MathFlow. We hope it makes working with mathematics simpler and clearer."
+    }
+    val ok = when (language) {
+        "ru" -> "ОК"
+        "kk" -> "ЖАРАЙДЫ"
+        "es" -> "ACEPTAR"
+        "fr" -> "OK"
+        "de" -> "OK"
+        "pt" -> "OK"
+        "it" -> "OK"
+        "tr" -> "TAMAM"
+        "ar" -> "حسنًا"
+        "hi" -> "ठीक है"
+        "zh" -> "确定"
+        "ja" -> "OK"
+        "ko" -> "확인"
+        "uz" -> "OK"
+        else -> "OK"
+    }
+    Dialog(onDismissRequest = {}) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = palette.surface,
+            contentColor = palette.text,
+            shadowElevation = 12.dp
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.mark_black),
+                    contentDescription = null,
+                    modifier = Modifier.size(52.dp),
+                    colorFilter = ColorFilter.tint(palette.accent)
+                )
+                Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = palette.muted,
+                    textAlign = TextAlign.Center
+                )
+                TextButton(onClick = onConfirm) {
+                    Text(ok, color = palette.accent, fontWeight = FontWeight.SemiBold)
                 }
             }
         }
