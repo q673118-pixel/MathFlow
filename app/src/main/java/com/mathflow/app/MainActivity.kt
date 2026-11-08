@@ -254,7 +254,7 @@ private enum class Page(val title: String, val icon: ImageVector) {
 
 // ---------------------------------------------------------------- palette
 
-private class Palette(
+internal class Palette(
     val background: Color,
     val surface: Color,
     val key: Color,
@@ -332,7 +332,7 @@ private val ThemeOptions = listOf(
 private fun themeFor(id: String): ThemeOption =
     ThemeOptions.firstOrNull { it.id == id } ?: ThemeOptions.first()
 
-private val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
+internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
