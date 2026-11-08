@@ -117,7 +117,7 @@ internal fun MathFlowKeyButton(
     val flash = normalized.style == KeyAnimationStyle.FLASH && pressed
     val background = baseColor
     val foreground by animateColorAsState(
-        if (flash) Color.lerp(baseText, palette.background, normalized.opacity) else baseText,
+        baseText,
         tween(normalized.durationMs),
         label = "MathFlowKeyFlashText"
     )
