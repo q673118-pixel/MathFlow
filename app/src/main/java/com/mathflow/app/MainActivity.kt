@@ -137,9 +137,9 @@ class MainActivity : ComponentActivity() {
 private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
     val density = LocalDensity.current
     val mScale = remember { Animatable(0f) }
-    val startY = with(density) { (-150).dp.toPx() }
-    val firstBounceY = with(density) { (-25).dp.toPx() }
-    val secondBounceY = with(density) { (-8).dp.toPx() }
+    val startY = with(density) { (-210).dp.toPx() }
+    val firstBounceY = with(density) { (-42).dp.toPx() }
+    val secondBounceY = with(density) { (-14).dp.toPx() }
     val dotY = remember { Animatable(startY) }
     val dotAlpha = remember { Animatable(0f) }
     val dotScaleX = remember { Animatable(1f) }
@@ -157,36 +157,51 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
         mScale.animateTo(1f, spring(dampingRatio = 0.48f, stiffness = 430f))
         dotAlpha.snapTo(1f)
 
-        val fall = keyframes<Float> {
-            startY at 0
-            0f at 340 using androidx.compose.animation.core.Easing { it * it }
-            firstBounceY at 500
-            0f at 625
-            secondBounceY at 710
-            0f at 790
-        }
-        val squashX = keyframes<Float> {
-            1f at 0
-            1.16f at 340
-            0.90f at 390
-            1.035f at 500
-            0.965f at 625
-            1.012f at 710
-            1f at 790
-        }
-        val squashY = keyframes<Float> {
-            1f at 0
-            0.78f at 340
-            1.10f at 390
-            0.985f at 500
-            1.04f at 625
-            0.992f at 710
-            1f at 790
-        }
+        // Run the ball trajectory as separate phases. Each impact is a real
+        // direction change, so it cannot be skipped by reaching the final keyframe early.
         kotlinx.coroutines.coroutineScope {
-            launch { dotY.animateTo(0f, fall) }
-            launch { dotScaleX.animateTo(1f, squashX) }
-            launch { dotScaleY.animateTo(1f, squashY) }
+            launch {
+                // Gravity: accelerate downwards into the first impact.
+                dotY.animateTo(
+                    0f,
+                    tween(420, easing = androidx.compose.animation.core.Easing { it * it })
+                )
+                // First rebound: upward, then back to the baseline.
+                dotY.animateTo(
+                    firstBounceY,
+                    tween(190, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) })
+                )
+                dotY.animateTo(
+                    0f,
+                    tween(170, easing = androidx.compose.animation.core.Easing { it * it })
+                )
+                // Smaller second rebound, then settle exactly on the mark.
+                dotY.animateTo(
+                    secondBounceY,
+                    tween(125, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) })
+                )
+                dotY.animateTo(
+                    0f,
+                    tween(115, easing = androidx.compose.animation.core.Easing { it * it })
+                )
+            }
+            launch {
+                // Compress on impact, stretch on rebound, and damp each later bounce.
+                dotScaleX.animateTo(1.18f, tween(420))
+                dotScaleX.animateTo(0.88f, tween(75))
+                dotScaleX.animateTo(1.04f, tween(190))
+                dotScaleX.animateTo(0.96f, tween(170))
+                dotScaleX.animateTo(1.015f, tween(125))
+                dotScaleX.animateTo(1f, tween(115))
+            }
+            launch {
+                dotScaleY.animateTo(0.80f, tween(420))
+                dotScaleY.animateTo(1.12f, tween(75))
+                dotScaleY.animateTo(0.98f, tween(190))
+                dotScaleY.animateTo(1.04f, tween(170))
+                dotScaleY.animateTo(0.99f, tween(125))
+                dotScaleY.animateTo(1f, tween(115))
+            }
         }
 
         splashAlpha.animateTo(
