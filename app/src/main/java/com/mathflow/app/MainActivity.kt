@@ -1857,7 +1857,6 @@ private fun SettingsPage(
                         onClick = { onAnimationSettingsApplied(pendingAnimationSettings.normalized()) }
                     )
                 }
-            }
 
                 Panel {
                     Row(
@@ -1880,8 +1879,8 @@ private fun SettingsPage(
                     }
                     Text("Цвет эффекта", color = p.muted, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        listOf(0L, 0xFFB9A8F0L, 0xFF39C7FFFFL, 0xFF4BE2B2L, 0xFFFF9A66L).forEach { argb ->
-                            val color = if (argb == 0L) p.accent else Color(argb)
+                        listOf(0L, 0xFFB9A8F0L, 0xFF39C7FFL, 0xFF4BE2B2L, 0xFFFF9A66L).forEach { argb ->
+                            val color = if (argb == 0L) p.accent else Color(argb.toInt())
                             Box(
                                 Modifier.size(30.dp).clip(CircleShape).background(color)
                                     .border(
@@ -1976,6 +1975,7 @@ private fun SettingsPage(
                         onClick = { onNavAnimationSettingsApplied(pendingNavAnimationSettings.normalized()) }
                     )
                 }
+            }
             SettingsSection.FONTS -> PageColumn("Шрифты") {
                 TextButton(onClick = { section = SettingsSection.MAIN }) {
                     Text("← ${tx("settings")}", color = p.accent)
