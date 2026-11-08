@@ -214,6 +214,8 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
             }
         }
 
+        // Let the final landing settle before the overlay begins to fade.
+        delay(120L)
         splashAlpha.animateTo(
             0f,
             tween(1000, easing = LinearOutSlowInEasing)
@@ -1605,8 +1607,6 @@ private fun SettingsPage(
     val fontOpenError = tx("font_open_error")
     val fontEmptyError = tx("font_empty")
     val fontInstallError = tx("font_install_error")
-    val fontAppliedLabel = tx("font_applied")
-    val defaultFontLabel = tx("default_font")
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
