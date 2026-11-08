@@ -1206,7 +1206,7 @@ private fun EquationSolverPage() {
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf("x", "x²", "x³", "x⁴", "(", ")", "+", "−", "×", "÷", "=").forEach { symbol ->
+                listOf("x", "x²", "x³", "x⁴", "^", "(", ")", "√(", "abs(", "sin(", "cos(", "tan(", "ln(", "log(", "π", "e", "+", "−", "×", "÷", "=").forEach { symbol ->
                     Chip(symbol, false) {
                         solveJob?.cancel()
                         solveJob = null
