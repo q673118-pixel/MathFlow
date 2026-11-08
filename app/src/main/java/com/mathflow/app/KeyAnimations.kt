@@ -47,12 +47,45 @@ internal data class KeyAnimationSettings(
     val style: KeyAnimationStyle = KeyAnimationStyle.SPRING,
     val durationMs: Int = 140,
     val opacity: Float = 0.72f,
-    val intensity: Float = 0.10f
+    val intensity: Float = 0.10f,
+    val colorEffectEnabled: Boolean = false,
+    val pressColorArgb: Long = 0x00000000L
 ) {
     fun normalized() = copy(
         durationMs = durationMs.coerceIn(70, 400),
         opacity = opacity.coerceIn(0.20f, 1f),
         intensity = intensity.coerceIn(0.02f, 0.20f)
+    )
+}
+
+internal enum class BottomNavAnimationStyle(val id: String, val title: String, val description: String) {
+    FLUID_PILL("fluid_pill", "Fluid Pill", "Плавно перетекающая капсула"),
+    SPRING_MOTION("spring_motion", "Spring Motion", "Пружинящее движение иконки"),
+    LIGHT_TRAIL("light_trail", "Light Trail", "Световой след под вкладкой"),
+    MORPH("morph", "Morph", "Плавное изменение формы индикатора"),
+    EXPAND("expand", "Expand", "Раскрытие капсулы из точки"),
+    SOFT_FOCUS("soft_focus", "Soft Focus", "Мягкое проявление выбранной вкладки"),
+    ELASTIC_SLIDE("elastic_slide", "Elastic Slide", "Эластичное скольжение индикатора"),
+    RIPPLE_BLOOM("ripple_bloom", "Ripple Bloom", "Волна раскрывается под иконкой");
+
+    companion object {
+        fun fromId(id: String) = values().firstOrNull { it.id == id } ?: FLUID_PILL
+    }
+}
+
+internal data class BottomNavAnimationSettings(
+    val enabled: Boolean = true,
+    val style: BottomNavAnimationStyle = BottomNavAnimationStyle.FLUID_PILL,
+    val durationMs: Int = 280,
+    val intensity: Float = 0.65f,
+    val iconScale: Float = 0.08f,
+    val opacity: Float = 0.85f
+) {
+    fun normalized() = copy(
+        durationMs = durationMs.coerceIn(100, 1000),
+        intensity = intensity.coerceIn(0f, 1f),
+        iconScale = iconScale.coerceIn(0f, 0.20f),
+        opacity = opacity.coerceIn(0f, 1f)
     )
 }
 
@@ -117,7 +150,7 @@ internal fun MathFlowKeyButton(
     val background = baseColor
     val foreground = baseText
     val overlayAlpha by animateFloatAsState(
-        if (pressed) {
+        if (pressed && normalized.colorEffectEnabled) {
             when (normalized.style) {
                 KeyAnimationStyle.FLASH -> normalized.opacity
                 KeyAnimationStyle.RIPPLE -> normalized.opacity * 0.34f
@@ -132,7 +165,7 @@ internal fun MathFlowKeyButton(
         tween(normalized.durationMs),
         label = "MathFlowKeyRippleProgress"
     )
-    val overlayColor = if (palette.dark) Color.White else Color.Black
+    val overlayColor = if (normalized.pressColorArgb != 0L) Color(normalized.pressColorArgb) else palette.accent
     val shape = RoundedCornerShape(50)
 
     Surface(
