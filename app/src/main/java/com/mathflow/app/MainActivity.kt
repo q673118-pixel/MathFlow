@@ -1592,7 +1592,10 @@ private fun SettingsPage(
         mutableStateOf<List<Pair<String, String>>>(
             File(context.filesDir, "fonts").listFiles()
                 ?.filter { it.isFile && (it.extension.equals("ttf", true) || it.extension.equals("otf", true)) }
-                ?.map { it.absolutePath to it.name }
+                ?.map { file ->
+                    val storedName = file.name.substringAfter('_').substringAfter('_', file.name)
+                    file.absolutePath to storedName
+                }
                 ?: emptyList()
         )
     }
@@ -1618,7 +1621,8 @@ private fun SettingsPage(
                 val extension = displayName.substringAfterLast('.', "").lowercase(Locale.ROOT)
                 require(extension == "ttf" || extension == "otf") { fontFileTypeError }
                 val fontDir = File(context.filesDir, "fonts").apply { mkdirs() }
-                val target = File(fontDir, "mathflow_custom_${System.currentTimeMillis()}.$extension")
+                val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
+                val target = File(fontDir, "mathflow_${System.currentTimeMillis()}_$safeName")
                 importedTarget = target
                 context.contentResolver.openInputStream(uri).use { input ->
                     requireNotNull(input) { fontOpenError }
