@@ -538,6 +538,19 @@ private fun MathFlowApp() {
                                                         .putFloat("key_animation_opacity", normalized.opacity)
                                                         .putFloat("key_animation_intensity", normalized.intensity)
                                                         .apply()
+                                                },
+                                                appliedNavAnimationSettings = bottomNavAnimationSettings,
+                                                onNavAnimationSettingsApplied = { settings ->
+                                                    val normalized = settings.normalized()
+                                                    bottomNavAnimationSettings = normalized
+                                                    prefs.edit()
+                                                        .putBoolean("nav_animation_enabled", normalized.enabled)
+                                                        .putString("nav_animation_style", normalized.style.id)
+                                                        .putInt("nav_animation_duration", normalized.durationMs)
+                                                        .putFloat("nav_animation_intensity", normalized.intensity)
+                                                        .putFloat("nav_animation_icon_scale", normalized.iconScale)
+                                                        .putFloat("nav_animation_opacity", normalized.opacity)
+                                                        .apply()
                                                 }
                                             )
                                         }
@@ -661,79 +674,143 @@ private fun FirstLaunchWelcome(
 private const val NAV_TRANSITION_DURATION_MS = 180
 
 @Composable
-private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
+private fun BottomNav(
+    current: Page,
+    settings: BottomNavAnimationSettings,
+    onSelect: (Page) -> Unit
+) {
     val p = LocalPalette.current
+    val style = settings.style
+    val duration = if (settings.enabled) settings.durationMs else 0
+    val springMotion = settings.enabled && style in setOf(
+        BottomNavAnimationStyle.FLUID_PILL,
+        BottomNavAnimationStyle.SPRING_MOTION,
+        BottomNavAnimationStyle.ELASTIC_SLIDE
+    )
     Box(
-        Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 28.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 28.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(shape = RoundedCornerShape(26.dp), color = p.surface) {
             BoxWithConstraints(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 5.dp)
+                Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
                 val itemWidth = maxWidth / Page.values().size
-                // Wide, softly rounded active capsule (the original MathFlow shape),
-                // centered inside each tab rather than a small circular dot.
-                val indicatorWidth = 72.dp
-                val indicatorHeight = 44.dp
                 val density = LocalDensity.current
-                val indicatorOffsetPx by animateFloatAsState(
-                    targetValue = with(density) {
-                        (itemWidth * current.ordinal + (itemWidth - indicatorWidth) / 2).toPx()
+                val indicatorWidth = when (style) {
+                    BottomNavAnimationStyle.LIGHT_TRAIL -> 38.dp
+                    BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
+                    BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
+                    else -> 72.dp
+                }
+                val indicatorHeight = when (style) {
+                    BottomNavAnimationStyle.LIGHT_TRAIL -> 4.dp
+                    BottomNavAnimationStyle.MORPH -> 38.dp
+                    BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
+                    else -> 42.dp
+                }
+                val targetOffset = with(density) {
+                    (itemWidth * current.ordinal + (itemWidth - indicatorWidth) / 2).toPx()
+                }
+                val offsetSpec = if (springMotion) {
+                    spring<Float>(
+                        dampingRatio = if (style == BottomNavAnimationStyle.ELASTIC_SLIDE) 0.48f else 0.78f,
+                        stiffness = when (style) {
+                            BottomNavAnimationStyle.ELASTIC_SLIDE -> 520f
+                            BottomNavAnimationStyle.SPRING_MOTION -> 360f
+                            else -> 440f
+                        }
+                    )
+                } else tween<Float>(durationMillis = duration, easing = FastOutSlowInEasing)
+                val indicatorOffset by animateFloatAsState(
+                    targetValue = targetOffset,
+                    animationSpec = offsetSpec,
+                    label = "MathFlowNavIndicatorPosition"
+                )
+                val indicatorScaleX by animateFloatAsState(
+                    targetValue = when {
+                        !settings.enabled -> 1f
+                        style == BottomNavAnimationStyle.EXPAND -> 1.08f
+                        style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f + settings.intensity * 0.12f
+                        style == BottomNavAnimationStyle.LIGHT_TRAIL -> 1.18f
+                        else -> 1f
                     },
-                    animationSpec = tween(
-                        durationMillis = NAV_TRANSITION_DURATION_MS,
-                        easing = FastOutSlowInEasing
-                    ),
-                    label = "MathFlowActiveTabPosition"
+                    animationSpec = tween(duration, easing = FastOutSlowInEasing),
+                    label = "MathFlowNavIndicatorScale"
                 )
-
-                // Animate only the draw-layer translation, avoiding a layout pass
-                // on every animation frame. Taps themselves have no ripple.
-                Box(
-                    Modifier
-                        .align(Alignment.CenterStart)
-                        .graphicsLayer { translationX = indicatorOffsetPx }
-                        .size(width = indicatorWidth, height = indicatorHeight)
-                        .clip(RoundedCornerShape(percent = 50))
-                        .background(p.navActive)
+                val indicatorAlpha by animateFloatAsState(
+                    targetValue = if (style == BottomNavAnimationStyle.SOFT_FOCUS) {
+                        settings.opacity * 0.62f
+                    } else settings.opacity,
+                    animationSpec = tween(duration),
+                    label = "MathFlowNavIndicatorAlpha"
                 )
-
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                val bloom = remember(current, style) { Animatable(0.72f) }
+                LaunchedEffect(current, style, settings.enabled) {
+                    if (settings.enabled && style == BottomNavAnimationStyle.RIPPLE_BLOOM) {
+                        bloom.snapTo(0.18f)
+                        bloom.animateTo(1f, tween(duration, easing = FastOutSlowInEasing))
+                    } else {
+                        bloom.snapTo(1f)
+                    }
+                }
+                if (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled) {
+                    Box(
+                        Modifier.align(Alignment.CenterStart)
+                            .graphicsLayer {
+                                translationX = indicatorOffset
+                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) bloom.value else indicatorScaleX
+                                alpha = indicatorAlpha
+                            }
+                            .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 18.dp else 0.dp)
+                            .size(width = indicatorWidth, height = indicatorHeight)
+                            .clip(RoundedCornerShape(percent = 50))
+                            .background(
+                                when (style) {
+                                    BottomNavAnimationStyle.LIGHT_TRAIL -> p.accent
+                                    BottomNavAnimationStyle.SOFT_FOCUS -> p.navActive.copy(alpha = 0.5f)
+                                    else -> p.navActive
+                                }
+                            )
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Page.values().forEach { item ->
                         val selected = item == current
                         val tint by animateColorAsState(
                             targetValue = if (selected) p.accent else p.muted,
-                            animationSpec = tween(
-                                durationMillis = NAV_TRANSITION_DURATION_MS,
-                                easing = FastOutSlowInEasing
-                            ),
+                            animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconTint"
+                        )
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (settings.enabled && selected &&
+                                style in setOf(
+                                    BottomNavAnimationStyle.SPRING_MOTION,
+                                    BottomNavAnimationStyle.MORPH,
+                                    BottomNavAnimationStyle.SOFT_FOCUS,
+                                    BottomNavAnimationStyle.ELASTIC_SLIDE
+                                )
+                            ) 1f + settings.iconScale else 1f,
+                            animationSpec = if (springMotion) spring(dampingRatio = 0.62f, stiffness = 440f)
+                                else tween(duration, easing = FastOutSlowInEasing),
+                            label = "MathFlowNavigationIconScale"
                         )
                         val interactionSource = remember(item) { MutableInteractionSource() }
                         Box(
-                            Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .clickable(
-                                    interactionSource = interactionSource,
-                                    indication = null
-                                ) { if (!selected) onSelect(item) },
+                            Modifier.weight(1f).height(48.dp).clickable(
+                                interactionSource = interactionSource,
+                                indication = null
+                            ) { if (!selected) onSelect(item) },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = displayText(item.title),
                                 tint = tint,
-                                modifier = Modifier.size(26.dp)
+                                modifier = Modifier.size(26.dp).graphicsLayer {
+                                    scaleX = iconScale
+                                    scaleY = iconScale
+                                }
                             )
                         }
                     }
@@ -1428,7 +1505,7 @@ private fun setLauncherIcon(context: Context, iconId: String) {
     }
 }
 
-private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, ANIMATIONS }
+private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, ANIMATIONS, FONTS }
 
 @Composable
 private fun SettingsPage(
@@ -1444,7 +1521,9 @@ private fun SettingsPage(
     selectedLanguage: String,
     onLanguageSelected: (String) -> Unit,
     appliedAnimationSettings: KeyAnimationSettings,
-    onAnimationSettingsApplied: (KeyAnimationSettings) -> Unit
+    onAnimationSettingsApplied: (KeyAnimationSettings) -> Unit,
+    appliedNavAnimationSettings: BottomNavAnimationSettings,
+    onNavAnimationSettingsApplied: (BottomNavAnimationSettings) -> Unit
 ) {
     val p = LocalPalette.current
     val context = LocalContext.current
@@ -1452,6 +1531,7 @@ private fun SettingsPage(
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
+    var pendingNavAnimationSettings by remember(appliedNavAnimationSettings) { mutableStateOf(appliedNavAnimationSettings) }
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
@@ -1749,6 +1829,123 @@ private fun SettingsPage(
                 }
             }
 
+                Panel {
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            pendingAnimationSettings = pendingAnimationSettings.copy(
+                                colorEffectEnabled = !pendingAnimationSettings.colorEffectEnabled
+                            )
+                        },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Цветовой эффект нажатия", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                if (pendingAnimationSettings.colorEffectEnabled) "Включён" else "Выключен — без белого свечения",
+                                color = p.muted, fontSize = 12.sp
+                            )
+                        }
+                        Text(if (pendingAnimationSettings.colorEffectEnabled) "ВКЛ" else "ВЫКЛ", color = p.accent, fontSize = 12.sp)
+                    }
+                    Text("Цвет эффекта", color = p.muted, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        listOf(0L, 0xFFB9A8F0L, 0xFF39C7FFFFL, 0xFF4BE2B2L, 0xFFFF9A66L).forEach { argb ->
+                            val color = if (argb == 0L) p.accent else Color(argb)
+                            Box(
+                                Modifier.size(30.dp).clip(CircleShape).background(color)
+                                    .border(
+                                        if (pendingAnimationSettings.pressColorArgb == argb) 2.dp else 1.dp,
+                                        if (pendingAnimationSettings.pressColorArgb == argb) p.text else p.muted,
+                                        CircleShape
+                                    )
+                                    .clickable {
+                                        pendingAnimationSettings = pendingAnimationSettings.copy(pressColorArgb = argb)
+                                    }
+                            )
+                        }
+                    }
+                    ApplySelectionButton(
+                        text = if (pendingAnimationSettings == appliedAnimationSettings) tx("already_applied") else tx("apply"),
+                        enabled = pendingAnimationSettings != appliedAnimationSettings,
+                        onClick = { onAnimationSettingsApplied(pendingAnimationSettings.normalized()) }
+                    )
+                }
+                Panel {
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            pendingNavAnimationSettings = pendingNavAnimationSettings.copy(
+                                enabled = !pendingNavAnimationSettings.enabled
+                            )
+                        },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Анимации нижней панели", color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (pendingNavAnimationSettings.enabled) "Включены" else "Отключены",
+                                color = p.muted, fontSize = 12.sp
+                            )
+                        }
+                        Text(if (pendingNavAnimationSettings.enabled) "ВКЛ" else "ВЫКЛ", color = p.accent, fontSize = 12.sp)
+                    }
+                    BottomNavAnimationStyle.values().toList().chunked(2).forEach { pair ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            pair.forEach { style ->
+                                val selected = pendingNavAnimationSettings.style == style
+                                val shape = RoundedCornerShape(15.dp)
+                                Column(
+                                    Modifier.weight(1f).clip(shape)
+                                        .background(if (selected) p.navActive else p.surface)
+                                        .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                                        .clickable {
+                                            pendingNavAnimationSettings = pendingNavAnimationSettings.copy(style = style)
+                                        }
+                                        .padding(horizontal = 11.dp, vertical = 11.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(style.title, color = if (selected) p.accent else p.text,
+                                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(style.description, color = p.muted, fontSize = 10.sp, lineHeight = 13.sp)
+                                }
+                            }
+                        }
+                    }
+                    Text("Длительность: ${pendingNavAnimationSettings.durationMs} мс", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.durationMs.toFloat(),
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(durationMs = it.toInt()) },
+                        valueRange = 100f..1000f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    Text("Интенсивность: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.intensity,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(intensity = it) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    Text("Масштаб иконки: ${(pendingNavAnimationSettings.iconScale * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.iconScale,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(iconScale = it) },
+                        valueRange = 0f..0.20f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    Text("Прозрачность индикатора: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.opacity,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(opacity = it) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    ApplySelectionButton(
+                        text = if (pendingNavAnimationSettings == appliedNavAnimationSettings) tx("already_applied") else tx("apply"),
+                        enabled = pendingNavAnimationSettings != appliedNavAnimationSettings,
+                        onClick = { onNavAnimationSettingsApplied(pendingNavAnimationSettings.normalized()) }
+                    )
+                }
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
                 Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
