@@ -785,7 +785,7 @@ private fun BottomNav(
                     label = "MathFlowNavIndicatorAlpha"
                 )
                 val bloom = remember(current, style) { Animatable(0.72f) }
-                LaunchedEffect(current, style, settings.enabled) {
+                LaunchedEffect(current, style, settings.enabled, duration) {
                     if (settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
                         bloom.snapTo(if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.18f else 0.62f)
                         bloom.animateTo(1f, tween(duration, easing = FastOutSlowInEasing))
@@ -793,12 +793,27 @@ private fun BottomNav(
                         bloom.snapTo(1f)
                     }
                 }
+                val travelStretch = remember(current, style) { Animatable(1f) }
+                LaunchedEffect(current, style, settings.enabled, duration) {
+                    if (settings.enabled && style in setOf(BottomNavAnimationStyle.FLUID_PILL, BottomNavAnimationStyle.ELASTIC_SLIDE)) {
+                        travelStretch.snapTo(if (style == BottomNavAnimationStyle.FLUID_PILL) 1.16f else 1.24f)
+                        travelStretch.animateTo(
+                            1f,
+                            spring(
+                                dampingRatio = if (style == BottomNavAnimationStyle.FLUID_PILL) 0.72f else 0.48f,
+                                stiffness = if (style == BottomNavAnimationStyle.FLUID_PILL) 430f else 520f
+                            )
+                        )
+                    } else {
+                        travelStretch.snapTo(1f)
+                    }
+                }
                 if (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled) {
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 translationX = indicatorOffset
-                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX
+                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX * travelStretch.value
                                 alpha = indicatorAlpha
                             }
                             .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 18.dp else 0.dp)
