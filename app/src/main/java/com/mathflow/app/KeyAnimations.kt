@@ -132,8 +132,8 @@ internal fun MathFlowKeyButton(
     Surface(
         onClick = onClick,
         modifier = modifier.graphicsLayer {
-            scaleX = scaleX
-            scaleY = scaleY
+            this.scaleX = scaleX
+            this.scaleY = scaleY
         },
         shape = shape,
         color = background,
