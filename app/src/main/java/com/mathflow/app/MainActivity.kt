@@ -46,6 +46,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Build
@@ -962,38 +964,52 @@ private fun EquationSolverPage() {
 @Composable
 private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
     val p = LocalPalette.current
-    PageColumn(tx("history")) {
+    // Compose only visible history rows instead of building the full list at once.
+    LazyColumn(
+        modifier = Modifier.fillMaxSize()
+            .padding(horizontal = 14.dp)
+            .padding(top = 14.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item(key = "history_title") {
+            Text(tx("history"), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+        }
         if (entries.isEmpty()) {
-            Text(tx("history_empty"), color = p.muted, fontSize = 14.sp)
+            item(key = "history_empty") {
+                Text(tx("history_empty"), color = p.muted, fontSize = 14.sp)
+            }
         } else {
-            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = p.surface) {
-                Column(Modifier.padding(vertical = 4.dp)) {
-                    entries.forEachIndexed { index, entry ->
-                        var expanded by remember(entry.id) { mutableStateOf(false) }
-                        Column(
-                            Modifier.fillMaxWidth()
-                                .clickable(enabled = entry.steps.isNotEmpty()) { expanded = !expanded }
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Text(entry.expression, fontSize = 15.sp, color = p.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            Text("= ${entry.result}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
-                            Text(
-                                entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) tx("hide_solution") else tx("show_solution")) else "",
-                                fontSize = 12.sp, color = p.muted
-                            )
-                            if (expanded) {
-                                entry.steps.forEachIndexed { i, step ->
-                                    Text("${i + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
-                                }
+            items(entries, key = { it.id }) { entry ->
+                var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = p.surface
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .clickable(enabled = entry.steps.isNotEmpty()) { expanded = !expanded }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Text(entry.expression, fontSize = 15.sp, color = p.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("= ${entry.result}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
+                        Text(
+                            entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) tx("hide_solution") else tx("show_solution")) else "",
+                            fontSize = 12.sp, color = p.muted
+                        )
+                        if (expanded) {
+                            entry.steps.forEachIndexed { index, step ->
+                                Text("${index + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
                             }
                         }
-                        if (index != entries.lastIndex) HorizontalDivider(color = p.key, modifier = Modifier.padding(horizontal = 16.dp))
                     }
                 }
             }
-            TextButton(onClick = onClear, modifier = Modifier.align(Alignment.End)) {
-                Text(tx("clear_history"), color = p.accent)
+            item(key = "clear_history") {
+                TextButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) {
+                    Text(tx("clear_history"), color = p.accent)
+                }
             }
         }
     }
