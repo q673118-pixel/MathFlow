@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:android="http://schemas.android.com/apk/res/android">
     <style name="Theme.MathFlow.App" parent="android:style/Theme.Material.Light.NoActionBar" />
-
     <style name="Theme.MathFlow.Splash" parent="Theme.SplashScreen">
-        <!-- Android 12+ platform attributes: these control the real system launch window. -->
-        <item name="android:windowSplashScreenBackground">#0C0B10</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/mark_black</item>
-        <item name="android:windowSplashScreenAnimationDuration">480</item>
-
-        <!-- AndroidX compatibility attributes for pre-Android 12 devices. -->
-        <item name="windowSplashScreenBackground">#0C0B10</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/mark_black</item>
-        <item name="windowSplashScreenAnimationDuration">480</item>
+        <item name="android:windowSplashScreenBackground">#000000</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_empty</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+        <item name="windowSplashScreenBackground">#000000</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_empty</item>
+        <item name="windowSplashScreenAnimationDuration">0</item>
         <item name="postSplashScreenTheme">@style/Theme.MathFlow.App</item>
     </style>
 </resources>
