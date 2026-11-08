@@ -1910,7 +1910,6 @@ private fun SettingsPage(
                                 color = p.muted, fontSize = 12.sp
                             )
                         }
-                        Text(if (pendingAnimationSettings.colorEffectEnabled) tx("button_color_effect_on") else tx("button_color_effect_off"), color = p.accent, fontSize = 12.sp)
                     }
                     Text(tx("effect_color"), color = p.muted, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1952,7 +1951,6 @@ private fun SettingsPage(
                                 color = p.muted, fontSize = 12.sp
                             )
                         }
-                        Text(if (pendingNavAnimationSettings.enabled) "ВКЛ" else "ВЫКЛ", color = p.accent, fontSize = 12.sp)
                     }
                     BottomNavAnimationStyle.values().toList().chunked(2).forEach { pair ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
