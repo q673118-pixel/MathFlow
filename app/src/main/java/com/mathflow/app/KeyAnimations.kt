@@ -191,7 +191,7 @@ internal fun MathFlowKeyButton(
                     val radius = size.maxDimension * rippleReach * rippleProgress
                     if (radius > 0f) {
                         drawCircle(
-                            color = palette.accent.copy(alpha = overlayAlpha),
+                            color = overlayColor.copy(alpha = overlayAlpha),
                             radius = radius,
                             center = Offset(size.width / 2f, size.height / 2f)
                         )
@@ -201,8 +201,7 @@ internal fun MathFlowKeyButton(
                 Box(
                     Modifier.fillMaxSize()
                         .background(
-                            (if (normalized.style == KeyAnimationStyle.FLASH) palette.accent else overlayColor)
-                                .copy(alpha = overlayAlpha)
+                            overlayColor.copy(alpha = overlayAlpha)
                         )
                 )
             }
