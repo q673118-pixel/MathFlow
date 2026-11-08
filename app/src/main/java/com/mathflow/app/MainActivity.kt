@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -469,7 +470,12 @@ private fun MathFlowApp() {
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalKeyAnimationSettings provides keyAnimationSettings,
-        LocalRippleConfiguration provides null,
+        LocalRippleConfiguration provides if (keyAnimationSettings.colorEffectEnabled) {
+            RippleConfiguration(
+                color = if (keyAnimationSettings.pressColorArgb == 0L) palette.accent
+                    else Color(keyAnimationSettings.pressColorArgb.toInt())
+            )
+        } else null,
         LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
         MaterialTheme(colorScheme = colors, typography = typography) {
