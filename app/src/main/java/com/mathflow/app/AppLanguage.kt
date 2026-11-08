@@ -93,7 +93,17 @@ private val uiText: Map<String, Map<String, String>> = mapOf(
     "swap_units" to mapOf("ru" to "Поменять единицы местами", "en" to "Swap units", "kk" to "Өлшем бірліктерін ауыстыру", "es" to "Intercambiar unidades", "fr" to "Inverser les unités", "de" to "Einheiten tauschen", "pt" to "Inverter unidades", "it" to "Inverti unità", "tr" to "Birimleri değiştir", "ar" to "تبديل الوحدات", "hi" to "इकाइयाँ बदलें", "zh" to "交换单位", "ja" to "単位を入れ替え", "ko" to "단위 바꾸기", "uz" to "Birliklarni almashtirish"),
     "result" to mapOf("ru" to "РЕЗУЛЬТАТ", "en" to "RESULT", "kk" to "НӘТИЖЕ", "es" to "RESULTADO", "fr" to "RÉSULTAT", "de" to "ERGEBNIS", "pt" to "RESULTADO", "it" to "RISULTATO", "tr" to "SONUÇ", "ar" to "النتيجة", "hi" to "परिणाम", "zh" to "结果", "ja" to "結果", "ko" to "결과", "uz" to "NATIJA"),
     "enter_value" to mapOf("ru" to "Введите значение", "en" to "Enter a value", "kk" to "Мәнді енгізіңіз", "es" to "Introduce un valor", "fr" to "Saisissez une valeur", "de" to "Wert eingeben", "pt" to "Insira um valor", "it" to "Inserisci un valore", "tr" to "Bir değer girin", "ar" to "أدخل قيمة", "hi" to "मान दर्ज करें", "zh" to "输入数值", "ja" to "値を入力", "ko" to "값을 입력하세요", "uz" to "Qiymat kiriting"),
-    "offline_conversion" to mapOf("ru" to "Пересчёт выполняется автоматически. Интернет не требуется.", "en" to "Conversion is automatic. No internet connection is required.", "kk" to "Түрлендіру автоматты түрде орындалады. Интернет қажет емес.", "es" to "La conversión es automática. No se necesita internet.", "fr" to "La conversion est automatique. Aucune connexion Internet n’est nécessaire.", "de" to "Die Umrechnung erfolgt automatisch. Internet ist nicht erforderlich.", "pt" to "A conversão é automática. Não é necessária internet.", "it" to "La conversione è automatica. Non serve Internet.", "tr" to "Dönüştürme otomatik yapılır. İnternet gerekmez.", "ar" to "يتم التحويل تلقائيًا. لا يلزم الاتصال بالإنترنت.", "hi" to "रूपांतरण अपने आप होता है। इंटरनेट की आवश्यकता नहीं है।", "zh" to "自动换算，无需联网。", "ja" to "変換は自動で行われます。インターネットは不要です。", "ko" to "자동으로 변환됩니다. 인터넷 연결이 필요하지 않습니다.", "uz" to "O‘girish avtomatik bajariladi. Internet kerak emas.")
+    "offline_conversion" to mapOf("ru" to "Пересчёт выполняется автоматически. Интернет не требуется.", "en" to "Conversion is automatic. No internet connection is required.", "kk" to "Түрлендіру автоматты түрде орындалады. Интернет қажет емес.", "es" to "La conversión es automática. No se necesita internet.", "fr" to "La conversion est automatique. Aucune connexion Internet n’est nécessaire.", "de" to "Die Umrechnung erfolgt automatisch. Internet ist nicht erforderlich.", "pt" to "A conversão é automática. Não é necessária internet.", "it" to "La conversione è automatica. Non serve Internet.", "tr" to "Dönüştürme otomatik yapılır. İnternet gerekmez.", "ar" to "يتم التحويل تلقائيًا. لا يلزم الاتصال بالإنترنت.", "hi" to "रूपांतरण अपने आप होता है। इंटरनेट की आवश्यकता नहीं है।", "zh" to "自动换算，无需联网。", "ja" to "変換は自動で行われます。インターネットは不要です。", "ko" to "자동으로 변환됩니다. 인터넷 연결이 필요하지 않습니다.", "uz" to "O‘girish avtomatik bajariladi. Internet kerak emas."),
+    "length" to mapOf("ru" to "Длина", "en" to "Length", "kk" to "Ұзындық", "es" to "Longitud", "fr" to "Longueur", "de" to "Länge", "pt" to "Comprimento", "it" to "Lunghezza", "tr" to "Uzunluk", "ar" to "الطول", "hi" to "लंबाई", "zh" to "长度", "ja" to "長さ", "ko" to "길이", "uz" to "Uzunlik"),
+    "mass" to mapOf("ru" to "Масса", "en" to "Mass", "kk" to "Масса", "es" to "Masa", "fr" to "Masse", "de" to "Masse", "pt" to "Massa", "it" to "Massa", "tr" to "Kütle", "ar" to "الكتلة", "hi" to "द्रव्यमान", "zh" to "质量", "ja" to "質量", "ko" to "질량", "uz" to "Massa"),
+    "area" to mapOf("ru" to "Площадь", "en" to "Area", "kk" to "Аудан", "es" to "Área", "fr" to "Surface", "de" to "Fläche", "pt" to "Área", "it" to "Area", "tr" to "Alan", "ar" to "المساحة", "hi" to "क्षेत्रफल", "zh" to "面积", "ja" to "面積", "ko" to "넓이", "uz" to "Maydon"),
+    "volume" to mapOf("ru" to "Объём", "en" to "Volume", "kk" to "Көлем", "es" to "Volumen", "fr" to "Volume", "de" to "Volumen", "pt" to "Volume", "it" to "Volume", "tr" to "Hacim", "ar" to "الحجم", "hi" to "आयतन", "zh" to "体积", "ja" to "体積", "ko" to "부피", "uz" to "Hajm"),
+    "temperature" to mapOf("ru" to "Температура", "en" to "Temperature", "kk" to "Температура", "es" to "Temperatura", "fr" to "Température", "de" to "Temperatur", "pt" to "Temperatura", "it" to "Temperatura", "tr" to "Sıcaklık", "ar" to "درجة الحرارة", "hi" to "तापमान", "zh" to "温度", "ja" to "温度", "ko" to "온도", "uz" to "Harorat"),
+    "speed" to mapOf("ru" to "Скорость", "en" to "Speed", "kk" to "Жылдамдық", "es" to "Velocidad", "fr" to "Vitesse", "de" to "Geschwindigkeit", "pt" to "Velocidade", "it" to "Velocità", "tr" to "Hız", "ar" to "السرعة", "hi" to "गति", "zh" to "速度", "ja" to "速度", "ko" to "속도", "uz" to "Tezlik"),
+    "time" to mapOf("ru" to "Время", "en" to "Time", "kk" to "Уақыт", "es" to "Tiempo", "fr" to "Temps", "de" to "Zeit", "pt" to "Tempo", "it" to "Tempo", "tr" to "Zaman", "ar" to "الوقت", "hi" to "समय", "zh" to "时间", "ja" to "時間", "ko" to "시간", "uz" to "Vaqt"),
+    "pressure" to mapOf("ru" to "Давление", "en" to "Pressure", "kk" to "Қысым", "es" to "Presión", "fr" to "Pression", "de" to "Druck", "pt" to "Pressão", "it" to "Pressione", "tr" to "Basınç", "ar" to "الضغط", "hi" to "दाब", "zh" to "压力", "ja" to "圧力", "ko" to "압력", "uz" to "Bosim"),
+    "energy" to mapOf("ru" to "Энергия", "en" to "Energy", "kk" to "Энергия", "es" to "Energía", "fr" to "Énergie", "de" to "Energie", "pt" to "Energia", "it" to "Energia", "tr" to "Enerji", "ar" to "الطاقة", "hi" to "ऊर्जा", "zh" to "能量", "ja" to "エネルギー", "ko" to "에너지", "uz" to "Energiya"),
+    "data" to mapOf("ru" to "Данные", "en" to "Data", "kk" to "Деректер", "es" to "Datos", "fr" to "Données", "de" to "Daten", "pt" to "Dados", "it" to "Dati", "tr" to "Veri", "ar" to "البيانات", "hi" to "डेटा", "zh" to "数据", "ja" to "データ", "ko" to "데이터", "uz" to "Ma’lumotlar")
 )
 
 @Composable
@@ -105,6 +115,16 @@ internal fun tx(key: String): String {
 @Composable
 internal fun displayText(source: String): String {
     val key = when (source) {
+        "Длина" -> "length"
+        "Масса" -> "mass"
+        "Площадь" -> "area"
+        "Объём" -> "volume"
+        "Температура" -> "temperature"
+        "Скорость" -> "speed"
+        "Время" -> "time"
+        "Давление" -> "pressure"
+        "Энергия" -> "energy"
+        "Данные" -> "data"
         "Главная" -> "home"
         "Инструменты" -> "tools"
         "Решатель" -> "solver"
@@ -138,6 +158,14 @@ internal fun displayText(source: String): String {
         "Применить" -> "apply"
         "Уже применяется" -> "already_applied"
         "Возвращён стандартный шрифт" -> "default_font"
+        "Конвертер величин" -> "converter_title"
+        "Значение" -> "value"
+        "Из" -> "from"
+        "В" -> "to"
+        "Поменять единицы местами" -> "swap_units"
+        "РЕЗУЛЬТАТ" -> "result"
+        "Введите значение" -> "enter_value"
+        "Пересчёт выполняется автоматически. Интернет не требуется." -> "offline_conversion"
         "Проверьте дроби" -> "fraction_error"
         "Проверьте значения" -> "values_error"
         "Проверьте размеры" -> "sizes_error"
