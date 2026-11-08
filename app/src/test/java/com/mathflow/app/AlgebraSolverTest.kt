@@ -127,4 +127,26 @@ class AlgebraSolverTest {
         assertTrue(!result.answer.contains("x₂"))
     }
 
+    @Test fun preservesDenominatorMultiplicityWhenPoweringFractions() {
+        val result = solver.solve("(1/x)^2 = 1/4")
+        assertEquals("quadratic", result.kind)
+        assertTrue(result.answer.contains("-2"))
+        assertTrue(result.answer.contains("2"))
+    }
+
+    @Test fun rejectsDivisionByAnIdenticallyZeroExpression() {
+        try {
+            solver.solve("1/(x - x) = 2")
+            throw AssertionError("Expected division by zero")
+        } catch (_: IllegalArgumentException) {
+            // The expression is undefined for every x.
+        }
+    }
+
+    @Test fun supportsParenthesizedRationalExpressions() {
+        val result = solver.solve("(x + 1)/(x - 2) = 3")
+        assertEquals("linear", result.kind)
+        assertTrue(result.answer.contains("3.5"))
+    }
+
 }
