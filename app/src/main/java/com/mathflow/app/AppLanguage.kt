@@ -160,6 +160,7 @@ internal fun displayText(source: String): String {
         "Главная" -> "home"
         "Инструменты" -> "tools"
         "Решатель" -> "solver"
+        "Уравнения" -> "solver"
         "История" -> "history"
         "Настройки" -> "settings"
         "Иконки приложения" -> "app_icons"
