@@ -292,7 +292,12 @@ private fun MathFlowApp() {
         controller.isAppearanceLightNavigationBars = !palette.dark
     }
 
-    CompositionLocalProvider(\n        LocalLanguage provides appLanguage,\n        LocalDensity provides density,\n        LocalPalette provides palette,\n        LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr\n    ) {
+    CompositionLocalProvider(
+        LocalLanguage provides appLanguage,
+        LocalDensity provides density,
+        LocalPalette provides palette,
+        LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
+    ) {
         MaterialTheme(colorScheme = colors, typography = typography) {
             // Text() reads LocalTextStyle, not the theme typography, so the custom
             // family has to be provided here too for it to reach every label.
@@ -1319,7 +1324,20 @@ private fun SettingsPage(
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
                 Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
-                OutlinedTextField(\n                    value = languageQuery,\n                    onValueChange = { languageQuery = it },\n                    modifier = Modifier.fillMaxWidth(),\n                    singleLine = true,\n                    label = { Text(tx("search_languages")) },\n                    shape = RoundedCornerShape(16.dp)\n                )\n                val visibleLanguages = AppLanguages.filter { language ->\n                    language.nativeName.contains(languageQuery, ignoreCase = true) ||\n                        language.englishName.contains(languageQuery, ignoreCase = true)\n                }\n                if (visibleLanguages.isEmpty()) Text(tx("no_languages_found"), color = p.muted, fontSize = 13.sp)\n                visibleLanguages.forEach { language ->
+                OutlinedTextField(
+                    value = languageQuery,
+                    onValueChange = { languageQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text(tx("search_languages")) },
+                    shape = RoundedCornerShape(16.dp)
+                )
+                val visibleLanguages = AppLanguages.filter { language ->
+                    language.nativeName.contains(languageQuery, ignoreCase = true) ||
+                        language.englishName.contains(languageQuery, ignoreCase = true)
+                }
+                if (visibleLanguages.isEmpty()) Text(tx("no_languages_found"), color = p.muted, fontSize = 13.sp)
+                visibleLanguages.forEach { language ->
                     val selected = selectedLanguage == language.tag
                     val shape = RoundedCornerShape(18.dp)
                     Row(
