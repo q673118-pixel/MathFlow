@@ -247,7 +247,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
 private enum class Page(val title: String, val icon: ImageVector) {
     HOME("Главная", Icons.Default.Calculate),
     TOOLS("Инструменты", Icons.Default.Build),
-    SOLVER("Решатель", Icons.Default.Functions),
+    SOLVER("Уравнения", Icons.Default.Functions),
     HISTORY("История", Icons.Default.History),
     SETTINGS("Настройки", Icons.Default.Settings)
 }
@@ -368,6 +368,16 @@ private fun MathFlowApp() {
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
     var fontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
+    var keyAnimationSettings by remember {
+        mutableStateOf(
+            KeyAnimationSettings(
+                style = KeyAnimationStyle.fromId(prefs.getString("key_animation_style", "spring") ?: "spring"),
+                durationMs = prefs.getInt("key_animation_duration", 140),
+                opacity = prefs.getFloat("key_animation_opacity", 0.72f),
+                intensity = prefs.getFloat("key_animation_intensity", 0.10f)
+            ).normalized()
+        )
+    }
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
     val historyScope = rememberCoroutineScope()
@@ -430,6 +440,7 @@ private fun MathFlowApp() {
         LocalLanguage provides appLanguage,
         LocalDensity provides density,
         LocalPalette provides palette,
+        LocalKeyAnimationSettings provides keyAnimationSettings,
         LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
         MaterialTheme(colorScheme = colors, typography = typography) {
@@ -515,6 +526,17 @@ private fun MathFlowApp() {
                                                 onResetFont = {
                                                     fontPath = null
                                                     prefs.edit().remove("font_path").apply()
+                                                },
+                                                appliedAnimationSettings = keyAnimationSettings,
+                                                onAnimationSettingsApplied = { settings ->
+                                                    val normalized = settings.normalized()
+                                                    keyAnimationSettings = normalized
+                                                    prefs.edit()
+                                                        .putString("key_animation_style", normalized.style.id)
+                                                        .putInt("key_animation_duration", normalized.durationMs)
+                                                        .putFloat("key_animation_opacity", normalized.opacity)
+                                                        .putFloat("key_animation_intensity", normalized.intensity)
+                                                        .apply()
                                                 }
                                             )
                                         }
@@ -940,29 +962,12 @@ private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun CalcKey(key: String, modifier: Modifier, compact: Boolean, onClick: () -> Unit) {
-    val p = LocalPalette.current
-    val operator = key in OPERATORS
-    val equals = key == "="
-    val background = when {
-        equals -> p.keyEquals
-        operator || key == "AC" -> p.keyAccent
-        else -> p.key
-    }
-    val foreground = if (equals) p.onKeyEquals else p.text
-    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(50), color = background, contentColor = foreground) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                key,
-                fontSize = when {
-                    key.length > 1 && key != "AC" -> if (compact) 18.sp else 20.sp
-                    else -> if (compact) 22.sp else 28.sp
-                },
-                fontWeight = FontWeight.Normal,
-                color = foreground,
-                maxLines = 1
-            )
-        }
-    }
+    MathFlowKeyButton(
+        label = key,
+        modifier = modifier,
+        compact = compact,
+        onClick = onClick
+    )
 }
 
 // ---------------------------------------------------------------- shared pieces
@@ -1200,7 +1205,7 @@ private fun EquationSolverPage() {
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                listOf("x", "x²", "(", ")", "+", "−", "×", "÷", "=").forEach { symbol ->
+                listOf("x", "x²", "x³", "x⁴", "(", ")", "+", "−", "×", "÷", "=").forEach { symbol ->
                     Chip(symbol, false) {
                         solveJob?.cancel()
                         solveJob = null
@@ -1417,7 +1422,7 @@ private fun setLauncherIcon(context: Context, iconId: String) {
     }
 }
 
-private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE }
+private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, ANIMATIONS }
 
 @Composable
 private fun SettingsPage(
@@ -1431,13 +1436,16 @@ private fun SettingsPage(
     onFontSelected: (String) -> Unit,
     onResetFont: () -> Unit,
     selectedLanguage: String,
-    onLanguageSelected: (String) -> Unit
+    onLanguageSelected: (String) -> Unit,
+    appliedAnimationSettings: KeyAnimationSettings,
+    onAnimationSettingsApplied: (KeyAnimationSettings) -> Unit
 ) {
     val p = LocalPalette.current
     val context = LocalContext.current
     var section by rememberSaveable { mutableStateOf(SettingsSection.MAIN) }
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
+    var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
@@ -1540,6 +1548,17 @@ private fun SettingsPage(
                     )
                 }
                 Panel {
+                    SettingsEntry(
+                        title = tx("animations"),
+                        subtitle = tx("animation_entry_subtitle"),
+                        icon = Icons.Default.Settings,
+                        onClick = {
+                            pendingAnimationSettings = appliedAnimationSettings
+                            section = SettingsSection.ANIMATIONS
+                        }
+                    )
+                }
+                Panel {
                     Text(tx("font"), fontSize = 15.sp, color = p.muted)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(Modifier.weight(1f)) {
@@ -1622,6 +1641,104 @@ private fun SettingsPage(
                         text = if (pendingIconId == selectedIconId) tx("already_applied") else tx("apply"),
                         enabled = pendingIconId != selectedIconId,
                         onClick = { onIconSelected(pendingIconId) }
+                    )
+                }
+            }
+
+
+            SettingsSection.ANIMATIONS -> PageColumn(tx("animations")) {
+                TextButton(onClick = { section = SettingsSection.MAIN }) {
+                    Text("← ${tx("settings")}", color = p.accent)
+                }
+                Text(tx("animation_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                KeyAnimationStyle.values().toList().chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        pair.forEach { style ->
+                            val selected = pendingAnimationSettings.style == style
+                            val shape = RoundedCornerShape(17.dp)
+                            Column(
+                                Modifier.weight(1f).clip(shape)
+                                    .background(if (selected) p.navActive else p.surface)
+                                    .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                                    .clickable { pendingAnimationSettings = pendingAnimationSettings.copy(style = style) }
+                                    .padding(horizontal = 13.dp, vertical = 14.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(tx(style.titleKey), color = if (selected) p.accent else p.text,
+                                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    if (selected) tx("selected") else " ",
+                                    color = p.muted, fontSize = 10.sp, maxLines = 1
+                                )
+                            }
+                        }
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                }
+                Panel {
+                    Text(tx("animation_preview"), color = p.muted, fontSize = 13.sp)
+                    MathFlowKeyButton(
+                        label = "123",
+                        modifier = Modifier.fillMaxWidth().height(58.dp),
+                        settings = pendingAnimationSettings
+                    ) { }
+                }
+                Panel {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(tx("animation_duration"), color = p.text, fontSize = 14.sp)
+                        Text("${pendingAnimationSettings.durationMs} ms", color = p.accent, fontSize = 14.sp)
+                    }
+                    Slider(
+                        value = pendingAnimationSettings.durationMs.toFloat(),
+                        onValueChange = {
+                            pendingAnimationSettings = pendingAnimationSettings.copy(durationMs = (it / 10f).toInt() * 10)
+                        },
+                        valueRange = 70f..400f,
+                        steps = 32,
+                        colors = SliderDefaults.colors(
+                            thumbColor = p.accent, activeTrackColor = p.accent,
+                            inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent
+                        )
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(tx("animation_opacity"), color = p.text, fontSize = 14.sp)
+                        Text("${(pendingAnimationSettings.opacity * 100).toInt()}%", color = p.accent, fontSize = 14.sp)
+                    }
+                    Slider(
+                        value = pendingAnimationSettings.opacity,
+                        onValueChange = {
+                            pendingAnimationSettings = pendingAnimationSettings.copy(opacity = (it * 20f).toInt() / 20f)
+                        },
+                        valueRange = 0.20f..1f,
+                        steps = 15,
+                        colors = SliderDefaults.colors(
+                            thumbColor = p.accent, activeTrackColor = p.accent,
+                            inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent
+                        )
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(tx("animation_intensity"), color = p.text, fontSize = 14.sp)
+                        Text("${(pendingAnimationSettings.intensity * 100).toInt()}%", color = p.accent, fontSize = 14.sp)
+                    }
+                    Slider(
+                        value = pendingAnimationSettings.intensity,
+                        onValueChange = {
+                            pendingAnimationSettings = pendingAnimationSettings.copy(intensity = (it * 100f).toInt() / 100f)
+                        },
+                        valueRange = 0.02f..0.20f,
+                        steps = 17,
+                        colors = SliderDefaults.colors(
+                            thumbColor = p.accent, activeTrackColor = p.accent,
+                            inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent
+                        )
+                    )
+                    ApplySelectionButton(
+                        text = if (pendingAnimationSettings == appliedAnimationSettings) tx("already_applied") else tx("apply"),
+                        enabled = pendingAnimationSettings != appliedAnimationSettings,
+                        onClick = { onAnimationSettingsApplied(pendingAnimationSettings.normalized()) }
                     )
                 }
             }
