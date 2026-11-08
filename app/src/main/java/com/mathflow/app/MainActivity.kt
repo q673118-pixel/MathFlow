@@ -71,6 +71,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -109,6 +110,11 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -310,26 +316,23 @@ private fun MathFlowApp() {
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
                     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                        // Compose only the selected tab. AnimatedContent keeps both outgoing
-                        // and incoming screens alive during a transition, which can double the
-                        // layout/draw work on low-memory devices. This enter-only animation keeps
-                        // the motion while avoiding two full page trees at once.
-                        key(page) {
-                            pageStateHolder.SaveableStateProvider(page) {
-                                val enterProgress = remember { Animatable(0f) }
-                                LaunchedEffect(Unit) {
-                                    enterProgress.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(150, easing = FastOutSlowInEasing)
-                                    )
-                                }
-                                Box(
-                                    Modifier.weight(1f).fillMaxWidth().graphicsLayer {
-                                        alpha = enterProgress.value
-                                        translationX = (1f - enterProgress.value) * 8.dp.toPx()
-                                    }
-                                ) {
-                                    when (page) {
+                        AnimatedContent(
+                            targetState = page,
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            transitionSpec = {
+                                val direction = if (targetState.ordinal > initialState.ordinal) 1 else -1
+                                slideInHorizontally(
+                                    animationSpec = tween(180, easing = FastOutSlowInEasing),
+                                    initialOffsetX = { fullWidth -> fullWidth * direction }
+                                ) togetherWith slideOutHorizontally(
+                                    animationSpec = tween(180, easing = FastOutSlowInEasing),
+                                    targetOffsetX = { fullWidth -> -fullWidth * direction }
+                                )
+                            },
+                            label = "MathFlowPageTransition"
+                        ) { targetPage ->
+                            pageStateHolder.SaveableStateProvider(targetPage) {
+                                when (targetPage) {
                                     Page.HOME -> CalculatorHome { expression, result, steps ->
                                         history = HistoryStore.add(context, expression, result, steps)
                                     }
@@ -371,7 +374,6 @@ private fun MathFlowApp() {
                                             prefs.edit().remove("font_path").apply()
                                         }
                                     )
-                                    }
                                 }
                             }
                         }
@@ -383,7 +385,7 @@ private fun MathFlowApp() {
     }
 }
 
-private const val NAV_TRANSITION_DURATION_MS = 280
+private const val NAV_TRANSITION_DURATION_MS = 180
 
 @Composable
 private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
