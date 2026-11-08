@@ -129,6 +129,14 @@ internal fun displayText(source: String): String {
         "Применить" -> "apply"
         "Уже применяется" -> "already_applied"
         "Возвращён стандартный шрифт" -> "default_font"
+        "Проверьте дроби" -> "fraction_error"
+        "Проверьте значения" -> "values_error"
+        "Проверьте размеры" -> "sizes_error"
+        "Проверьте запись уравнения" -> "equation_error"
+        "Например: x² − 5x + 6 = 0" -> "example_equation"
+        "  ·  скрыть решение" -> "hide_solution"
+        "  ·  показать решение" -> "show_solution"
+        "15 языков интерфейса. Выбор применяется сразу и сохраняется на устройстве." -> "languages_available"
         else -> return source
     }
     return tx(key)
