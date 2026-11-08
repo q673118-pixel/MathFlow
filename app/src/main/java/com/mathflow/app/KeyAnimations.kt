@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -20,6 +21,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -115,7 +117,7 @@ internal fun MathFlowKeyButton(
     val flash = normalized.style == KeyAnimationStyle.FLASH && pressed
     val background = baseColor
     val foreground by animateColorAsState(
-        if (flash) palette.background else baseText,
+        if (flash) Color.lerp(baseText, palette.background, normalized.opacity) else baseText,
         tween(normalized.durationMs),
         label = "MathFlowKeyFlashText"
     )
@@ -123,17 +125,19 @@ internal fun MathFlowKeyButton(
         if (pressed) {
             when (normalized.style) {
                 KeyAnimationStyle.FLASH -> normalized.opacity
-                KeyAnimationStyle.RIPPLE -> normalized.opacity * (0.08f + normalized.intensity * 0.30f)
+                KeyAnimationStyle.RIPPLE -> normalized.opacity * 0.34f
                 else -> normalized.opacity * 0.22f
             }
         } else 0f,
         tween(normalized.durationMs),
         label = "MathFlowKeyOverlay"
     )
-    val overlayColor = when (normalized.style) {
-        KeyAnimationStyle.FLASH, KeyAnimationStyle.RIPPLE -> palette.accent
-        else -> if (palette.dark) Color.White else Color.Black
-    }
+    val rippleProgress by animateFloatAsState(
+        if (pressed && normalized.style == KeyAnimationStyle.RIPPLE) 1f else 0f,
+        tween(normalized.durationMs),
+        label = "MathFlowKeyRippleProgress"
+    )
+    val overlayColor = if (palette.dark) Color.White else Color.Black
     val shape = RoundedCornerShape(50)
 
     Surface(
@@ -148,10 +152,29 @@ internal fun MathFlowKeyButton(
         interactionSource = interactionSource
     ) {
         Box(
-            Modifier.fillMaxSize().clip(shape)
-                .background(overlayColor.copy(alpha = overlayAlpha)),
+            Modifier.fillMaxSize().clip(shape),
             contentAlignment = Alignment.Center
         ) {
+            if (normalized.style == KeyAnimationStyle.RIPPLE) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val radius = size.maxDimension * 0.78f * rippleProgress
+                    if (radius > 0f) {
+                        drawCircle(
+                            color = palette.accent.copy(alpha = overlayAlpha),
+                            radius = radius,
+                            center = Offset(size.width / 2f, size.height / 2f)
+                        )
+                    }
+                }
+            } else {
+                Box(
+                    Modifier.fillMaxSize()
+                        .background(
+                            (if (normalized.style == KeyAnimationStyle.FLASH) palette.accent else overlayColor)
+                                .copy(alpha = overlayAlpha)
+                        )
+                )
+            }
             Text(
                 label,
                 fontSize = when {
