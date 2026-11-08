@@ -113,6 +113,14 @@ private val uiText: Map<String, Map<String, String>> = mapOf(
     "font_empty" to mapOf("ru" to "Файл шрифта пустой","en" to "The font file is empty","kk" to "Қаріп файлы бос"),
     "font_install_error" to mapOf("ru" to "Не удалось установить шрифт","en" to "Could not install the font","kk" to "Қаріпті орнату мүмкін болмады"),
     "font_applied" to mapOf("ru" to "Шрифт применён","en" to "Font applied","kk" to "Қаріп қолданылды"),
+    "percent_decrease" to mapOf("ru" to "Процент (− уменьшить)","en" to "Percent (− decrease)","kk" to "Пайыз (− азайту)","es" to "Porcentaje (− reducir)","fr" to "Pourcentage (− réduire)","de" to "Prozent (− verringern)","pt" to "Porcentagem (− diminuir)","it" to "Percentuale (− riduci)","tr" to "Yüzde (− azalt)","ar" to "النسبة (− تقليل)","hi" to "प्रतिशत (− घटाएँ)","zh" to "百分比（− 减少）","ja" to "パーセント（− 減少）","ko" to "퍼센트 (− 감소)","uz" to "Foiz (− kamaytirish)"),
+    "conversion_error" to mapOf("ru" to "Не удалось выполнить конвертацию","en" to "Conversion could not be completed","kk" to "Түрлендіру орындалмады","es" to "No se pudo completar la conversión","fr" to "La conversion a échoué","de" to "Umrechnung fehlgeschlagen","pt" to "Não foi possível concluir a conversão","it" to "Conversione non riuscita","tr" to "Dönüştürme tamamlanamadı","ar" to "تعذر إكمال التحويل","hi" to "रूपांतरण पूरा नहीं हो सका","zh" to "无法完成换算","ja" to "変換できませんでした","ko" to "변환을 완료할 수 없습니다","uz" to "O‘girishni bajarib bo‘lmadi"),
+    "home" to mapOf("ru" to "Главная","en" to "Home","kk" to "Басты бет"),
+    "font_file_type" to mapOf("ru" to "Выберите файл TTF или OTF","en" to "Choose a TTF or OTF file","kk" to "TTF немесе OTF файлын таңдаңыз"),
+    "font_open_error" to mapOf("ru" to "Не удалось открыть файл шрифта","en" to "Could not open the font file","kk" to "Қаріп файлын ашу мүмкін болмады"),
+    "font_empty" to mapOf("ru" to "Файл шрифта пустой","en" to "The font file is empty","kk" to "Қаріп файлы бос"),
+    "font_install_error" to mapOf("ru" to "Не удалось установить шрифт","en" to "Could not install the font","kk" to "Қаріпті орнату мүмкін болмады"),
+    "font_applied" to mapOf("ru" to "Шрифт применён","en" to "Font applied","kk" to "Қаріп қолданылды"),
     "theme_violet" to mapOf("ru" to "Фирменная фиолетовая палитра MathFlow.","en" to "MathFlow signature purple palette.","kk" to "MathFlow фирмалық күлгін палитрасы."),
     "theme_black" to mapOf("ru" to "Почти чёрный интерфейс с нейтральными поверхностями.","en" to "Near-black interface with neutral surfaces.","kk" to "Қараға жақын интерфейс және бейтарап беттер."),
     "theme_white" to mapOf("ru" to "Светлая тема с чистыми белыми поверхностями.","en" to "Light theme with clean white surfaces.","kk" to "Таза ақ беттері бар ашық тақырып."),
@@ -203,6 +211,9 @@ internal fun displayText(source: String): String {
         "  ·  скрыть решение" -> "hide_solution"
         "  ·  показать решение" -> "show_solution"
         "15 языков интерфейса. Выбор применяется сразу и сохраняется на устройстве." -> "languages_available"
+        "Процент (− уменьшить)" -> "percent_decrease"
+        "Division by zero" -> "divide_zero"
+        "Не удалось выполнить конвертацию" -> "conversion_error"
         "Фирменная фиолетовая палитра MathFlow." -> "theme_violet"
         "Почти чёрный интерфейс с нейтральными поверхностями." -> "theme_black"
         "Светлая тема с чистыми белыми поверхностями." -> "theme_white"
