@@ -746,12 +746,20 @@ private fun BottomNav(
             ) {
                 val itemWidth = maxWidth / Page.values().size
                 val density = LocalDensity.current
-                val indicatorWidth = when (style) {
-                    BottomNavAnimationStyle.LIGHT_TRAIL -> 38.dp
-                    BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
-                    BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
-                    else -> 72.dp
-                }
+                val layoutDirection = LocalLayoutDirection.current
+                val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
+                    Page.values().lastIndex - current.ordinal
+                } else current.ordinal
+                val indicatorWidth = minOf(
+                    when (style) {
+                        BottomNavAnimationStyle.LIGHT_TRAIL -> 38.dp
+                        BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
+                        BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
+                        else -> 72.dp
+                    },
+                    itemWidth * 0.92f
+                )
+                val trailWidth = minOf(62.dp, itemWidth * 0.96f)
                 val indicatorHeight = when (style) {
                     BottomNavAnimationStyle.LIGHT_TRAIL -> 4.dp
                     BottomNavAnimationStyle.MORPH -> 38.dp
@@ -759,7 +767,7 @@ private fun BottomNav(
                     else -> 42.dp
                 }
                 val targetOffset = with(density) {
-                    (itemWidth * current.ordinal + (itemWidth - indicatorWidth) / 2).toPx()
+                    (itemWidth * visualIndex + (itemWidth - indicatorWidth) / 2).toPx()
                 }
                 val offsetSpec = if (springMotion) {
                     spring<Float>(
@@ -827,13 +835,15 @@ private fun BottomNav(
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
-                                translationX = indicatorOffset - if (style == BottomNavAnimationStyle.LIGHT_TRAIL) with(density) { 12.dp.toPx() } else 0f
+                                translationX = indicatorOffset - if (style == BottomNavAnimationStyle.LIGHT_TRAIL) {
+                                    with(density) { ((trailWidth - indicatorWidth) / 2).toPx() }
+                                } else 0f
                                 scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX * travelStretch.value
                                 alpha = indicatorAlpha
                             }
                             .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 14.dp else 0.dp)
                             .size(
-                                width = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 62.dp else indicatorWidth,
+                                width = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) trailWidth else indicatorWidth,
                                 height = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 12.dp else indicatorHeight
                             )
                     ) {
