@@ -93,8 +93,9 @@ class AlgebraSolver {
 
         operator fun div(other: RationalExpression): RationalExpression {
             require(!other.numerator.isZero) { "Деление на ноль" }
-            val newFactors = denominatorFactors + other.denominatorFactors +
-                if (other.numerator.degree > 0) listOf(other.numerator) else emptyList()
+            // Keep constant factors too: they scale the denominator even though
+            // they do not add excluded x-values to the domain.
+            val newFactors = denominatorFactors + other.denominatorFactors + listOf(other.numerator)
             return RationalExpression(numerator * other.denominatorProduct(), newFactors)
         }
 
@@ -106,7 +107,7 @@ class AlgebraSolver {
             require(!numerator.isZero) { "Нельзя возвести ноль в отрицательную степень" }
             return RationalExpression(
                 denominatorProduct().pow(-exponent),
-                denominatorFactors + if (numerator.degree > 0) listOf(numerator) else emptyList()
+                denominatorFactors + listOf(numerator)
             )
         }
 
