@@ -1594,6 +1594,7 @@ private fun SettingsPage(
     }
     val fontPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
+            var importedTarget: File? = null
             runCatching {
                 val displayName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
                     val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
@@ -1603,6 +1604,7 @@ private fun SettingsPage(
                 require(extension == "ttf" || extension == "otf") { fontFileTypeError }
                 val fontDir = File(context.filesDir, "fonts").apply { mkdirs() }
                 val target = File(fontDir, "mathflow_custom_${System.currentTimeMillis()}.$extension")
+                importedTarget = target
                 context.contentResolver.openInputStream(uri).use { input ->
                     requireNotNull(input) { fontOpenError }
                     target.outputStream().use { output -> input.copyTo(output) }
@@ -1613,6 +1615,7 @@ private fun SettingsPage(
                 pendingFontPath = target.absolutePath
                 fontMessage = "Добавлен шрифт: $displayName. Нажмите «Применить»."
             }.onFailure {
+                importedTarget?.delete()
                 fontMessage = fontInstallError
             }
         }
@@ -1689,6 +1692,7 @@ private fun SettingsPage(
                         icon = Icons.Default.Settings,
                         onClick = {
                             pendingAnimationSettings = appliedAnimationSettings
+                            pendingNavAnimationSettings = appliedNavAnimationSettings
                             section = SettingsSection.ANIMATIONS
                         }
                     )
