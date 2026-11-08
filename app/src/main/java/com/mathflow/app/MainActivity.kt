@@ -489,6 +489,8 @@ private val CALCULATOR_SCIENTIFIC_ROWS = listOf(
 @Composable
 private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
+    val calculationScope = rememberCoroutineScope()
+    var calculationJob by remember { mutableStateOf<Job?>(null) }
     var expression by rememberSaveable { mutableStateOf("") }
     var result by rememberSaveable { mutableStateOf("0") }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
@@ -500,11 +502,15 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
     var continuation by rememberSaveable { mutableStateOf("") }
 
     fun clearAll() {
+        calculationJob?.cancel()
+        calculationJob = null
         expression = ""; result = "0"; message = null; steps = emptyList()
         finished = false; continuation = ""
     }
 
     fun append(text: String, continuesResult: Boolean) {
+        calculationJob?.cancel()
+        calculationJob = null
         if (finished) {
             expression = if (continuesResult && continuation.isNotEmpty()) continuation + text else text
             finished = false
@@ -517,31 +523,39 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
 
     fun evaluate() {
         if (expression.isBlank()) return
-        try {
-            var source = expression
-            val open = source.count { it == '(' } - source.count { it == ')' }
-            if (open > 0) source += ")".repeat(open)
-            val r = ExpressionEngine(if (degrees) AngleMode.DEGREES else AngleMode.RADIANS).calculate(source)
-            result = r.displayValue
-            steps = r.steps
-            message = null
-            continuation = r.exactValue?.let {
-                if (it.isInteger()) it.numerator.toString() else "(${it.numerator}/${it.denominator})"
-            } ?: r.displayValue
-            finished = true
-            onCalculationSaved(source, r.displayValue, r.steps)
-            expression = source
-        } catch (e: IllegalArgumentException) {
-            result = "Ошибка"
-            message = when {
-                e.message?.contains("Division by zero") == true -> "Деление на ноль"
-                else -> e.message ?: "Проверьте выражение"
+        val input = expression
+        val open = input.count { it == '(' } - input.count { it == ')' }
+        val source = if (open > 0) input + ")".repeat(open) else input
+        val angleMode = if (degrees) AngleMode.DEGREES else AngleMode.RADIANS
+        calculationJob?.cancel()
+        calculationJob = calculationScope.launch {
+            try {
+                val r = withContext(Dispatchers.Default) {
+                    ExpressionEngine(angleMode).calculate(source)
+                }
+                result = r.displayValue
+                steps = r.steps
+                message = null
+                continuation = r.exactValue?.let {
+                    if (it.isInteger()) it.numerator.toString() else "(${it.numerator}/${it.denominator})"
+                } ?: r.displayValue
+                finished = true
+                onCalculationSaved(source, r.displayValue, r.steps)
+                expression = source
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IllegalArgumentException) {
+                result = "Ошибка"
+                message = when {
+                    e.message?.contains("Division by zero") == true -> "Деление на ноль"
+                    else -> e.message ?: "Проверьте выражение"
+                }
+                steps = emptyList()
+            } catch (_: Exception) {
+                result = "Ошибка"
+                message = "Не удалось вычислить выражение"
+                steps = emptyList()
             }
-            steps = emptyList()
-        } catch (_: Exception) {
-            result = "Ошибка"
-            message = "Не удалось вычислить выражение"
-            steps = emptyList()
         }
     }
 
@@ -585,7 +599,11 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Chip("f(x)", scientific) { scientific = !scientific }
-                    if (scientific) Chip(if (degrees) "DEG" else "RAD", false) { degrees = !degrees }
+                    if (scientific) Chip(if (degrees) "DEG" else "RAD", false) {
+                        calculationJob?.cancel()
+                        calculationJob = null
+                        degrees = !degrees
+                    }
                     if (steps.isNotEmpty()) Chip(tx("steps"), showSteps) { showSteps = !showSteps }
                 }
                 Box(
@@ -909,6 +927,8 @@ private fun friendly(error: Throwable, fallback: String): String = when {
 @Composable
 private fun EquationSolverPage() {
     val p = LocalPalette.current
+    val solveScope = rememberCoroutineScope()
+    var solveJob by remember { mutableStateOf<Job?>(null) }
     var equation by rememberSaveable { mutableStateOf("") }
     var answer by rememberSaveable { mutableStateOf<String?>(null) }
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
@@ -917,7 +937,11 @@ private fun EquationSolverPage() {
 
     PageColumn(tx("solver")) {
         Panel {
-            Field(equation, { equation = it }, tx("example_equation"), Modifier.fillMaxWidth(), numeric = false)
+            Field(equation, {
+                solveJob?.cancel()
+                solveJob = null
+                equation = it
+            }, tx("example_equation"), Modifier.fillMaxWidth(), numeric = false)
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -927,15 +951,27 @@ private fun EquationSolverPage() {
                 }
             }
             ActionButton(tx("solve")) {
-                try {
-                    val solved = AlgebraSolver().solve(equation)
-                    answer = solved.answer
-                    steps = solved.steps
-                    error = null
-                } catch (e: IllegalArgumentException) {
-                    answer = null
-                    steps = emptyList()
-                    error = friendly(e, equationFallback)
+                val input = equation
+                solveJob?.cancel()
+                solveJob = solveScope.launch {
+                    try {
+                        val solved = withContext(Dispatchers.Default) {
+                            AlgebraSolver().solve(input)
+                        }
+                        answer = solved.answer
+                        steps = solved.steps
+                        error = null
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: IllegalArgumentException) {
+                        answer = null
+                        steps = emptyList()
+                        error = friendly(e, equationFallback)
+                    } catch (_: Exception) {
+                        answer = null
+                        steps = emptyList()
+                        error = equationFallback
+                    }
                 }
             }
         }
