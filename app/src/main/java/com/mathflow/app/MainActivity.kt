@@ -454,7 +454,7 @@ private fun BottomNav(current: Page, onSelect: (Page) -> Unit) {
                         ) {
                             Icon(
                                 imageVector = item.icon,
-                                contentDescription = item.title,
+                                contentDescription = displayText(item.title),
                                 tint = tint,
                                 modifier = Modifier.size(26.dp)
                             )
@@ -1255,7 +1255,7 @@ private fun SettingsPage(
                 }
                 Panel {
                     Text("MathFlow", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Версия $version", fontSize = 14.sp, color = p.accent)
+                    Text("Version $version", fontSize = 14.sp, color = p.accent)
                     Text(
                         "Научный калькулятор, дроби, проценты, геометрия и решатель уравнений. Всё считается на устройстве, без интернета.",
                         fontSize = 13.sp, color = p.muted, lineHeight = 18.sp
@@ -1296,7 +1296,7 @@ private fun SettingsPage(
                         }
                     }
                     ApplySelectionButton(
-                        text = if (pendingIconId == selectedIconId) "Уже применяется" else "Применить",
+                        text = if (pendingIconId == selectedIconId) tx("already_applied") else tx("apply"),
                         enabled = pendingIconId != selectedIconId,
                         onClick = { onIconSelected(pendingIconId) }
                     )
@@ -1304,7 +1304,7 @@ private fun SettingsPage(
             }
 
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
-                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
+                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
                 Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
                 AppLanguages.forEach { language ->
                     val selected = selectedLanguage == language.tag
@@ -1327,7 +1327,7 @@ private fun SettingsPage(
                         }
                     }
                 }
-                Text("Переводы основных разделов подключаются постепенно. Список языков будет расширен после подготовки переводов.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                Text("15 языков интерфейса. Выбор применяется сразу и сохраняется на устройстве.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
             }
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
@@ -1357,7 +1357,7 @@ private fun SettingsPage(
                         }
                     }
                     ApplySelectionButton(
-                        text = if (pendingThemeId == selectedThemeId) "Уже применяется" else "Применить",
+                        text = if (pendingThemeId == selectedThemeId) tx("already_applied") else tx("apply"),
                         enabled = pendingThemeId != selectedThemeId,
                         onClick = { onThemeSelected(pendingThemeId) }
                     )
@@ -1441,7 +1441,7 @@ private fun IconOptionCard(
         )
         Text(option.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1)
         Text(
-            when { applied -> "Применяется"; selected -> "Выбрана"; else -> " " },
+            when { applied -> tx("applied"); selected -> tx("selected"); else -> " " },
             fontSize = 10.sp,
             color = if (applied) p.accent else p.muted,
             maxLines = 1
@@ -1474,7 +1474,7 @@ private fun ThemeOptionCard(
         }
         Text(option.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1)
         Text(
-            when { applied -> "Применяется"; selected -> "Выбрана"; else -> " " },
+            when { applied -> tx("applied"); selected -> tx("selected"); else -> " " },
             fontSize = 10.sp,
             color = if (applied) p.accent else p.muted,
             maxLines = 1
