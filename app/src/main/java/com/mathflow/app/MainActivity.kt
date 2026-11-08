@@ -698,7 +698,7 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+        Text(displayText(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
         content()
     }
 }
@@ -748,7 +748,7 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(option, fontSize = 13.sp, maxLines = 1, fontWeight = FontWeight.Medium, color = tint)
+                    Text(displayText(option), fontSize = 13.sp, maxLines = 1, fontWeight = FontWeight.Medium, color = tint)
                 }
             }
         }
@@ -760,7 +760,7 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label, maxLines = 1) },
+        label = { Text(displayText(label), maxLines = 1) },
         modifier = modifier,
         singleLine = true,
         shape = RoundedCornerShape(16.dp),
@@ -1408,8 +1408,8 @@ private fun SettingsEntry(
             Icon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.text)
-            Text(subtitle, fontSize = 12.sp, color = p.muted, lineHeight = 16.sp)
+            Text(displayText(title), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.text)
+            Text(displayText(subtitle), fontSize = 12.sp, color = p.muted, lineHeight = 16.sp)
         }
         Text("›", color = p.muted, fontSize = 27.sp)
     }
