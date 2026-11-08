@@ -610,7 +610,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                             else -> 52.sp
                         },
                         fontWeight = FontWeight.Medium,
-                        color = if (result == tx("error")) p.error else p.text,
+                        color = if (result == "Ошибка") p.error else p.text,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.End,
@@ -951,7 +951,7 @@ private fun EquationSolverPage() {
             }
         }
         Text(
-            "Линейные и квадратные уравнения с одной переменной x. Деление на выражение с x и степени выше второй не поддерживаются.",
+            tx("equation_help"),
             color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
         )
     }
@@ -1138,20 +1138,20 @@ private fun SettingsPage(
                     if (column >= 0 && cursor.moveToFirst()) cursor.getString(column) else null
                 } ?: "custom_font.ttf"
                 val extension = displayName.substringAfterLast('.', "").lowercase(Locale.ROOT)
-                require(extension == "ttf" || extension == "otf") { "Выберите файл TTF или OTF" }
+                require(extension == "ttf" || extension == "otf") { tx("font_file_type") }
                 val fontDir = File(context.filesDir, "fonts").apply { mkdirs() }
                 val target = File(fontDir, "mathflow_custom_${System.currentTimeMillis()}.$extension")
                 context.contentResolver.openInputStream(uri).use { input ->
-                    requireNotNull(input) { "Не удалось открыть файл шрифта" }
+                    requireNotNull(input) { tx("font_open_error") }
                     target.outputStream().use { output -> input.copyTo(output) }
                 }
-                require(target.length() > 0L) { "Файл шрифта пустой" }
+                require(target.length() > 0L) { tx("font_empty") }
                 android.graphics.Typeface.createFromFile(target)
                 fontDir.listFiles()?.filter { it != target }?.forEach { it.delete() }
                 onFontSelected(target.absolutePath)
-                fontMessage = "Шрифт применён: $displayName"
+                fontMessage = "${tx("font_applied")}: $displayName"
             }.onFailure {
-                fontMessage = it.message ?: "Не удалось установить шрифт"
+                fontMessage = displayText(it.message ?: "Не удалось установить шрифт")
             }
         }
     }
@@ -1230,7 +1230,7 @@ private fun SettingsPage(
                         }
                         if (fontPath != null) {
                             Surface(
-                                onClick = { onResetFont(); fontMessage = "Возвращён стандартный шрифт" },
+                                onClick = { onResetFont(); fontMessage = tx("default_font") },
                                 modifier = Modifier.height(50.dp), shape = RoundedCornerShape(25.dp), color = p.key
                             ) {
                                 Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
@@ -1261,7 +1261,7 @@ private fun SettingsPage(
                     Text("MathFlow", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                     Text("Version $version", fontSize = 14.sp, color = p.accent)
                     Text(
-                        "Научный калькулятор, дроби, проценты, геометрия и решатель уравнений. Всё считается на устройстве, без интернета.",
+                        tx("about_description"),
                         fontSize = 13.sp, color = p.muted, lineHeight = 18.sp
                     )
                 }
@@ -1296,7 +1296,7 @@ private fun SettingsPage(
                         )
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
-                            Text(selected.description, fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
+                            Text(displayText(selected.description), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
                         }
                     }
                     ApplySelectionButton(
@@ -1327,7 +1327,7 @@ private fun SettingsPage(
                             Text(language.englishName, color = p.muted, fontSize = 12.sp)
                         }
                         if (selected) {
-                            Icon(Icons.Default.Calculate, contentDescription = "Выбран", tint = p.accent)
+                            Icon(Icons.Default.Calculate, contentDescription = tx("selected"), tint = p.accent)
                         }
                     }
                 }
@@ -1335,7 +1335,7 @@ private fun SettingsPage(
             }
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
-                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
+                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
                 Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp)
                 ThemeOptions.chunked(2).forEach { pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1357,7 +1357,7 @@ private fun SettingsPage(
                         Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(selected.palette.background).border(1.dp, p.key, RoundedCornerShape(16.dp)))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
-                            Text(selected.description, fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
+                            Text(displayText(selected.description), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
                         }
                     }
                     ApplySelectionButton(
