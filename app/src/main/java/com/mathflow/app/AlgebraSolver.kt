@@ -5,6 +5,17 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
+import kotlin.math.ln
+import kotlin.math.log10
+import kotlin.math.sin
+import kotlin.math.cos
+import kotlin.math.tan
+import kotlin.math.exp
+import kotlin.math.asin
+import kotlin.math.acos
+import kotlin.math.atan
+import kotlin.math.PI
+import kotlin.math.pow
 
 data class EquationSolution(
     val kind: String,
@@ -143,10 +154,18 @@ class AlgebraSolver {
             "Обе части уравнения должны быть заполнены"
         }
 
-        val left = Parser(leftText).parse()
-        val right = Parser(rightText).parse()
-        val reduced = left.numerator * right.denominatorProduct() -
-            right.numerator * left.denominatorProduct()
+        val parsed = try {
+            val parsedLeft = Parser(leftText).parse()
+            val parsedRight = Parser(rightText).parse()
+            val polynomialDifference = parsedLeft.numerator * parsedRight.denominatorProduct() -
+                parsedRight.numerator * parsedLeft.denominatorProduct()
+            Triple(parsedLeft, parsedRight, polynomialDifference)
+        } catch (_: IllegalArgumentException) {
+            return solveGeneral(equation)
+        }
+        val left = parsed.first
+        val right = parsed.second
+        val reduced = parsed.third
         val excludedFactors = left.domainFactors + right.domainFactors
         val excludedRoots = excludedFactors.flatMap { factor ->
             if (factor.degree > 0) {
@@ -277,6 +296,275 @@ class AlgebraSolver {
         val labels = roots.mapIndexed { index, root -> "x${subscript(index + 1)} ≈ ${fmt(root)}" }
         steps += "Проверка корней выполнена подстановкой в исходный многочлен с численной точностью."
         return EquationSolution("polynomial_numeric", labels.joinToString(", "), steps)
+    }
+
+    /**
+     * Fallback for equations containing functions or powers above degree four.
+     * Numerical roots are searched on a documented finite interval; poles and
+     * undefined function values are rejected by checking the residual at each root.
+     */
+    private fun solveGeneral(equation: String): EquationSolution {
+        val equal = equation.indexOf('=')
+        require(equal >= 0 && equation.indexOf('=', equal + 1) < 0) {
+            "Введите уравнение с одним знаком ="
+        }
+        val leftText = equation.substring(0, equal).trim()
+        val rightText = equation.substring(equal + 1).trim()
+        require(leftText.isNotEmpty() && rightText.isNotEmpty()) {
+            "Обе части уравнения должны быть заполнены"
+        }
+        val left = NumericParser(leftText).parse()
+        val right = NumericParser(rightText).parse()
+        fun valueAt(x: Double): Double = try {
+            (left(x) - right(x)).takeIf { it.isFinite() } ?: Double.NaN
+        } catch (_: Exception) {
+            Double.NaN
+        }
+
+        val lower = -100.0
+        val upper = 100.0
+        val sampleCount = 20_000
+        val step = (upper - lower) / sampleCount
+        val values = DoubleArray(sampleCount + 1) { index ->
+            valueAt(lower + index * step)
+        }
+        val validValues = values.filter { it.isFinite() }
+        require(validValues.isNotEmpty()) {
+            "На выбранном интервале нет допустимых действительных значений"
+        }
+        if (validValues.all { abs(it) <= 1.0e-11 }) {
+            return EquationSolution(
+                "general_identity",
+                "Равенство верно на всей области определения",
+                listOf(
+                    "Использовано численное исследование выражения",
+                    "На проверенном интервале [-100; 100] равенство выполняется для всех допустимых значений"
+                )
+            )
+        }
+
+        val roots = mutableListOf<Double>()
+        fun addRoot(candidate: Double) {
+            if (!candidate.isFinite() || abs(valueAt(candidate)) > 1.0e-7) return
+            if (roots.none { abs(it - candidate) <= 1.0e-4 * max(1.0, abs(candidate)) }) {
+                roots += candidate
+            }
+        }
+
+        for (index in 0 until sampleCount) {
+            val x1 = lower + index * step
+            val x2 = x1 + step
+            val y1 = values[index]
+            val y2 = values[index + 1]
+            if (!y1.isFinite() || !y2.isFinite()) continue
+            if (abs(y1) <= 1.0e-10) addRoot(x1)
+            if ((y1 < 0.0) != (y2 < 0.0)) {
+                var low = x1
+                var high = x2
+                var lowValue = y1
+                repeat(90) {
+                    val middle = low + (high - low) / 2.0
+                    val middleValue = valueAt(middle)
+                    if (!middleValue.isFinite()) {
+                        high = middle
+                    } else if (abs(middleValue) <= 1.0e-14) {
+                        low = middle
+                        high = middle
+                    } else if ((middleValue < 0.0) == (lowValue < 0.0)) {
+                        low = middle
+                        lowValue = middleValue
+                    } else {
+                        high = middle
+                    }
+                }
+                addRoot(low + (high - low) / 2.0)
+            }
+        }
+        if (values.last().isFinite() && abs(values.last()) <= 1.0e-10) addRoot(upper)
+
+        // Find even-multiplicity roots, which do not create a sign change.
+        for (index in 1 until sampleCount) {
+            val before = values[index - 1]
+            val current = values[index]
+            val after = values[index + 1]
+            if (!before.isFinite() || !current.isFinite() || !after.isFinite()) continue
+            if (abs(current) > 0.05 || abs(current) > abs(before) || abs(current) > abs(after)) continue
+            var low = lower + (index - 1) * step
+            var high = lower + (index + 1) * step
+            repeat(55) {
+                val leftProbe = low + (high - low) / 3.0
+                val rightProbe = high - (high - low) / 3.0
+                val leftValue = valueAt(leftProbe)
+                val rightValue = valueAt(rightProbe)
+                if (!leftValue.isFinite() || (rightValue.isFinite() && abs(leftValue) > abs(rightValue))) {
+                    low = leftProbe
+                } else {
+                    high = rightProbe
+                }
+            }
+            addRoot(low + (high - low) / 2.0)
+        }
+
+        val ordered = roots.sorted()
+        if (ordered.isEmpty()) {
+            return EquationSolution(
+                "general_no_roots_in_range",
+                "На интервале [-100; 100] действительные корни не найдены",
+                listOf(
+                    "Уравнение содержит функции или степени, для которых применён численный метод",
+                    "Проверена область [-100; 100]; это не доказывает отсутствие корней за её пределами"
+                )
+            )
+        }
+        val shown = ordered.take(20)
+        val answer = shown.mapIndexed { index, root ->
+            "x${subscript(index + 1)} ≈ ${fmt(root)}"
+        }.joinToString(", ")
+        val steps = mutableListOf(
+            "Использован численный метод с проверкой допустимых значений",
+            "Область поиска: [-100; 100]; тригонометрические функции вычисляются в радианах",
+            "Каждый найденный корень проверен подстановкой в исходное уравнение"
+        )
+        if (ordered.size > shown.size) {
+            steps += "Показаны первые 20 корней из ${ordered.size} найденных на этом интервале"
+        }
+        return EquationSolution("general_numeric", answer, steps)
+    }
+
+    private class NumericParser(input: String) {
+        private val normalizedInput = input
+            .replace("−", "-").replace("×", "*").replace("÷", "/")
+            .replace("π", "pi").replace("√", "sqrt")
+            .replace("⁴", "^4").replace("³", "^3").replace("²", "^2")
+            .filterNot { it.isWhitespace() }
+        private val tokens = Regex("""\d+(?:[.,]\d+)?|[A-Za-z]+|[()+\-*/^,|]""")
+            .findAll(normalizedInput).map { it.value }.toList()
+        private var index = 0
+
+        init {
+            require(tokens.isNotEmpty() && tokens.joinToString("") == normalizedInput) {
+                "Недопустимый символ в уравнении"
+            }
+        }
+
+        fun parse(): (Double) -> Double {
+            val result = expression()
+            require(index == tokens.size) { "Проверьте запись выражения" }
+            return result
+        }
+
+        private fun expression(): (Double) -> Double {
+            var value = term()
+            while (peek() == "+" || peek() == "-") {
+                val operator = take()
+                val left = value
+                val right = term()
+                value = if (operator == "+") {
+                    { x -> left(x) + right(x) }
+                } else {
+                    { x -> left(x) - right(x) }
+                }
+            }
+            return value
+        }
+
+        private fun term(): (Double) -> Double {
+            var value = unary()
+            while (peek() == "*" || peek() == "/" || startsPrimary(peek())) {
+                val operator = if (peek() == "*" || peek() == "/") take() else "*"
+                val left = value
+                val right = unary()
+                value = if (operator == "*") {
+                    { x -> left(x) * right(x) }
+                } else {
+                    { x -> left(x) / right(x) }
+                }
+            }
+            return value
+        }
+
+        private fun startsPrimary(token: String?): Boolean =
+            token == "(" || token == "|" || token?.firstOrNull()?.isDigit() == true ||
+                token?.firstOrNull()?.isLetter() == true
+
+        private fun unary(): (Double) -> Double = when (peek()) {
+            "+" -> { take(); unary() }
+            "-" -> {
+                take()
+                val value = unary()
+                { x -> -value(x) }
+            }
+            else -> power()
+        }
+
+        private fun power(): (Double) -> Double {
+            val base = primary()
+            if (peek() != "^") return base
+            take()
+            val exponent = unary()
+            return { x -> base(x).pow(exponent(x)) }
+        }
+
+        private fun primary(): (Double) -> Double {
+            val token = take()
+            return when {
+                token == "(" -> {
+                    val value = expression()
+                    require(take() == ")") { "Не закрыта скобка" }
+                    value
+                }
+                token == "|" -> {
+                    val value = expression()
+                    require(take() == "|") { "Не закрыт модуль" }
+                    { x -> abs(value(x)) }
+                }
+                token.equals("x", true) -> { x -> x }
+                token.equals("pi", true) -> { _ -> PI }
+                token.equals("e", true) -> { _ -> kotlin.math.E }
+                token.firstOrNull()?.isDigit() == true -> {
+                    val number = token.replace(',', '.').toDouble()
+                    { _ -> number }
+                }
+                token.firstOrNull()?.isLetter() == true -> parseFunction(token)
+                else -> throw IllegalArgumentException("Ожидалось число, x, функция или скобка")
+            }
+        }
+
+        private fun parseFunction(name: String): (Double) -> Double {
+            require(peek() == "(") { "После имени функции поставьте скобку" }
+            take()
+            val first = expression()
+            val second = if (peek() == ",") {
+                take()
+                expression()
+            } else null
+            require(take() == ")") { "Не закрыта скобка функции" }
+            return when (name.lowercase(Locale.ROOT)) {
+                "abs" -> { x -> abs(first(x)) }
+                "sqrt" -> { x -> first(x).takeIf { it >= 0.0 }?.let(::sqrt) ?: Double.NaN }
+                "sin" -> { x -> sin(first(x)) }
+                "cos" -> { x -> cos(first(x)) }
+                "tan" -> { x -> tan(first(x)) }
+                "asin" -> { x -> asin(first(x)) }
+                "acos" -> { x -> acos(first(x)) }
+                "atan" -> { x -> atan(first(x)) }
+                "ln" -> { x -> first(x).takeIf { it > 0.0 }?.let(::ln) ?: Double.NaN }
+                "log" -> { x -> first(x).takeIf { it > 0.0 }?.let(::log10) ?: Double.NaN }
+                "exp" -> { x -> exp(first(x)) }
+                "min" -> {
+                    requireNotNull(second) { "Функции min нужны два аргумента" }
+                    { x -> minOf(first(x), second(x)) }
+                }
+                "max" -> {
+                    requireNotNull(second) { "Функции max нужны два аргумента" }
+                    { x -> maxOf(first(x), second(x)) }
+                }
+                else -> throw IllegalArgumentException("Неизвестная функция: $name")
+            }
+        }
+
+        private fun peek() = tokens.getOrNull(index)
+        private fun take() = tokens.getOrNull(index++) ?: throw IllegalArgumentException("Неожиданный конец выражения")
     }
 
     private fun findRealRoots(input: DoubleArray): List<Double> {
