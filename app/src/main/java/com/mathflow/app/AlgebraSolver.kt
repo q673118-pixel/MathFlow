@@ -440,6 +440,7 @@ class AlgebraSolver {
         private val tokens = Regex("""\d+(?:[.,]\d+)?|[A-Za-z]+|[()+\-*/^,|]""")
             .findAll(normalizedInput).map { it.value }.toList()
         private var index = 0
+        private var absoluteDepth = 0
 
         init {
             require(tokens.isNotEmpty() && tokens.joinToString("") == normalizedInput) {
@@ -484,7 +485,8 @@ class AlgebraSolver {
         }
 
         private fun startsPrimary(token: String?): Boolean =
-            token == "(" || token == "|" || token?.firstOrNull()?.isDigit() == true ||
+            token == "(" || (token == "|" && absoluteDepth == 0) ||
+                token?.firstOrNull()?.isDigit() == true ||
                 token?.firstOrNull()?.isLetter() == true
 
         private fun unary(): (Double) -> Double = when (peek()) {
@@ -515,8 +517,10 @@ class AlgebraSolver {
                     value
                 }
                 token == "|" -> {
+                    absoluteDepth++
                     val value = expression()
                     require(take() == "|") { "Не закрыт модуль" }
+                    absoluteDepth--
                     val absolute: (Double) -> Double = { x -> abs(value(x)) }
                     absolute
                 }
