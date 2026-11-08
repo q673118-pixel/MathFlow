@@ -121,7 +121,38 @@ import kotlinx.coroutines.sync.Mutex
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
+        splashScreen.setOnExitAnimationListener { splashProvider ->
+            val icon = splashProvider.iconView
+            val grow = android.animation.AnimatorSet().apply {
+                playTogether(
+                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_X, 1f, 1.16f),
+                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_Y, 1f, 1.16f)
+                )
+                duration = 220L
+                interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            }
+            val shrink = android.animation.AnimatorSet().apply {
+                playTogether(
+                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_X, 1.16f, 0.76f),
+                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_Y, 1.16f, 0.76f)
+                )
+                duration = 260L
+                interpolator = android.view.animation.AccelerateDecelerateInterpolator()
+            }
+            val fadeOut = android.animation.ObjectAnimator.ofFloat(
+                splashProvider.view, android.view.View.ALPHA, 1f, 0f
+            ).apply { duration = 130L }
+            android.animation.AnimatorSet().apply {
+                playSequentially(grow, shrink, fadeOut)
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        splashProvider.remove()
+                    }
+                })
+                start()
+            }
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent { MathFlowApp() }
@@ -258,7 +289,6 @@ private fun MathFlowApp() {
     val historyMutex = remember { Mutex() }
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
-    var showSplash by remember { mutableStateOf(true) }
     var showWelcome by remember { mutableStateOf(!prefs.getBoolean("welcome_seen", false)) }
 
     LaunchedEffect(Unit) {
@@ -407,10 +437,7 @@ private fun MathFlowApp() {
                             }
                             BottomNav(page) { page = it }
                         }
-                        if (showSplash) {
-                            MathFlowSplash(palette = palette) { showSplash = false }
-                        }
-                        if (!showSplash && showWelcome) {
+                        if (showWelcome) {
                             FirstLaunchWelcome(
                                 palette = palette,
                                 language = appLanguage,
@@ -428,34 +455,6 @@ private fun MathFlowApp() {
 }
 
  
-@Composable
-private fun MathFlowSplash(palette: Palette, onFinished: () -> Unit) {
-    val scale = remember { Animatable(0.72f) }
-    val alpha = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        launch { alpha.animateTo(1f, tween(210, easing = FastOutSlowInEasing)) }
-        scale.animateTo(1.12f, tween(280, easing = FastOutSlowInEasing))
-        launch { alpha.animateTo(0f, tween(300, easing = FastOutSlowInEasing)) }
-        scale.animateTo(0.72f, tween(300, easing = FastOutSlowInEasing))
-        onFinished()
-    }
-    Box(
-        Modifier.fillMaxSize().background(palette.background),
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(R.drawable.mark_black),
-            contentDescription = "MathFlow",
-            modifier = Modifier.size(224.dp).graphicsLayer {
-                scaleX = scale.value
-                scaleY = scale.value
-                this.alpha = alpha.value
-            },
-            colorFilter = ColorFilter.tint(if (palette.dark) Color.White else Color(0xFF17131F))
-        )
-    }
-}
-
 @Composable
 private fun FirstLaunchWelcome(
     palette: Palette,
