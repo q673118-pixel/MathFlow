@@ -492,7 +492,8 @@ class AlgebraSolver {
             "-" -> {
                 take()
                 val value = unary()
-                { x -> -value(x) }
+                val negated: (Double) -> Double = { x -> -value(x) }
+                negated
             }
             else -> power()
         }
@@ -516,14 +517,16 @@ class AlgebraSolver {
                 token == "|" -> {
                     val value = expression()
                     require(take() == "|") { "Не закрыт модуль" }
-                    { x -> abs(value(x)) }
+                    val absolute: (Double) -> Double = { x -> abs(value(x)) }
+                    absolute
                 }
                 token.equals("x", true) -> { x -> x }
                 token.equals("pi", true) -> { _ -> PI }
                 token.equals("e", true) -> { _ -> kotlin.math.E }
                 token.firstOrNull()?.isDigit() == true -> {
                     val number = token.replace(',', '.').toDouble()
-                    { _ -> number }
+                    val constant: (Double) -> Double = { _ -> number }
+                    constant
                 }
                 token.firstOrNull()?.isLetter() == true -> parseFunction(token)
                 else -> throw IllegalArgumentException("Ожидалось число, x, функция или скобка")
@@ -552,12 +555,14 @@ class AlgebraSolver {
                 "log" -> { x -> first(x).takeIf { it > 0.0 }?.let(::log10) ?: Double.NaN }
                 "exp" -> { x -> exp(first(x)) }
                 "min" -> {
-                    requireNotNull(second) { "Функции min нужны два аргумента" }
-                    { x -> minOf(first(x), second(x)) }
+                    val right = requireNotNull(second) { "Функции min нужны два аргумента" }
+                    val minimum: (Double) -> Double = { x -> minOf(first(x), right(x)) }
+                    minimum
                 }
                 "max" -> {
-                    requireNotNull(second) { "Функции max нужны два аргумента" }
-                    { x -> maxOf(first(x), second(x)) }
+                    val right = requireNotNull(second) { "Функции max нужны два аргумента" }
+                    val maximum: (Double) -> Double = { x -> maxOf(first(x), right(x)) }
+                    maximum
                 }
                 else -> throw IllegalArgumentException("Неизвестная функция: $name")
             }
