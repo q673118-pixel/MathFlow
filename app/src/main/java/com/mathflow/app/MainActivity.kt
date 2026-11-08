@@ -1632,7 +1632,7 @@ private fun SettingsPage(
                 android.graphics.Typeface.createFromFile(target)
                 savedFonts = (savedFonts + (target.absolutePath to displayName)).distinctBy { it.first }
                 pendingFontPath = target.absolutePath
-                fontMessage = "Добавлен шрифт: $displayName. Нажмите «Применить»."
+                fontMessage = "$displayName — ${tx("font_add_apply_hint")}"
             }.onFailure {
                 importedTarget?.delete()
                 fontMessage = fontInstallError
@@ -1718,8 +1718,8 @@ private fun SettingsPage(
                 }
                 Panel {
                     SettingsEntry(
-                        title = "Шрифты",
-                        subtitle = if (fontPath == null) "Системный шрифт и ваша библиотека" else "Выбран пользовательский шрифт",
+                        title = tx("fonts"),
+                        subtitle = tx("font_library_hint"),
                         icon = Icons.Default.Functions,
                         onClick = {
                             pendingFontPath = fontPath
@@ -1902,15 +1902,15 @@ private fun SettingsPage(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Цветовой эффект нажатия", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(tx("button_color_effect"), color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Text(
-                                if (pendingAnimationSettings.colorEffectEnabled) "Включён" else "Выключен — без белого свечения",
+                                if (pendingAnimationSettings.colorEffectEnabled) tx("button_color_effect_on") else tx("button_color_effect_off"),
                                 color = p.muted, fontSize = 12.sp
                             )
                         }
                         Text(if (pendingAnimationSettings.colorEffectEnabled) "ВКЛ" else "ВЫКЛ", color = p.accent, fontSize = 12.sp)
                     }
-                    Text("Цвет эффекта", color = p.muted, fontSize = 13.sp)
+                    Text(tx("effect_color"), color = p.muted, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         listOf(0L, 0xFFB9A8F0L, 0xFF39C7FFL, 0xFF4BE2B2L, 0xFFFF9A66L).forEach { argb ->
                             val color = if (argb == 0L) p.accent else Color(argb.toInt())
@@ -1944,9 +1944,9 @@ private fun SettingsPage(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Анимации нижней панели", color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text(tx("nav_animations"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                             Text(
-                                if (pendingNavAnimationSettings.enabled) "Включены" else "Отключены",
+                                if (pendingNavAnimationSettings.enabled) tx("nav_enabled") else tx("nav_disabled"),
                                 color = p.muted, fontSize = 12.sp
                             )
                         }
@@ -1969,16 +1969,16 @@ private fun SettingsPage(
                                 ) {
                                     Text(style.title, color = if (selected) p.accent else p.text,
                                         fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                    Text(style.description, color = p.muted, fontSize = 10.sp, lineHeight = 13.sp)
+                                    Text(tx(style.descriptionKey), color = p.muted, fontSize = 10.sp, lineHeight = 13.sp)
                                 }
                             }
                         }
                     }
                     Panel {
-                        Text("Предпросмотр нижней панели", color = p.muted, fontSize = 13.sp)
+                        Text(tx("nav_preview"), color = p.muted, fontSize = 13.sp)
                         BottomNav(navPreviewPage, pendingNavAnimationSettings, preview = true) { navPreviewPage = it }
                     }
-                    Text("Длительность: ${pendingNavAnimationSettings.durationMs} мс", color = p.text, fontSize = 13.sp)
+                    Text("${tx("nav_duration")}: ${pendingNavAnimationSettings.durationMs} ms", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.durationMs.toFloat(),
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(durationMs = it.toInt()) },
@@ -1992,14 +1992,14 @@ private fun SettingsPage(
                         valueRange = 0f..1f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("Масштаб иконки: ${(pendingNavAnimationSettings.iconScale * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${tx("nav_icon_scale")}: ${(pendingNavAnimationSettings.iconScale * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.iconScale,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(iconScale = it) },
                         valueRange = 0f..0.20f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("Прозрачность индикатора: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.opacity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(opacity = it) },
@@ -2013,20 +2013,20 @@ private fun SettingsPage(
                     )
                 }
             }
-            SettingsSection.FONTS -> PageColumn("Шрифты") {
+            SettingsSection.FONTS -> PageColumn(tx("fonts")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) {
                     Text("← ${tx("settings")}", color = p.accent)
                 }
-                Text("Добавляйте шрифты из памяти устройства. Импортированные файлы сохраняются в библиотеке MathFlow.", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                Text(tx("font_library_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Panel {
-                    ActionButton("Выбрать шрифт") {
+                    ActionButton(tx("choose_font")) {
                         fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
                     }
                     fontMessage?.let { Text(it, fontSize = 12.sp, color = p.accent, lineHeight = 17.sp) }
                 }
                 if (savedFonts.isEmpty()) {
                     Panel {
-                        Text("Пока нет импортированных шрифтов.", color = p.muted, fontSize = 13.sp)
+                        Text(tx("no_saved_fonts"), color = p.muted, fontSize = 13.sp)
                     }
                 } else {
                     savedFonts.forEach { (path, name) ->
@@ -2044,7 +2044,7 @@ private fun SettingsPage(
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Text(name, color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                                     Text(
-                                        when { active -> "Применён"; selected -> "Выбран"; else -> "Сохранён" },
+                                        when { active -> tx("applied"); selected -> tx("selected"); else -> tx("font_saved") },
                                         color = if (active || selected) p.accent else p.muted,
                                         fontSize = 11.sp
                                     )
@@ -2063,8 +2063,8 @@ private fun SettingsPage(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Системный", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            Text(if (pendingFontPath == null) "Выбран" else "Стандартный шрифт Android", color = p.muted, fontSize = 11.sp)
+                            Text(tx("system_font"), color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(if (pendingFontPath == null) tx("selected") else tx("font_system_subtitle"), color = p.muted, fontSize = 11.sp)
                         }
                         if (pendingFontPath == null) Icon(Icons.Default.Calculate, contentDescription = null, tint = p.accent)
                     }
@@ -2076,7 +2076,7 @@ private fun SettingsPage(
                         enabled = pendingFontPath != fontPath,
                         onClick = {
                             if (pendingFontPath == null) onResetFont() else onFontSelected(pendingFontPath!!)
-                            fontMessage = "Шрифт применён."
+                            fontMessage = tx("font_apply_success")
                         }
                     )
                 }
