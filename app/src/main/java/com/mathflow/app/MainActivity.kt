@@ -1194,6 +1194,7 @@ private fun EquationSolverPage() {
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     val equationFallback = tx("equation_error")
+    val divisionByZeroText = tx("divide_zero")
 
     PageColumn(tx("solver")) {
         Panel {
@@ -1231,7 +1232,7 @@ private fun EquationSolverPage() {
                         answer = null
                         steps = emptyList()
                         error = if (e.message?.contains("Деление на ноль") == true) {
-                            tx("divide_zero")
+                            divisionByZeroText
                         } else {
                             equationFallback
                         }
