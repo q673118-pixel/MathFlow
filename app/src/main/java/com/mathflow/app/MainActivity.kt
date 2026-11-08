@@ -809,7 +809,7 @@ private fun ToolsPage() {
     var geometryError by rememberSaveable { mutableStateOf<String?>(null) }
 
     PageColumn("Инструменты") {
-        Segmented(listOf("Дроби", "Проценты", "Геометрия"), tool) { tool = it }
+        Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер"), tool) { tool = it }
         Panel {
             when (tool) {
                 "Дроби" -> {
@@ -861,7 +861,7 @@ private fun ToolsPage() {
                     }
                     if (percentResult.isNotEmpty() || percentError != null) ResultBox(percentResult, percentError)
                 }
-                else -> {
+                "Геометрия" -> {
                     Segmented(listOf("Прямоугольник", "Круг", "Треугольник"), shape) { shape = it }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Field(sideA, { sideA = it }, if (shape == "Круг") "Радиус" else "Сторона a", Modifier.weight(1f))
@@ -880,11 +880,11 @@ private fun ToolsPage() {
                     }
                     if (geometryResult.isNotEmpty() || geometryError != null) ResultBox(geometryResult, geometryError)
                 }
+                "Конвертер" -> UnitConverterContent()
             }
         }
     }
 }
-
 private fun friendly(error: Throwable, fallback: String): String = when {
     error.message?.contains("Division by zero") == true -> "Деление на ноль"
     error is IllegalArgumentException || error is ArithmeticException -> error.message ?: fallback

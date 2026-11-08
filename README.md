@@ -1,4 +1,4 @@
-# MathFlow Android — 1.0.0
+# MathFlow Android — 1.5.4
 
 MathFlow is a Kotlin / Jetpack Compose / Material 3 Android mathematics app.
 
@@ -8,6 +8,7 @@ MathFlow is a Kotlin / Jetpack Compose / Material 3 Android mathematics app.
 - Fraction calculator: exact addition, subtraction, multiplication and division; reduced fraction, mixed and decimal representations.
 - Percentage tools: percentage of a value, part-to-whole percentage, increase and decrease.
 - Geometry: rectangle, circle and triangle (Heron's formula).
+- Offline unit converter: length, mass, area, volume, temperature, speed, time, pressure, energy and data units.
 - Local history of the latest 100 successful calculator evaluations, including result, timestamp and steps.
 - TTF/OTF font import, persistent light/dark theme and text-size adjustment.
 
