@@ -73,13 +73,10 @@ class AlgebraSolverTest {
         assertTrue(result.answer.contains("2"))
     }
 
-    @Test fun rejectsPolynomialDegreeAboveFourExplicitly() {
-        try {
-            solver.solve("x^5 = 1")
-            throw AssertionError("Expected degree above four to be rejected")
-        } catch (_: IllegalArgumentException) {
-            // The solver must report the unsupported degree rather than guessing.
-        }
+    @Test fun solvesQuinticEquationNumerically() {
+        val result = solver.solve("x^5 = 1")
+        assertEquals("general_numeric", result.kind)
+        assertTrue(result.answer.contains("1"))
     }
 
     @Test fun acceptsSuperscriptSquareAndUnicodeMinus() {
@@ -160,6 +157,37 @@ class AlgebraSolverTest {
         val result = solver.solve("(1/x)^0 = 1")
         assertEquals("identity", result.kind)
         assertTrue(result.answer.contains("0"))
+    }
+
+    @Test fun solvesAbsoluteValueEquation() {
+        val result = solver.solve("|x| = 2")
+        assertEquals("general_numeric", result.kind)
+        assertTrue(result.answer.contains("-2"))
+        assertTrue(result.answer.contains("2"))
+    }
+
+    @Test fun solvesSquareRootEquationNumerically() {
+        val result = solver.solve("sqrt(x) = 2")
+        assertEquals("general_numeric", result.kind)
+        assertTrue(result.answer.contains("4"))
+    }
+
+    @Test fun solvesNaturalLogarithmEquationNumerically() {
+        val result = solver.solve("ln(x) = 0")
+        assertEquals("general_numeric", result.kind)
+        assertTrue(result.answer.contains("1"))
+    }
+
+    @Test fun solvesTrigonometricEquationInRadians() {
+        val result = solver.solve("sin(x) = 0")
+        assertEquals("general_numeric", result.kind)
+        assertTrue(result.answer.contains("0"))
+    }
+
+    @Test fun solvesFractionalPowerEquationNumerically() {
+        val result = solver.solve("x^0.5 = 3")
+        assertEquals("general_numeric", result.kind)
+        assertTrue(result.answer.contains("9"))
     }
 
 }
