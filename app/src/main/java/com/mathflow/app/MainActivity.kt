@@ -473,7 +473,13 @@ private fun MathFlowApp() {
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalKeyAnimationSettings provides keyAnimationSettings,
-        LocalIndication provides MathFlowNoIndication,
+        LocalIndication provides if (keyAnimationSettings.colorEffectEnabled) {
+            MathFlowPressIndication(
+                color = if (keyAnimationSettings.pressColorArgb == 0L) palette.accent
+                    else Color(keyAnimationSettings.pressColorArgb.toInt()),
+                maxAlpha = keyAnimationSettings.opacity * 0.20f
+            )
+        } else MathFlowNoIndication,
         LocalRippleConfiguration provides if (keyAnimationSettings.colorEffectEnabled) {
             RippleConfiguration(
                 color = if (keyAnimationSettings.pressColorArgb == 0L) palette.accent
@@ -773,9 +779,9 @@ private fun BottomNav(
                 val indicatorScaleX by animateFloatAsState(
                     targetValue = when {
                         !settings.enabled -> 1f
-                        style == BottomNavAnimationStyle.EXPAND -> 1.08f
-                        style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f + settings.intensity * 0.12f
-                        style == BottomNavAnimationStyle.LIGHT_TRAIL -> 1.18f
+                        style == BottomNavAnimationStyle.EXPAND -> 1f + settings.intensity * 0.12f
+                        style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f + settings.intensity * 0.20f
+                        style == BottomNavAnimationStyle.LIGHT_TRAIL -> 1f + settings.intensity * 0.08f
                         else -> 1f
                     },
                     animationSpec = tween(duration, easing = FastOutSlowInEasing),
@@ -821,21 +827,32 @@ private fun BottomNav(
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
-                                translationX = indicatorOffset
+                                translationX = indicatorOffset - if (style == BottomNavAnimationStyle.LIGHT_TRAIL) with(density) { 12.dp.toPx() } else 0f
                                 scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX * travelStretch.value
                                 alpha = indicatorAlpha
                             }
-                            .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 18.dp else 0.dp)
-                            .size(width = indicatorWidth, height = indicatorHeight)
-                            .clip(RoundedCornerShape(percent = 50))
-                            .background(
-                                when (style) {
-                                    BottomNavAnimationStyle.LIGHT_TRAIL -> p.accent
-                                    BottomNavAnimationStyle.SOFT_FOCUS -> p.navActive.copy(alpha = 0.5f)
-                                    else -> p.navActive
-                                }
+                            .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 14.dp else 0.dp)
+                            .size(
+                                width = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 62.dp else indicatorWidth,
+                                height = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 12.dp else indicatorHeight
                             )
-                    )
+                    ) {
+                        if (style == BottomNavAnimationStyle.LIGHT_TRAIL && settings.enabled) {
+                            Box(
+                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
+                                    .background(p.accent.copy(alpha = 0.16f))
+                            )
+                            Box(
+                                Modifier.align(Alignment.Center).size(width = indicatorWidth, height = 3.dp)
+                                    .clip(RoundedCornerShape(percent = 50)).background(p.accent)
+                            )
+                        } else {
+                            Box(
+                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
+                                    .background(if (style == BottomNavAnimationStyle.LIGHT_TRAIL) p.accent else p.navActive)
+                            )
+                        }
+                    }
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Page.values().forEach { item ->
@@ -854,9 +871,18 @@ private fun BottomNav(
                                     BottomNavAnimationStyle.ELASTIC_SLIDE
                                 )
                             ) 1f + settings.iconScale else 1f,
-                            animationSpec = if (springMotion) spring(dampingRatio = 0.62f, stiffness = 440f)
-                                else tween(duration, easing = FastOutSlowInEasing),
+                            animationSpec = if (springMotion) spring(
+                                dampingRatio = 0.88f - settings.intensity * 0.38f,
+                                stiffness = 300f + settings.intensity * 360f
+                            ) else tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconScale"
+                        )
+                        val morphY by animateFloatAsState(
+                            targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.MORPH) {
+                                1f - settings.iconScale * (0.35f + settings.intensity * 0.45f)
+                            } else 1f,
+                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
+                            label = "MathFlowNavigationIconMorph"
                         )
                         val focusAlpha by animateFloatAsState(
                             targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
@@ -887,7 +913,7 @@ private fun BottomNav(
                                 tint = tint,
                                 modifier = Modifier.size(26.dp).graphicsLayer {
                                     scaleX = iconScale
-                                    scaleY = iconScale
+                                    scaleY = iconScale * morphY
                                 }
                             )
                         }
