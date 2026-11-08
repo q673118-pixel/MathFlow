@@ -1127,6 +1127,12 @@ private fun SettingsPage(
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val fontFileTypeError = tx("font_file_type")
+    val fontOpenError = tx("font_open_error")
+    val fontEmptyError = tx("font_empty")
+    val fontInstallError = tx("font_install_error")
+    val fontAppliedLabel = tx("font_applied")
+    val defaultFontLabel = tx("default_font")
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
@@ -1138,18 +1144,18 @@ private fun SettingsPage(
                     if (column >= 0 && cursor.moveToFirst()) cursor.getString(column) else null
                 } ?: "custom_font.ttf"
                 val extension = displayName.substringAfterLast('.', "").lowercase(Locale.ROOT)
-                require(extension == "ttf" || extension == "otf") { tx("font_file_type") }
+                require(extension == "ttf" || extension == "otf") { fontFileTypeError }
                 val fontDir = File(context.filesDir, "fonts").apply { mkdirs() }
                 val target = File(fontDir, "mathflow_custom_${System.currentTimeMillis()}.$extension")
                 context.contentResolver.openInputStream(uri).use { input ->
-                    requireNotNull(input) { tx("font_open_error") }
+                    requireNotNull(input) { fontOpenError }
                     target.outputStream().use { output -> input.copyTo(output) }
                 }
-                require(target.length() > 0L) { tx("font_empty") }
+                require(target.length() > 0L) { fontEmptyError }
                 android.graphics.Typeface.createFromFile(target)
                 fontDir.listFiles()?.filter { it != target }?.forEach { it.delete() }
                 onFontSelected(target.absolutePath)
-                fontMessage = "${tx("font_applied")}: $displayName"
+                fontMessage = "$fontAppliedLabel: $displayName"
             }.onFailure {
                 fontMessage = displayText(it.message ?: "Не удалось установить шрифт")
             }
@@ -1230,7 +1236,7 @@ private fun SettingsPage(
                         }
                         if (fontPath != null) {
                             Surface(
-                                onClick = { onResetFont(); fontMessage = tx("default_font") },
+                                onClick = { onResetFont(); fontMessage = defaultFontLabel },
                                 modifier = Modifier.height(50.dp), shape = RoundedCornerShape(25.dp), color = p.key
                             ) {
                                 Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
