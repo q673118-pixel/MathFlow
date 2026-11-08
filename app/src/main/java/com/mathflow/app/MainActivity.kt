@@ -1230,7 +1230,11 @@ private fun EquationSolverPage() {
                     } catch (e: IllegalArgumentException) {
                         answer = null
                         steps = emptyList()
-                        error = friendly(e, equationFallback)
+                        error = if (e.message?.contains("Деление на ноль") == true) {
+                            tx("divide_zero")
+                        } else {
+                            equationFallback
+                        }
                     } catch (_: Exception) {
                         answer = null
                         steps = emptyList()
