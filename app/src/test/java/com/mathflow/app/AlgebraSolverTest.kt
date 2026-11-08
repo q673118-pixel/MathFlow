@@ -149,4 +149,17 @@ class AlgebraSolverTest {
         assertTrue(result.answer.contains("3.5"))
     }
 
+    @Test fun dividesByAnotherRationalExpressionWithoutLosingItsDomain() {
+        val result = solver.solve("(1/x)/(1/(x - 1)) = 2")
+        assertEquals("linear", result.kind)
+        assertTrue(result.answer.contains("-1"))
+        assertTrue(result.steps.any { it.contains("ОДЗ") })
+    }
+
+    @Test fun zeroPowerKeepsTheOriginalExpressionDomain() {
+        val result = solver.solve("(1/x)^0 = 1")
+        assertEquals("identity", result.kind)
+        assertTrue(result.answer.contains("0"))
+    }
+
 }
