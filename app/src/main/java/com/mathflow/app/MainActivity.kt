@@ -116,7 +116,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -339,10 +338,13 @@ private fun MathFlowApp() {
                                 when (targetPage) {
                                     Page.HOME -> CalculatorHome { expression, result, steps ->
                                         historyScope.launch {
-                                            historyMutex.withLock {
+                                            historyMutex.lock()
+                                            try {
                                                 history = withContext(Dispatchers.IO) {
                                                     HistoryStore.add(context, expression, result, steps)
                                                 }
+                                            } finally {
+                                                historyMutex.unlock()
                                             }
                                         }
                                     }
@@ -350,11 +352,14 @@ private fun MathFlowApp() {
                                     Page.SOLVER -> EquationSolverPage()
                                     Page.HISTORY -> HistoryPage(history) {
                                         historyScope.launch {
-                                            historyMutex.withLock {
+                                            historyMutex.lock()
+                                            try {
                                                 withContext(Dispatchers.IO) {
                                                     HistoryStore.clear(context)
                                                 }
                                                 history = emptyList()
+                                            } finally {
+                                                historyMutex.unlock()
                                             }
                                         }
                                     }
