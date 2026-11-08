@@ -15,6 +15,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -69,6 +70,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -306,31 +308,26 @@ private fun MathFlowApp() {
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
                     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                        AnimatedContent(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            targetState = page,
-                            transitionSpec = {
-                                // Keep tab changes visually continuous without moving two full-width
-                                // screens across the display. A short fade + tiny offset is cheaper
-                                // to render on entry-level devices than the previous full-width slide.
-                                (androidx.compose.animation.fadeIn(
-                                    animationSpec = tween(170, easing = FastOutSlowInEasing)
-                                ) + slideInHorizontally(
-                                    animationSpec = tween(190, easing = FastOutSlowInEasing),
-                                    initialOffsetX = { width -> width / 18 }
-                                )) togetherWith
-                                    (androidx.compose.animation.fadeOut(
-                                        animationSpec = tween(120, easing = FastOutSlowInEasing)
-                                    ) + slideOutHorizontally(
-                                        animationSpec = tween(160, easing = FastOutSlowInEasing),
-                                        targetOffsetX = { width -> -width / 24 }
-                                    ))
-                            },
-                            label = "MathFlowScreenTransition"
-                        ) { targetPage ->
-                            pageStateHolder.SaveableStateProvider(targetPage) {
-                                Box(Modifier.fillMaxSize()) {
-                                    when (targetPage) {
+                        // Compose only the selected tab. AnimatedContent keeps both outgoing
+                        // and incoming screens alive during a transition, which can double the
+                        // layout/draw work on low-memory devices. This enter-only animation keeps
+                        // the motion while avoiding two full page trees at once.
+                        key(page) {
+                            pageStateHolder.SaveableStateProvider(page) {
+                                val enterProgress = remember { Animatable(0f) }
+                                LaunchedEffect(Unit) {
+                                    enterProgress.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = tween(150, easing = FastOutSlowInEasing)
+                                    )
+                                }
+                                Box(
+                                    Modifier.weight(1f).fillMaxWidth().graphicsLayer {
+                                        alpha = enterProgress.value
+                                        translationX = (1f - enterProgress.value) * 8.dp.toPx()
+                                    }
+                                ) {
+                                    when (page) {
                                     Page.HOME -> CalculatorHome { expression, result, steps ->
                                         history = HistoryStore.add(context, expression, result, steps)
                                     }
