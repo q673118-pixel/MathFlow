@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -139,11 +140,14 @@ internal fun MathFlowKeyButton(
         modifier = modifier.graphicsLayer {
             this.scaleX = scaleX
             this.scaleY = scaleY
-        },
+        }.clip(shape).clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = onClick
+        ),
         shape = shape,
         color = background,
-        contentColor = foreground,
-        interactionSource = interactionSource
+        contentColor = foreground
     ) {
         Box(
             Modifier.fillMaxSize().clip(shape),
