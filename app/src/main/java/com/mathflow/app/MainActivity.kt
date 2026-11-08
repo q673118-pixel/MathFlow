@@ -829,7 +829,7 @@ private fun ToolsPage() {
                                 ActionButton(op) {
                                     runCatching { FractionTools.calculate(fractionA, fractionB, op) }
                                         .onSuccess { fractionResult = it; fractionError = null }
-                                        .onFailure { fractionError = friendly(it, "Проверьте дроби"); fractionResult = "" }
+                                        .onFailure { fractionError = friendly(it, tx("fraction_error")); fractionResult = "" }
                                 }
                             }
                         }
@@ -863,7 +863,7 @@ private fun ToolsPage() {
                                 else -> PercentTools.percentOf(percentA, percentB)
                             }
                         }.onSuccess { percentResult = it; percentError = null }
-                            .onFailure { percentError = friendly(it, "Проверьте значения"); percentResult = "" }
+                            .onFailure { percentError = friendly(it, tx("values_error")); percentResult = "" }
                     }
                     if (percentResult.isNotEmpty() || percentError != null) ResultBox(percentResult, percentError)
                 }
@@ -882,7 +882,7 @@ private fun ToolsPage() {
                                 else -> GeometryTools.triangle(sideA, sideB, sideC)
                             }
                         }.onSuccess { geometryResult = it; geometryError = null }
-                            .onFailure { geometryError = friendly(it, "Проверьте размеры"); geometryResult = "" }
+                            .onFailure { geometryError = friendly(it, tx("sizes_error")); geometryResult = "" }
                     }
                     if (geometryResult.isNotEmpty() || geometryError != null) ResultBox(geometryResult, geometryError)
                 }
@@ -909,7 +909,7 @@ private fun EquationSolverPage() {
 
     PageColumn(tx("solver")) {
         Panel {
-            Field(equation, { equation = it }, "Например: x² − 5x + 6 = 0", Modifier.fillMaxWidth(), numeric = false)
+            Field(equation, { equation = it }, tx("example_equation"), Modifier.fillMaxWidth(), numeric = false)
             Row(
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -927,7 +927,7 @@ private fun EquationSolverPage() {
                 } catch (e: IllegalArgumentException) {
                     answer = null
                     steps = emptyList()
-                    error = friendly(e, "Проверьте запись уравнения")
+                    error = friendly(e, tx("equation_error"))
                 }
             }
         }
@@ -975,7 +975,7 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                             Text(entry.expression, fontSize = 15.sp, color = p.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text("= ${entry.result}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
                             Text(
-                                entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) "  ·  скрыть решение" else "  ·  показать решение") else "",
+                                entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) tx("hide_solution") else tx("show_solution")) else "",
                                 fontSize = 12.sp, color = p.muted
                             )
                             if (expanded) {
@@ -1327,7 +1327,7 @@ private fun SettingsPage(
                         }
                     }
                 }
-                Text("15 языков интерфейса. Выбор применяется сразу и сохраняется на устройстве.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                Text(tx("languages_available"), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
             }
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
