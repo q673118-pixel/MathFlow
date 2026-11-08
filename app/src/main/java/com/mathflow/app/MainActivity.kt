@@ -582,14 +582,14 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 ) {
                     Chip("f(x)", scientific) { scientific = !scientific }
                     if (scientific) Chip(if (degrees) "DEG" else "RAD", false) { degrees = !degrees }
-                    if (steps.isNotEmpty()) Chip("Решение", showSteps) { showSteps = !showSteps }
+                    if (steps.isNotEmpty()) Chip(tx("steps"), showSteps) { showSteps = !showSteps }
                 }
                 Box(
                     Modifier.align(Alignment.TopEnd).size(40.dp).clip(RoundedCornerShape(20.dp))
                         .clickable { press("⌫") },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Backspace, "Удалить", tint = p.muted, modifier = Modifier.size(22.dp))
+                    Icon(Icons.AutoMirrored.Filled.Backspace, tx("delete"), tint = p.muted, modifier = Modifier.size(22.dp))
                 }
                 Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState(), reverseScrolling = true), horizontalArrangement = Arrangement.End) {
@@ -610,7 +610,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                             else -> 52.sp
                         },
                         fontWeight = FontWeight.Medium,
-                        color = if (result == "Ошибка") p.error else p.text,
+                        color = if (result == tx("error")) p.error else p.text,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.End,
@@ -1327,7 +1327,7 @@ private fun SettingsPage(
                         }
                     }
                 }
-                Text("Это первый этап локализации. Сейчас доступны языковые профили; перевод всех экранов подключается отдельно.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                Text("Переводы основных разделов подключаются постепенно. Список языков будет расширен после подготовки переводов.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
             }
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
