@@ -136,7 +136,6 @@ internal fun MathFlowKeyButton(
     val shape = RoundedCornerShape(50)
 
     Surface(
-        onClick = onClick,
         modifier = modifier.graphicsLayer {
             this.scaleX = scaleX
             this.scaleY = scaleY
