@@ -9,11 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -319,82 +315,83 @@ private fun MathFlowApp() {
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
                     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                        AnimatedContent(
-                            targetState = page,
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            transitionSpec = {
-                                val direction = if (targetState.ordinal > initialState.ordinal) 1 else -1
-                                slideInHorizontally(
-                                    animationSpec = tween(180, easing = FastOutSlowInEasing),
-                                    initialOffsetX = { fullWidth -> fullWidth * direction }
-                                ) togetherWith slideOutHorizontally(
-                                    animationSpec = tween(180, easing = FastOutSlowInEasing),
-                                    targetOffsetX = { fullWidth -> -fullWidth * direction }
-                                )
-                            },
-                            label = "MathFlowPageTransition"
-                        ) { targetPage ->
-                            pageStateHolder.SaveableStateProvider(targetPage) {
-                                when (targetPage) {
-                                    Page.HOME -> CalculatorHome { expression, result, steps ->
-                                        historyScope.launch {
-                                            historyMutex.lock()
-                                            try {
-                                                history = withContext(Dispatchers.IO) {
-                                                    HistoryStore.add(context, expression, result, steps)
-                                                }
-                                            } finally {
-                                                historyMutex.unlock()
-                                            }
-                                        }
-                                    }
-                                    Page.TOOLS -> ToolsPage()
-                                    Page.SOLVER -> EquationSolverPage()
-                                    Page.HISTORY -> HistoryPage(history) {
-                                        historyScope.launch {
-                                            historyMutex.lock()
-                                            try {
-                                                withContext(Dispatchers.IO) {
-                                                    HistoryStore.clear(context)
-                                                }
-                                                history = emptyList()
-                                            } finally {
-                                                historyMutex.unlock()
-                                            }
-                                        }
-                                    }
-                                    Page.SETTINGS -> SettingsPage(
-                                        selectedThemeId = themeId,
-                                        selectedIconId = selectedIconId,
-                                        onThemeSelected = { id ->
-                                            themeId = id
-                                            prefs.edit().putString("app_theme", id).apply()
-                                        },
-                                        onIconSelected = { id ->
-                                            selectedIconId = id
-                                            prefs.edit().putString("app_icon", id).apply()
-                                            setLauncherIcon(context, id)
-                                        },
-                                        fontScale = fontScale,
-                                        fontPath = fontPath,
-                                        selectedLanguage = appLanguage,
-                                        onLanguageSelected = { tag ->
-                                            appLanguage = tag
-                                            prefs.edit().putString("app_language", tag).apply()
-                                        },
-                                        onFontScale = {
-                                            fontScale = it
-                                            prefs.edit().putFloat("font_scale", it).apply()
-                                        },
-                                        onFontSelected = { path ->
-                                            fontPath = path
-                                            prefs.edit().putString("font_path", path).apply()
-                                        },
-                                        onResetFont = {
-                                            fontPath = null
-                                            prefs.edit().remove("font_path").apply()
-                                        }
+                        // Keep only one full page tree composed on low-memory devices.
+                        key(page) {
+                            pageStateHolder.SaveableStateProvider(page) {
+                                val enterProgress = remember { Animatable(0f) }
+                                LaunchedEffect(Unit) {
+                                    enterProgress.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = tween(150, easing = FastOutSlowInEasing)
                                     )
+                                }
+                                Box(
+                                    Modifier.weight(1f).fillMaxWidth().graphicsLayer {
+                                        alpha = enterProgress.value
+                                        translationX = (1f - enterProgress.value) * 8.dp.toPx()
+                                    }
+                                ) {
+                                    when (page) {
+                                        Page.HOME -> CalculatorHome { expression, result, steps ->
+                                            historyScope.launch {
+                                                historyMutex.lock()
+                                                try {
+                                                    history = withContext(Dispatchers.IO) {
+                                                        HistoryStore.add(context, expression, result, steps)
+                                                    }
+                                                } finally {
+                                                    historyMutex.unlock()
+                                                }
+                                            }
+                                        }
+                                        Page.TOOLS -> ToolsPage()
+                                        Page.SOLVER -> EquationSolverPage()
+                                        Page.HISTORY -> HistoryPage(history) {
+                                            historyScope.launch {
+                                                historyMutex.lock()
+                                                try {
+                                                    withContext(Dispatchers.IO) {
+                                                        HistoryStore.clear(context)
+                                                    }
+                                                    history = emptyList()
+                                                } finally {
+                                                    historyMutex.unlock()
+                                                }
+                                            }
+                                        }
+                                        Page.SETTINGS -> SettingsPage(
+                                            selectedThemeId = themeId,
+                                            selectedIconId = selectedIconId,
+                                            onThemeSelected = { id ->
+                                                themeId = id
+                                                prefs.edit().putString("app_theme", id).apply()
+                                            },
+                                            onIconSelected = { id ->
+                                                selectedIconId = id
+                                                prefs.edit().putString("app_icon", id).apply()
+                                                setLauncherIcon(context, id)
+                                            },
+                                            fontScale = fontScale,
+                                            fontPath = fontPath,
+                                            selectedLanguage = appLanguage,
+                                            onLanguageSelected = { tag ->
+                                                appLanguage = tag
+                                                prefs.edit().putString("app_language", tag).apply()
+                                            },
+                                            onFontScale = {
+                                                fontScale = it
+                                                prefs.edit().putFloat("font_scale", it).apply()
+                                            },
+                                            onFontSelected = { path ->
+                                                fontPath = path
+                                                prefs.edit().putString("font_path", path).apply()
+                                            },
+                                            onResetFont = {
+                                                fontPath = null
+                                                prefs.edit().remove("font_path").apply()
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
