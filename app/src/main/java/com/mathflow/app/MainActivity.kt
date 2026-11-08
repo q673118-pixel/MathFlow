@@ -137,7 +137,7 @@ class MainActivity : ComponentActivity() {
 private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
     val density = LocalDensity.current
     val mScale = remember { Animatable(0f) }
-    val startY = with(density) { (-210).dp.toPx() }
+    val startY = with(density) { (-450).dp.toPx() }
     val firstBounceY = with(density) { (-42).dp.toPx() }
     val secondBounceY = with(density) { (-14).dp.toPx() }
     val dotY = remember { Animatable(startY) }
@@ -166,7 +166,9 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                     0f,
                     tween(420, easing = androidx.compose.animation.core.Easing { it * it })
                 )
-                // First rebound: upward, then back to the baseline.
+                // Stay at the contact point while the ball visibly compresses.
+                delay(60L)
+                // First rebound: upward, then gravity pulls the ball back down.
                 dotY.animateTo(
                     firstBounceY,
                     tween(190, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) })
@@ -175,7 +177,8 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                     0f,
                     tween(170, easing = androidx.compose.animation.core.Easing { it * it })
                 )
-                // Smaller second rebound, then settle exactly on the mark.
+                // A shorter second impact, followed by a smaller rebound.
+                delay(45L)
                 dotY.animateTo(
                     secondBounceY,
                     tween(125, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) })
@@ -186,20 +189,22 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                 )
             }
             launch {
-                // Compress on impact, stretch on rebound, and damp each later bounce.
-                dotScaleX.animateTo(1.18f, tween(420))
-                dotScaleX.animateTo(0.88f, tween(75))
-                dotScaleX.animateTo(1.04f, tween(190))
-                dotScaleX.animateTo(0.96f, tween(170))
-                dotScaleX.animateTo(1.015f, tween(125))
+                // Keep the ball round during the fall; squash only at contact.
+                delay(420L)
+                dotScaleX.animateTo(1.18f, tween(60))
+                dotScaleX.animateTo(0.90f, tween(190))
+                dotScaleX.animateTo(1.02f, tween(170))
+                dotScaleX.animateTo(1.12f, tween(45))
+                dotScaleX.animateTo(0.96f, tween(125))
                 dotScaleX.animateTo(1f, tween(115))
             }
             launch {
-                dotScaleY.animateTo(0.80f, tween(420))
-                dotScaleY.animateTo(1.12f, tween(75))
-                dotScaleY.animateTo(0.98f, tween(190))
-                dotScaleY.animateTo(1.04f, tween(170))
-                dotScaleY.animateTo(0.99f, tween(125))
+                delay(420L)
+                dotScaleY.animateTo(0.78f, tween(60))
+                dotScaleY.animateTo(1.12f, tween(190))
+                dotScaleY.animateTo(0.98f, tween(170))
+                dotScaleY.animateTo(0.88f, tween(45))
+                dotScaleY.animateTo(1.04f, tween(125))
                 dotScaleY.animateTo(1f, tween(115))
             }
         }
