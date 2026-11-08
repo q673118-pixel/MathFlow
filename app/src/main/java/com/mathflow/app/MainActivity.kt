@@ -1302,7 +1302,7 @@ private fun SettingsPage(
                         )
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
-                            Text(displayText(selected.description), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
+                            Text(tx("icon_option_description"), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
                         }
                     }
                     ApplySelectionButton(
@@ -1363,7 +1363,7 @@ private fun SettingsPage(
                         Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(selected.palette.background).border(1.dp, p.key, RoundedCornerShape(16.dp)))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
-                            Text(displayText(selected.description), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
+                            Text(tx("theme_option_description"), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
                         }
                     }
                     ApplySelectionButton(
