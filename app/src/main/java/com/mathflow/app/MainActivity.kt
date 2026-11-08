@@ -2335,9 +2335,12 @@ private fun ThemeOptionCard(
 @Composable
 private fun ApplySelectionButton(text: String, enabled: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
+    val shape = RoundedCornerShape(25.dp)
     Surface(
-        modifier = Modifier.fillMaxWidth().height(50.dp).then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
-        shape = RoundedCornerShape(25.dp),
+        modifier = Modifier.fillMaxWidth().height(50.dp).then(
+            if (enabled) Modifier.clip(shape).clickable(onClick = onClick) else Modifier
+        ),
+        shape = shape,
         color = if (enabled) p.keyEquals else p.key
     ) {
         Box(contentAlignment = Alignment.Center) {
