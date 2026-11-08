@@ -1607,6 +1607,8 @@ private fun SettingsPage(
     val fontOpenError = tx("font_open_error")
     val fontEmptyError = tx("font_empty")
     val fontInstallError = tx("font_install_error")
+    val fontAddApplyHint = tx("font_add_apply_hint")
+    val fontApplySuccess = tx("font_apply_success")
     val version = remember {
         runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
     }
@@ -1632,7 +1634,7 @@ private fun SettingsPage(
                 android.graphics.Typeface.createFromFile(target)
                 savedFonts = (savedFonts + (target.absolutePath to displayName)).distinctBy { it.first }
                 pendingFontPath = target.absolutePath
-                fontMessage = "$displayName — ${tx("font_add_apply_hint")}"
+                fontMessage = "$displayName — $fontAddApplyHint"
             }.onFailure {
                 importedTarget?.delete()
                 fontMessage = fontInstallError
@@ -2076,7 +2078,7 @@ private fun SettingsPage(
                         enabled = pendingFontPath != fontPath,
                         onClick = {
                             if (pendingFontPath == null) onResetFont() else onFontSelected(pendingFontPath!!)
-                            fontMessage = tx("font_apply_success")
+                            fontMessage = fontApplySuccess
                         }
                     )
                 }
