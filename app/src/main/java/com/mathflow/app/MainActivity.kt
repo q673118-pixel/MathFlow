@@ -290,7 +290,7 @@ private fun MathFlowApp() {
         controller.isAppearanceLightNavigationBars = !palette.dark
     }
 
-    CompositionLocalProvider(LocalDensity provides density, LocalPalette provides palette) {
+    CompositionLocalProvider(LocalLanguage provides appLanguage, LocalDensity provides density, LocalPalette provides palette) {
         MaterialTheme(colorScheme = colors, typography = typography) {
             // Text() reads LocalTextStyle, not the theme typography, so the custom
             // family has to be provided here too for it to reach every label.
@@ -814,7 +814,7 @@ private fun ToolsPage() {
     var geometryResult by rememberSaveable { mutableStateOf("") }
     var geometryError by rememberSaveable { mutableStateOf<String?>(null) }
 
-    PageColumn("Инструменты") {
+    PageColumn(tx("tools")) {
         Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер"), tool) { tool = it }
         Panel {
             when (tool) {
@@ -850,7 +850,7 @@ private fun ToolsPage() {
                             Modifier.weight(1f)
                         )
                     }
-                    ActionButton("Вычислить") {
+                    ActionButton(tx("calculate")) {
                         runCatching {
                             when (percentMode) {
                                 "Сколько %" -> PercentTools.whatPercent(percentA, percentB)
@@ -874,7 +874,7 @@ private fun ToolsPage() {
                         if (shape != "Круг") Field(sideB, { sideB = it }, "Сторона b", Modifier.weight(1f))
                         if (shape == "Треугольник") Field(sideC, { sideC = it }, "Сторона c", Modifier.weight(1f))
                     }
-                    ActionButton("Рассчитать") {
+                    ActionButton(tx("calculate")) {
                         runCatching {
                             when (shape) {
                                 "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
@@ -907,7 +907,7 @@ private fun EquationSolverPage() {
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
 
-    PageColumn("Решатель") {
+    PageColumn(tx("solver")) {
         Panel {
             Field(equation, { equation = it }, "Например: x² − 5x + 6 = 0", Modifier.fillMaxWidth(), numeric = false)
             Row(
@@ -918,7 +918,7 @@ private fun EquationSolverPage() {
                     Chip(symbol, false) { equation += symbol }
                 }
             }
-            ActionButton("Решить") {
+            ActionButton(tx("solve")) {
                 try {
                     val solved = AlgebraSolver().solve(equation)
                     answer = solved.answer
@@ -958,9 +958,9 @@ private fun EquationSolverPage() {
 @Composable
 private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
     val p = LocalPalette.current
-    PageColumn("История") {
+    PageColumn(tx("history")) {
         if (entries.isEmpty()) {
-            Text("Здесь появятся результаты основного калькулятора.", color = p.muted, fontSize = 14.sp)
+            Text(tx("history_empty"), color = p.muted, fontSize = 14.sp)
         } else {
             Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = p.surface) {
                 Column(Modifier.padding(vertical = 4.dp)) {
@@ -989,7 +989,7 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                 }
             }
             TextButton(onClick = onClear, modifier = Modifier.align(Alignment.End)) {
-                Text("Очистить историю", color = p.accent)
+                Text(tx("clear_history"), color = p.accent)
             }
         }
     }
@@ -1191,7 +1191,7 @@ private fun SettingsPage(
         label = "SettingsSubpageTransition"
     ) { target ->
         when (target) {
-            SettingsSection.MAIN -> PageColumn("Настройки") {
+            SettingsSection.MAIN -> PageColumn(tx("settings")) {
                 Panel {
                     SettingsEntry(
                         title = "Иконки приложения",
@@ -1217,10 +1217,10 @@ private fun SettingsPage(
                     )
                 }
                 Panel {
-                    Text("Шрифт", fontSize = 15.sp, color = p.muted)
+                    Text(tx("font"), fontSize = 15.sp, color = p.muted)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(Modifier.weight(1f)) {
-                            ActionButton("Выбрать TTF / OTF") {
+                            ActionButton(tx("choose_font")) {
                                 fontPicker.launch(arrayOf("font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream"))
                             }
                         }
@@ -1230,7 +1230,7 @@ private fun SettingsPage(
                                 modifier = Modifier.height(50.dp), shape = RoundedCornerShape(25.dp), color = p.key
                             ) {
                                 Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
-                                    Text("Сброс", fontSize = 15.sp, color = p.text)
+                                    Text(tx("reset"), fontSize = 15.sp, color = p.text)
                                 }
                             }
                         }
@@ -1239,7 +1239,7 @@ private fun SettingsPage(
                 }
                 Panel {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Размер текста", fontSize = 15.sp, color = p.muted)
+                        Text(tx("text_size"), fontSize = 15.sp, color = p.muted)
                         Text("${(fontScale * 100).toInt()}%", fontSize = 15.sp, color = p.text)
                     }
                     Slider(
@@ -1263,10 +1263,10 @@ private fun SettingsPage(
                 }
             }
 
-            SettingsSection.ICONS -> PageColumn("Иконки приложения") {
-                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
+            SettingsSection.ICONS -> PageColumn(tx("app_icons")) {
+                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Выберите вариант. Изменения вступят в силу после нажатия «Применить».", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                    Text(tx("icon_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 }
                 AppIconOptions.chunked(2).forEach { pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1303,9 +1303,9 @@ private fun SettingsPage(
                 }
             }
 
-            SettingsSection.LANGUAGE -> PageColumn("Язык приложения") {
+            SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
-                Text("Выберите язык интерфейса. Выбор сохраняется на устройстве.", color = p.muted, fontSize = 13.sp)
+                Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
                 AppLanguages.forEach { language ->
                     val selected = selectedLanguage == language.tag
                     val shape = RoundedCornerShape(18.dp)
@@ -1330,9 +1330,9 @@ private fun SettingsPage(
                 Text("Это первый этап локализации. Сейчас доступны языковые профили; перевод всех экранов подключается отдельно.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
             }
 
-            SettingsSection.THEMES -> PageColumn("Темы оформления") {
+            SettingsSection.THEMES -> PageColumn(tx("themes")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← Настройки", color = p.accent) }
-                Text("Тема не зависит от выбранной иконки приложения.", color = p.muted, fontSize = 13.sp)
+                Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp)
                 ThemeOptions.chunked(2).forEach { pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         pair.forEach { option ->
