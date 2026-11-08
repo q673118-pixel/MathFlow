@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.spring
@@ -211,7 +212,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
 
         splashAlpha.animateTo(
             0f,
-            tween(850, easing = FastOutSlowInEasing)
+            tween(850, easing = LinearOutSlowInEasing)
         )
         onFinished()
     }
