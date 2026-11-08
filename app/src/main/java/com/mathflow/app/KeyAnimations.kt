@@ -165,7 +165,7 @@ internal fun MathFlowKeyButton(
         tween(normalized.durationMs),
         label = "MathFlowKeyRippleProgress"
     )
-    val overlayColor = if (normalized.pressColorArgb != 0L) Color(normalized.pressColorArgb) else palette.accent
+    val overlayColor = if (normalized.pressColorArgb != 0L) Color(normalized.pressColorArgb.toInt()) else palette.accent
     val shape = RoundedCornerShape(50)
 
     Surface(
