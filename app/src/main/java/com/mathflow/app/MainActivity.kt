@@ -13,6 +13,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.keyframes
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.togetherWith
@@ -86,6 +88,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -116,6 +119,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 
@@ -123,39 +127,97 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
-        splashScreen.setOnExitAnimationListener { splashProvider ->
-            val icon = splashProvider.iconView
-            val grow = android.animation.AnimatorSet().apply {
-                playTogether(
-                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_X, 1f, 1.16f),
-                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_Y, 1f, 1.16f)
-                )
-                duration = 220L
-                interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-            }
-            val shrink = android.animation.AnimatorSet().apply {
-                playTogether(
-                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_X, 1.16f, 0.76f),
-                    android.animation.ObjectAnimator.ofFloat(icon, android.view.View.SCALE_Y, 1.16f, 0.76f)
-                )
-                duration = 260L
-                interpolator = android.view.animation.AccelerateDecelerateInterpolator()
-            }
-            val fadeOut = android.animation.ObjectAnimator.ofFloat(
-                splashProvider.view, android.view.View.ALPHA, 1f, 0f
-            ).apply { duration = 130L }
-            android.animation.AnimatorSet().apply {
-                playSequentially(grow, shrink, fadeOut)
-                addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: android.animation.Animator) {
-                        splashProvider.remove()
-                    }
-                })
-                start()
-            }
-        }
         enableEdgeToEdge()
         setContent { MathFlowApp() }
+    }
+}
+
+
+@Composable
+private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
+    val density = LocalDensity.current
+    val mScale = remember { Animatable(0f) }
+    val startY = with(density) { (-150).dp.toPx() }
+    val firstBounceY = with(density) { (-25).dp.toPx() }
+    val secondBounceY = with(density) { (-8).dp.toPx() }
+    val dotY = remember { Animatable(startY) }
+    val dotScaleX = remember { Animatable(1f) }
+    val dotScaleY = remember { Animatable(1f) }
+    val splashAlpha = remember { Animatable(1f) }
+
+    LaunchedEffect(Unit) {
+        delay(500L)
+        mScale.animateTo(
+            1.08f,
+            tween(390, easing = androidx.compose.animation.core.Easing { f ->
+                1f - (1f - f) * (1f - f) * (1f - f)
+            })
+        )
+        mScale.animateTo(1f, spring(dampingRatio = 0.48f, stiffness = 430f))
+
+        val fall = keyframes<Float> {
+            startY at 0
+            0f at 340 using androidx.compose.animation.core.Easing { it * it }
+            firstBounceY at 500
+            0f at 625
+            secondBounceY at 710
+            0f at 790
+        }
+        val squashX = keyframes<Float> {
+            1f at 0
+            1.16f at 340
+            0.90f at 390
+            1.035f at 500
+            0.965f at 625
+            1.012f at 710
+            1f at 790
+        }
+        val squashY = keyframes<Float> {
+            1f at 0
+            0.78f at 340
+            1.10f at 390
+            0.985f at 500
+            1.04f at 625
+            0.992f at 710
+            1f at 790
+        }
+        kotlinx.coroutines.coroutineScope {
+            launch { dotY.animateTo(0f, fall) }
+            launch { dotScaleX.animateTo(1f, squashX) }
+            launch { dotScaleY.animateTo(1f, squashY) }
+        }
+
+        splashAlpha.animateTo(
+            0f,
+            tween(1500, easing = androidx.compose.animation.core.LinearEasing)
+        )
+        onFinished()
+    }
+
+    Box(
+        Modifier.fillMaxSize().background(palette.background).graphicsLayer { alpha = splashAlpha.value },
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.mark_m),
+            contentDescription = null,
+            modifier = Modifier.size(108.dp).graphicsLayer {
+                scaleX = mScale.value
+                scaleY = mScale.value
+            },
+            colorFilter = ColorFilter.tint(palette.text)
+        )
+        Image(
+            painter = painterResource(R.drawable.mark_dot),
+            contentDescription = null,
+            modifier = Modifier.size(108.dp).graphicsLayer {
+                translationY = dotY.value
+                scaleX = dotScaleX.value
+                scaleY = dotScaleY.value
+                transformOrigin = TransformOrigin(0.5f, 0.308f)
+            },
+            colorFilter = ColorFilter.tint(palette.text)
+        )
     }
 }
 
@@ -290,6 +352,7 @@ private fun MathFlowApp() {
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
     var showWelcome by remember { mutableStateOf(!prefs.getBoolean("welcome_seen", false)) }
+    var splashFinished by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         setLauncherIcon(context, selectedIconId)
@@ -437,7 +500,7 @@ private fun MathFlowApp() {
                             }
                             BottomNav(page) { page = it }
                         }
-                        if (showWelcome) {
+                        if (showWelcome && splashFinished) {
                             FirstLaunchWelcome(
                                 palette = palette,
                                 language = appLanguage,
@@ -446,6 +509,9 @@ private fun MathFlowApp() {
                                     showWelcome = false
                                 }
                             )
+                        }
+                        if (!splashFinished) {
+                            MathFlowIntroSplash(palette = palette, onFinished = { splashFinished = true })
                         }
                     }
                 }
