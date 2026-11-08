@@ -5,9 +5,14 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Indication
-import androidx.compose.foundation.IndicationInstance
+import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.ui.node.DelegatableNode
+import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
+import androidx.compose.animation.core.Animatable
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -20,12 +25,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.ContentDrawScope
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -94,43 +97,52 @@ internal data class BottomNavAnimationSettings(
     )
 }
 
-internal object MathFlowNoIndication : Indication {
-    @Composable
-    override fun rememberUpdatedInstance(interactionSource: InteractionSource): IndicationInstance {
-        return remember {
-            object : IndicationInstance {
-                override fun ContentDrawScope.drawIndication() {
-                    drawContent()
+internal object MathFlowNoIndication : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        object : Modifier.Node(), DrawModifierNode {
+            override fun ContentDrawScope.draw() {
+                drawContent()
+            }
+        }
+}
+
+internal data class MathFlowPressIndication(
+    private val color: Color,
+    private val maxAlpha: Float
+) : IndicationNodeFactory {
+    override fun create(interactionSource: InteractionSource): DelegatableNode =
+        MathFlowPressIndicationNode(interactionSource, color, maxAlpha.coerceIn(0f, 0.36f))
+}
+
+private class MathFlowPressIndicationNode(
+    private val interactionSource: InteractionSource,
+    private val color: Color,
+    private val maxAlpha: Float
+) : Modifier.Node(), DrawModifierNode {
+    private val overlayAlpha = Animatable(0f)
+
+    override fun onAttach() {
+        coroutineScope.launch {
+            interactionSource.interactions.collect { interaction ->
+                when (interaction) {
+                    is PressInteraction.Press -> overlayAlpha.animateTo(
+                        maxAlpha,
+                        tween(durationMillis = 125)
+                    )
+                    is PressInteraction.Release, is PressInteraction.Cancel -> overlayAlpha.animateTo(
+                        0f,
+                        tween(durationMillis = 165)
+                    )
                 }
+                invalidateDraw()
             }
         }
     }
-}
 
-internal class MathFlowPressIndication(
-    private val color: Color,
-    private val maxAlpha: Float
-) : Indication {
-    @Composable
-    override fun rememberUpdatedInstance(interactionSource: InteractionSource): IndicationInstance {
-        val pressed by interactionSource.collectIsPressedAsState()
-        val alpha by animateFloatAsState(
-            targetValue = if (pressed) maxAlpha.coerceIn(0f, 0.36f) else 0f,
-            animationSpec = tween(durationMillis = 125),
-            label = "MathFlowCustomPressColor"
-        )
-        val currentAlpha = rememberUpdatedState(alpha)
-        return remember(color) {
-            object : IndicationInstance {
-                override fun ContentDrawScope.drawIndication() {
-                    drawContent()
-                    val overlayAlpha = currentAlpha.value
-                    if (overlayAlpha > 0f) {
-                        drawRect(color.copy(alpha = overlayAlpha))
-                    }
-                }
-            }
-        }
+    override fun ContentDrawScope.draw() {
+        drawContent()
+        val alpha = overlayAlpha.value
+        if (alpha > 0f) drawRect(color.copy(alpha = alpha))
     }
 }
 
