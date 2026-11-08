@@ -41,13 +41,30 @@ class AlgebraSolverTest {
         assertEquals("no_solution", solver.solve("x + 1 = x + 2").kind)
     }
 
-    @Test fun rejectsCubicEquation() {
-        try {
-            solver.solve("x^3 = 8")
-            throw AssertionError("Expected unsupported degree to fail")
-        } catch (_: IllegalArgumentException) {
-            // Expected.
-        }
+    @Test fun solvesCubicEquationNumerically() {
+        val result = solver.solve("x^3 = 8")
+        assertEquals("polynomial_numeric", result.kind)
+        assertTrue(result.answer.contains("2"))
+    }
+
+    @Test fun solvesQuarticWithFourRealRoots() {
+        val result = solver.solve("x^4 - 5x^2 + 4 = 0")
+        assertEquals("polynomial_numeric", result.kind)
+        assertTrue(result.answer.contains("-2"))
+        assertTrue(result.answer.contains("-1"))
+        assertTrue(result.answer.contains("1"))
+        assertTrue(result.answer.contains("2"))
+    }
+
+    @Test fun findsRepeatedQuarticRoots() {
+        val result = solver.solve("x^4 - 2x^2 + 1 = 0")
+        assertEquals("polynomial_numeric", result.kind)
+        assertTrue(result.answer.contains("-1"))
+        assertTrue(result.answer.contains("1"))
+    }
+
+    @Test fun identifiesQuarticWithoutRealRoots() {
+        assertEquals("no_real_roots", solver.solve("x^4 + 1 = 0").kind)
     }
 
     @Test fun acceptsSuperscriptSquareAndUnicodeMinus() {
