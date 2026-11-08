@@ -1574,7 +1574,7 @@ private fun SettingsPage(
     var navPreviewPage by rememberSaveable { mutableStateOf(Page.HOME) }
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var savedFonts by remember {
-        mutableStateOf(
+        mutableStateOf<List<Pair<String, String>>>(
             File(context.filesDir, "fonts").listFiles()
                 ?.filter { it.isFile && (it.extension.equals("ttf", true) || it.extension.equals("otf", true)) }
                 ?.map { it.absolutePath to it.name }
