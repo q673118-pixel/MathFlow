@@ -2,7 +2,6 @@ package com.mathflow.app
 
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -114,13 +113,8 @@ internal fun MathFlowKeyButton(
         else -> palette.key
     }
     val baseText = if (equals) palette.onKeyEquals else palette.text
-    val flash = normalized.style == KeyAnimationStyle.FLASH && pressed
     val background = baseColor
-    val foreground by animateColorAsState(
-        baseText,
-        tween(normalized.durationMs),
-        label = "MathFlowKeyFlashText"
-    )
+    val foreground = baseText
     val overlayAlpha by animateFloatAsState(
         if (pressed) {
             when (normalized.style) {
