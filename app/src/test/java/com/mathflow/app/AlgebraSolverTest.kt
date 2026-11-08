@@ -88,4 +88,43 @@ class AlgebraSolverTest {
         assertTrue(result.answer.contains("x₁ = 3"))
         assertTrue(result.answer.contains("x₂ = 2"))
     }
+    @Test fun solvesSimpleRationalEquationAndChecksDomain() {
+        val result = solver.solve("1/(x - 1) = 2")
+        assertEquals("linear", result.kind)
+        assertTrue(result.answer.contains("1.5"))
+        assertTrue(result.steps.any { it.contains("ОДЗ") })
+    }
+
+    @Test fun excludesExtraneousRootAfterClearingDenominator() {
+        val result = solver.solve("(x² - 1)/(x - 1) = 0")
+        assertEquals("linear", result.kind)
+        assertTrue(result.answer.contains("-1"))
+        assertTrue(!result.answer.contains("1"))
+    }
+
+    @Test fun keepsConstantDenominatorScale() {
+        val result = solver.solve("x/2 = 3")
+        assertEquals("linear", result.kind)
+        assertTrue(result.answer.contains("6"))
+    }
+
+    @Test fun supportsNegativePowersAsRationalExpressions() {
+        val result = solver.solve("x^-1 = 0.5")
+        assertEquals("linear", result.kind)
+        assertTrue(result.answer.contains("2"))
+    }
+
+    @Test fun identifiesRationalIdentityWithExcludedPoint() {
+        val result = solver.solve("(x - 1)/(x - 1) = 1")
+        assertEquals("identity", result.kind)
+        assertTrue(result.answer.contains("1"))
+        assertTrue(result.steps.any { it.contains("ОДЗ") })
+    }
+
+    @Test fun excludesDenominatorRootFromQuadraticSolutions() {
+        val result = solver.solve("(x² - 1)/(x - 1) = 0")
+        assertTrue(result.answer.contains("-1"))
+        assertTrue(!result.answer.contains("x₂"))
+    }
+
 }
