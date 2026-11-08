@@ -105,6 +105,10 @@ internal object MathFlowNoIndication : IndicationNodeFactory {
                 drawContent()
             }
         }
+
+    override fun equals(other: Any?): Boolean = this === other
+
+    override fun hashCode(): Int = System.identityHashCode(this)
 }
 
 internal data class MathFlowPressIndication(
@@ -135,7 +139,6 @@ private class MathFlowPressIndicationNode(
                         tween(durationMillis = 165)
                     )
                 }
-                invalidateDraw()
             }
         }
     }
