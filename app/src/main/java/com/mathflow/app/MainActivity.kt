@@ -1157,7 +1157,7 @@ private fun SettingsPage(
                 onFontSelected(target.absolutePath)
                 fontMessage = "$fontAppliedLabel: $displayName"
             }.onFailure {
-                fontMessage = displayText(it.message ?: "Не удалось установить шрифт")
+                fontMessage = fontInstallError
             }
         }
     }
