@@ -813,6 +813,9 @@ private fun ToolsPage() {
     var sideC by rememberSaveable { mutableStateOf("4") }
     var geometryResult by rememberSaveable { mutableStateOf("") }
     var geometryError by rememberSaveable { mutableStateOf<String?>(null) }
+    val fractionFallback = tx("fraction_error")
+    val valuesFallback = tx("values_error")
+    val sizesFallback = tx("sizes_error")
 
     PageColumn(tx("tools")) {
         Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер"), tool) { tool = it }
@@ -829,7 +832,7 @@ private fun ToolsPage() {
                                 ActionButton(op) {
                                     runCatching { FractionTools.calculate(fractionA, fractionB, op) }
                                         .onSuccess { fractionResult = it; fractionError = null }
-                                        .onFailure { fractionError = friendly(it, tx("fraction_error")); fractionResult = "" }
+                                        .onFailure { fractionError = friendly(it, fractionFallback); fractionResult = "" }
                                 }
                             }
                         }
@@ -863,7 +866,7 @@ private fun ToolsPage() {
                                 else -> PercentTools.percentOf(percentA, percentB)
                             }
                         }.onSuccess { percentResult = it; percentError = null }
-                            .onFailure { percentError = friendly(it, tx("values_error")); percentResult = "" }
+                            .onFailure { percentError = friendly(it, valuesFallback); percentResult = "" }
                     }
                     if (percentResult.isNotEmpty() || percentError != null) ResultBox(percentResult, percentError)
                 }
@@ -882,7 +885,7 @@ private fun ToolsPage() {
                                 else -> GeometryTools.triangle(sideA, sideB, sideC)
                             }
                         }.onSuccess { geometryResult = it; geometryError = null }
-                            .onFailure { geometryError = friendly(it, tx("sizes_error")); geometryResult = "" }
+                            .onFailure { geometryError = friendly(it, sizesFallback); geometryResult = "" }
                     }
                     if (geometryResult.isNotEmpty() || geometryError != null) ResultBox(geometryResult, geometryError)
                 }
@@ -906,6 +909,7 @@ private fun EquationSolverPage() {
     var answer by rememberSaveable { mutableStateOf<String?>(null) }
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
+    val equationFallback = tx("equation_error")
 
     PageColumn(tx("solver")) {
         Panel {
@@ -927,7 +931,7 @@ private fun EquationSolverPage() {
                 } catch (e: IllegalArgumentException) {
                     answer = null
                     steps = emptyList()
-                    error = friendly(e, tx("equation_error"))
+                    error = friendly(e, equationFallback)
                 }
             }
         }
