@@ -1908,7 +1908,7 @@ private fun SettingsPage(
                                 color = p.muted, fontSize = 12.sp
                             )
                         }
-                        Text(if (pendingAnimationSettings.colorEffectEnabled) "ВКЛ" else "ВЫКЛ", color = p.accent, fontSize = 12.sp)
+                        Text(if (pendingAnimationSettings.colorEffectEnabled) tx("button_color_effect_on") else tx("button_color_effect_off"), color = p.accent, fontSize = 12.sp)
                     }
                     Text(tx("effect_color"), color = p.muted, fontSize = 13.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1985,7 +1985,7 @@ private fun SettingsPage(
                         valueRange = 100f..1000f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("Интенсивность: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${tx("animation_intensity")}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.intensity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(intensity = it) },
