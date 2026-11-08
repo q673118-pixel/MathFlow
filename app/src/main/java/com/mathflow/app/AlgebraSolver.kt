@@ -460,7 +460,7 @@ class AlgebraSolver {
             "-" -> {
                 take()
                 val value = unary()
-                RationalExpression(-value.numerator, value.denominatorFactors)
+                RationalExpression(-value.numerator, value.denominatorFactors, value.domainFactors)
             }
             else -> power()
         }
