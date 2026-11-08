@@ -310,25 +310,21 @@ private fun MathFlowApp() {
                             modifier = Modifier.weight(1f).fillMaxWidth(),
                             targetState = page,
                             transitionSpec = {
-                                val duration = NAV_TRANSITION_DURATION_MS
-                                val easing = FastOutSlowInEasing
-                                if (targetState.ordinal > initialState.ordinal) {
-                                    slideInHorizontally(
-                                        animationSpec = tween(durationMillis = duration, easing = easing),
-                                        initialOffsetX = { fullWidth -> fullWidth }
-                                    ) togetherWith slideOutHorizontally(
-                                        animationSpec = tween(durationMillis = duration, easing = easing),
-                                        targetOffsetX = { fullWidth -> -fullWidth }
-                                    )
-                                } else {
-                                    slideInHorizontally(
-                                        animationSpec = tween(durationMillis = duration, easing = easing),
-                                        initialOffsetX = { fullWidth -> -fullWidth }
-                                    ) togetherWith slideOutHorizontally(
-                                        animationSpec = tween(durationMillis = duration, easing = easing),
-                                        targetOffsetX = { fullWidth -> fullWidth }
-                                    )
-                                }
+                                // Keep tab changes visually continuous without moving two full-width
+                                // screens across the display. A short fade + tiny offset is cheaper
+                                // to render on entry-level devices than the previous full-width slide.
+                                (androidx.compose.animation.fadeIn(
+                                    animationSpec = tween(170, easing = FastOutSlowInEasing)
+                                ) + slideInHorizontally(
+                                    animationSpec = tween(190, easing = FastOutSlowInEasing),
+                                    initialOffsetX = { width -> width / 18 }
+                                )) togetherWith
+                                    (androidx.compose.animation.fadeOut(
+                                        animationSpec = tween(120, easing = FastOutSlowInEasing)
+                                    ) + slideOutHorizontally(
+                                        animationSpec = tween(160, easing = FastOutSlowInEasing),
+                                        targetOffsetX = { width -> -width / 24 }
+                                    ))
                             },
                             label = "MathFlowScreenTransition"
                         ) { targetPage ->
