@@ -1129,6 +1129,7 @@ private fun SettingsPage(
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
     val fontOpenError = tx("font_open_error")
     val fontEmptyError = tx("font_empty")
@@ -1318,7 +1319,7 @@ private fun SettingsPage(
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
                 Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
-                AppLanguages.forEach { language ->
+                OutlinedTextField(\n                    value = languageQuery,\n                    onValueChange = { languageQuery = it },\n                    modifier = Modifier.fillMaxWidth(),\n                    singleLine = true,\n                    label = { Text(tx("search_languages")) },\n                    shape = RoundedCornerShape(16.dp)\n                )\n                val visibleLanguages = AppLanguages.filter { language ->\n                    language.nativeName.contains(languageQuery, ignoreCase = true) ||\n                        language.englishName.contains(languageQuery, ignoreCase = true)\n                }\n                if (visibleLanguages.isEmpty()) Text(tx("no_languages_found"), color = p.muted, fontSize = 13.sp)\n                visibleLanguages.forEach { language ->
                     val selected = selectedLanguage == language.tag
                     val shape = RoundedCornerShape(18.dp)
                     Row(
