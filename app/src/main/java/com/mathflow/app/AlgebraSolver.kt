@@ -1,6 +1,7 @@
 package com.mathflow.app
 
 import java.math.BigInteger
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -12,38 +13,36 @@ data class EquationSolution(
 )
 
 /**
- * One-variable polynomial equation solver for degrees 0..4.
- * Coefficients are kept as exact Rational values until numerical roots are needed.
- * Linear and quadratic roots remain exact whenever possible; cubic and quartic
- * real roots are isolated numerically using derivative intervals and bisection.
- *
- * The parser deliberately rejects unsupported non-polynomial denominators instead
- * of silently changing the equation's domain.
+ * Solves one-variable polynomial and rational equations whose reduced
+ * numerator has degree at most four. Denominator factors are retained so
+ * roots outside the original domain are never reported as valid solutions.
  */
 class AlgebraSolver {
     private data class Poly private constructor(val coefficients: List<Rational>) {
-        val degree: Int get() = coefficients.indexOfLast { it != Rational.ZERO }
+        val degree: Int get() = coefficients.indexOfLast { it != Rational.ZERO }.coerceAtLeast(0)
+        val isZero: Boolean get() = coefficients.all { it == Rational.ZERO }
         operator fun get(index: Int): Rational = coefficients.getOrElse(index) { Rational.ZERO }
 
-        operator fun plus(other: Poly) = of((0..maxOf(degree, other.degree)).map { this[it] + other[it] })
-        operator fun minus(other: Poly) = of((0..maxOf(degree, other.degree)).map { this[it] - other[it] })
+        operator fun plus(other: Poly) =
+            of((0..maxOf(degree, other.degree)).map { this[it] + other[it] })
+
+        operator fun minus(other: Poly) =
+            of((0..maxOf(degree, other.degree)).map { this[it] - other[it] })
+
         operator fun unaryMinus() = of(coefficients.map { -it })
 
         operator fun times(other: Poly): Poly {
-            if (degree < 0 || other.degree < 0) return ZERO
+            if (isZero || other.isZero) return ZERO
+            require(degree + other.degree <= 4) {
+                "После преобразования степень уравнения выше четвёртой"
+            }
             val result = MutableList(degree + other.degree + 1) { Rational.ZERO }
             for (i in 0..degree) for (j in 0..other.degree) {
                 if (this[i] != Rational.ZERO && other[j] != Rational.ZERO) {
-                    require(i + j <= 4) { "Поддерживаются многочлены не выше четвёртой степени" }
                     result[i + j] = result[i + j] + this[i] * other[j]
                 }
             }
             return of(result)
-        }
-
-        fun dividedBy(value: Rational): Poly {
-            require(value != Rational.ZERO) { "Деление на ноль" }
-            return of(coefficients.map { it / value })
         }
 
         fun pow(exponent: Int): Poly {
@@ -57,12 +56,63 @@ class AlgebraSolver {
             val ZERO = Poly(listOf(Rational.ZERO))
             val ONE = Poly(listOf(Rational.ONE))
             val X = Poly(listOf(Rational.ZERO, Rational.ONE))
+
             fun constant(value: Rational) = of(listOf(value))
+
             fun of(values: List<Rational>): Poly {
                 val trimmed = values.toMutableList()
-                while (trimmed.size > 1 && trimmed.last() == Rational.ZERO) trimmed.removeAt(trimmed.lastIndex)
+                while (trimmed.size > 1 && trimmed.last() == Rational.ZERO) {
+                    trimmed.removeAt(trimmed.lastIndex)
+                }
                 return Poly(trimmed.ifEmpty { listOf(Rational.ZERO) })
             }
+        }
+    }
+
+    private data class RationalExpression(
+        val numerator: Poly,
+        val denominatorFactors: List<Poly> = emptyList()
+    ) {
+        fun denominatorProduct(): Poly =
+            denominatorFactors.fold(Poly.ONE) { product, factor -> product * factor }
+
+        operator fun plus(other: RationalExpression) = RationalExpression(
+            numerator * other.denominatorProduct() + other.numerator * denominatorProduct(),
+            denominatorFactors + other.denominatorFactors
+        )
+
+        operator fun minus(other: RationalExpression) = RationalExpression(
+            numerator * other.denominatorProduct() - other.numerator * denominatorProduct(),
+            denominatorFactors + other.denominatorFactors
+        )
+
+        operator fun times(other: RationalExpression) = RationalExpression(
+            numerator * other.numerator,
+            denominatorFactors + other.denominatorFactors
+        )
+
+        operator fun div(other: RationalExpression): RationalExpression {
+            require(!other.numerator.isZero) { "Деление на ноль" }
+            val newFactors = denominatorFactors + other.denominatorFactors +
+                if (other.numerator.degree > 0) listOf(other.numerator) else emptyList()
+            return RationalExpression(numerator * other.denominatorProduct(), newFactors)
+        }
+
+        fun pow(exponent: Int): RationalExpression {
+            require(exponent in -4..4) { "Поддерживаются степени от −4 до 4" }
+            if (exponent >= 0) {
+                return RationalExpression(numerator.pow(exponent), denominatorFactors)
+            }
+            require(!numerator.isZero) { "Нельзя возвести ноль в отрицательную степень" }
+            return RationalExpression(
+                denominatorProduct().pow(-exponent),
+                denominatorFactors + if (numerator.degree > 0) listOf(numerator) else emptyList()
+            )
+        }
+
+        companion object {
+            fun polynomial(value: Poly) = RationalExpression(value)
+            val ONE = RationalExpression(Poly.ONE)
         }
     }
 
@@ -77,33 +127,73 @@ class AlgebraSolver {
             "Обе части уравнения должны быть заполнены"
         }
 
-        val reduced = Parser(leftText).parse() - Parser(rightText).parse()
+        val left = Parser(leftText).parse()
+        val right = Parser(rightText).parse()
+        val reduced = left.numerator * right.denominatorProduct() -
+            right.numerator * left.denominatorProduct()
+        val excludedFactors = left.denominatorFactors + right.denominatorFactors
+        val excludedRoots = excludedFactors.flatMap { factor ->
+            if (factor.degree > 0) {
+                findRealRoots((0..factor.degree).map {
+                    factor[it].toBigDecimal().toDouble()
+                }.toDoubleArray())
+            } else emptyList()
+        }.distinctBy { fmt(it) }.sorted()
+
+        fun isAllowed(value: Double): Boolean =
+            value.isFinite() && excludedRoots.none {
+                abs(it - value) <= 1.0e-7 * max(1.0, abs(value))
+            }
+
+        fun excludedDescription(): String =
+            if (excludedRoots.isEmpty()) "" else excludedRoots.joinToString(", ") { fmt(it) }
+
         val steps = mutableListOf<String>()
         steps += "Переносим всё в левую часть: ${format(reduced)} = 0"
+        if (excludedRoots.isNotEmpty()) {
+            steps += "ОДЗ: знаменатели не равны нулю; исключаем x = ${excludedDescription()}"
+        }
+
+        if (reduced.isZero) {
+            steps += "Получили верное равенство 0 = 0"
+            val answer = if (excludedRoots.isEmpty()) {
+                "x — любое число"
+            } else {
+                "x — любое число, кроме ${excludedDescription()}"
+            }
+            return EquationSolution("identity", answer, steps)
+        }
 
         val degree = reduced.degree
-        if (degree < 0 || (degree == 0 && reduced[0] == Rational.ZERO)) {
-            steps += "Получили верное равенство 0 = 0"
-            return EquationSolution("identity", "x — любое число", steps)
-        }
         if (degree == 0) {
             steps += "Получили противоречие ${reduced[0].toDisplayString()} = 0"
             return EquationSolution("no_solution", "Решений нет", steps)
         }
 
-        val a = reduced[degree]
-        val b = reduced[1]
-        val c = reduced[0]
+        val coefficients = (0..degree).map {
+            reduced[it].toBigDecimal().toDouble()
+        }.toDoubleArray()
+        require(coefficients.all { it.isFinite() }) {
+            "Коэффициенты слишком велики для численного решения"
+        }
 
         if (degree == 1) {
-            val x = -c / b
-            steps += "Оставляем член с x: ${b.toDisplayString()}x = ${(-c).toDisplayString()}"
-            steps += "Делим обе части на ${b.toDisplayString()}"
+            val x = -reduced[0] / reduced[1]
+            val numeric = x.toBigDecimal().toDouble()
+            steps += "Оставляем член с x: ${reduced[1].toDisplayString()}x = ${(-reduced[0]).toDisplayString()}"
+            steps += "Делим обе части на ${reduced[1].toDisplayString()}"
+            if (!isAllowed(numeric)) {
+                steps += "Полученное значение не входит в ОДЗ"
+                return EquationSolution("no_solution", "Решений нет", steps)
+            }
             steps += "x = ${x.toDisplayString()}"
             return EquationSolution("linear", "x = ${x.toDisplayString()} (${x.toDecimalString()})", steps)
         }
 
         if (degree == 2) {
+            val a = reduced[2]
+            val b = reduced[1]
+            val c = reduced[0]
             steps += "Это квадратное уравнение: ax² + bx + c = 0"
             steps += "a = ${a.toDisplayString()}, b = ${b.toDisplayString()}, c = ${c.toDisplayString()}"
             val d = b * b - Rational.of(4) * a * c
@@ -112,34 +202,60 @@ class AlgebraSolver {
                 steps += "D < 0, действительных корней нет"
                 return EquationSolution("no_real_roots", "Действительных корней нет", steps)
             }
+
             val sqrtD = exactSqrt(d)
             if (sqrtD != null) {
                 val x1 = (-b + sqrtD) / (Rational.of(2) * a)
                 val x2 = (-b - sqrtD) / (Rational.of(2) * a)
                 steps += "√D = ${sqrtD.toDisplayString()}"
-                steps += "x₁ = (−b + √D)/(2a) = ${x1.toDisplayString()}"
+                val roots = listOf(x1, x2).distinct().filter { isAllowed(it.toBigDecimal().toDouble()) }
+                if (roots.isEmpty()) {
+                    steps += "Все найденные корни исключены условиями ОДЗ"
+                    return EquationSolution("no_solution", "Решений нет", steps)
+                }
                 if (x1 == x2) {
+                    steps += "x = ${x1.toDisplayString()}"
                     return EquationSolution("quadratic_double", "x = ${x1.toDisplayString()}", steps)
                 }
+                if (roots.size == 1) {
+                    steps += "После проверки ОДЗ остаётся один корень: ${roots[0].toDisplayString()}"
+                    return EquationSolution("quadratic", "x = ${roots[0].toDisplayString()}", steps)
+                }
+                steps += "x₁ = (−b + √D)/(2a) = ${x1.toDisplayString()}"
                 steps += "x₂ = (−b − √D)/(2a) = ${x2.toDisplayString()}"
-                return EquationSolution("quadratic", "x₁ = ${x1.toDisplayString()}, x₂ = ${x2.toDisplayString()}", steps)
+                return EquationSolution(
+                    "quadratic",
+                    "x₁ = ${roots[0].toDisplayString()}, x₂ = ${roots[1].toDisplayString()}",
+                    steps
+                )
             }
 
             val root = sqrt(d.toBigDecimal().toDouble())
             val aDouble = a.toBigDecimal().toDouble()
             val bDouble = b.toBigDecimal().toDouble()
-            val x1 = (-bDouble + root) / (2.0 * aDouble)
-            val x2 = (-bDouble - root) / (2.0 * aDouble)
+            val rawRoots = listOf(
+                (-bDouble + root) / (2.0 * aDouble),
+                (-bDouble - root) / (2.0 * aDouble)
+            )
+            val roots = rawRoots.filter { isAllowed(it) }.distinctBy { fmt(it) }
             steps += "√D иррационален; корни вычислены приближённо"
-            steps += "x₁ ≈ ${fmt(x1)}, x₂ ≈ ${fmt(x2)}"
-            return EquationSolution("quadratic_approx", "x₁ ≈ ${fmt(x1)}, x₂ ≈ ${fmt(x2)}", steps)
+            if (roots.isEmpty()) {
+                steps += "Все найденные корни исключены условиями ОДЗ"
+                return EquationSolution("no_solution", "Решений нет", steps)
+            }
+            steps += roots.mapIndexed { index, value -> "x${subscript(index + 1)} ≈ ${fmt(value)}" }
+            return EquationSolution(
+                "quadratic_approx",
+                roots.mapIndexed { index, value -> "x${subscript(index + 1)} ≈ ${fmt(value)}" }.joinToString(", "),
+                steps
+            )
         }
 
         steps += "Это многочлен степени $degree. Ищем все действительные корни численно."
         steps += "Коэффициенты сохранены в точной рациональной форме до этапа численного поиска."
-        val roots = findRealRoots((0..degree).map { reduced[it].toBigDecimal().toDouble() }.toDoubleArray())
+        val roots = findRealRoots(coefficients).filter { isAllowed(it) }
         if (roots.isEmpty()) {
-            steps += "На действительной оси корней нет"
+            steps += "Действительных корней в допустимой области нет"
             return EquationSolution("no_real_roots", "Действительных корней нет", steps)
         }
         val labels = roots.mapIndexed { index, root -> "x${subscript(index + 1)} ≈ ${fmt(root)}" }
@@ -148,41 +264,50 @@ class AlgebraSolver {
     }
 
     private fun findRealRoots(input: DoubleArray): List<Double> {
-        var degree = input.lastIndex
-        while (degree > 0 && input[degree] == 0.0) degree--
+        if (input.isEmpty() || input.any { !it.isFinite() }) return emptyList()
+        val coefficientScale = input.maxOf { abs(it) }
+        if (coefficientScale == 0.0 || !coefficientScale.isFinite()) return emptyList()
+        val normalized = DoubleArray(input.size) { input[it] / coefficientScale }
+        var degree = normalized.lastIndex
+        while (degree > 0 && normalized[degree] == 0.0) degree--
         if (degree == 0) return emptyList()
-        if (degree == 1) return listOf(-input[0] / input[1]).filter { it.isFinite() }
+        if (degree == 1) {
+            val root = -normalized[0] / normalized[1]
+            return if (root.isFinite()) listOf(root) else emptyList()
+        }
 
-        val derivative = DoubleArray(degree) { index -> input[index + 1] * (index + 1) }
+        val derivative = DoubleArray(degree) { index -> normalized[index + 1] * (index + 1) }
         val criticalPoints = findRealRoots(derivative).filter { it.isFinite() }.sorted()
-        val leading = abs(input[degree])
+        val leading = abs(normalized[degree])
         if (leading == 0.0 || !leading.isFinite()) return emptyList()
         var ratio = 0.0
-        for (i in 0 until degree) ratio = max(ratio, abs(input[i]) / leading)
+        for (i in 0 until degree) ratio = max(ratio, abs(normalized[i]) / leading)
         val bound = (1.0 + ratio).coerceAtMost(1.0e12)
         val points = (listOf(-bound) + criticalPoints.filter { it > -bound && it < bound } + listOf(bound))
             .distinct().sorted()
         val roots = mutableListOf<Double>()
 
         fun valueAt(x: Double): Double {
-            var value = input[degree]
-            for (i in degree - 1 downTo 0) value = value * x + input[i]
+            var value = normalized[degree]
+            for (i in degree - 1 downTo 0) value = value * x + normalized[i]
             return value
         }
+
         fun toleranceAt(x: Double): Double {
             val magnitude = max(1.0, abs(x))
             var scale = 0.0
             var power = 1.0
             for (i in 0..degree) {
-                scale += abs(input[i]) * power
+                scale += abs(normalized[i]) * power
                 power *= magnitude
             }
-            return 1.0e-9 * max(1.0, scale)
+            return 1.0e-10 * max(1.0, scale)
         }
 
-        // Even-multiplicity roots occur at derivative roots and do not change sign.
         for (point in criticalPoints) {
-            if (point in -bound..bound && abs(valueAt(point)) <= toleranceAt(point)) roots += point
+            if (point in -bound..bound && abs(valueAt(point)) <= toleranceAt(point)) {
+                roots += point
+            }
         }
 
         for (index in 0 until points.lastIndex) {
@@ -209,7 +334,9 @@ class AlgebraSolver {
         }
 
         return roots.filter { it.isFinite() }.sorted().fold(mutableListOf()) { acc, root ->
-            if (acc.isEmpty() || abs(acc.last() - root) > 1.0e-6 * max(1.0, abs(root))) acc += root
+            if (acc.isEmpty() || abs(acc.last() - root) > 1.0e-7 * max(1.0, abs(root))) {
+                acc += root
+            }
             acc
         }
     }
@@ -237,7 +364,7 @@ class AlgebraSolver {
     }
 
     private fun fmt(value: Double): String =
-        if (value.isFinite()) "%.10f".format(java.util.Locale.US, value).trimEnd('0').trimEnd('.')
+        if (value.isFinite()) String.format(Locale.US, "%.10f", value).trimEnd('0').trimEnd('.')
         else "не определено"
 
     private fun format(poly: Poly): String {
@@ -270,7 +397,7 @@ class AlgebraSolver {
 
     private class Parser(input: String) {
         private val normalizedInput = input
-            .replace("⁴", "^4").replace("⁳", "^3").replace("³", "^3").replace("²", "^2")
+            .replace("⁴", "^4").replace("³", "^3").replace("²", "^2")
             .replace("−", "-").replace("×", "*").replace("÷", "/")
             .filterNot { it.isWhitespace() }
         private val tokens = Regex("""\d+(?:[.,]\d+)?|[xX]|[()+\-*/^]""")
@@ -283,13 +410,13 @@ class AlgebraSolver {
             }
         }
 
-        fun parse(): Poly {
+        fun parse(): RationalExpression {
             val result = expression()
             require(index == tokens.size) { "Проверьте запись выражения" }
             return result
         }
 
-        private fun expression(): Poly {
+        private fun expression(): RationalExpression {
             var value = term()
             while (peek() == "+" || peek() == "-") {
                 val operator = take()
@@ -299,15 +426,12 @@ class AlgebraSolver {
             return value
         }
 
-        private fun term(): Poly {
+        private fun term(): RationalExpression {
             var value = unary()
             while (peek() == "*" || peek() == "/" || startsPrimary(peek())) {
                 val operator = if (peek() == "*" || peek() == "/") take() else "*"
                 val right = unary()
-                value = if (operator == "*") value * right else {
-                    require(right.degree <= 0) { "Делить можно только на число, не содержащее x" }
-                    value.dividedBy(right[0])
-                }
+                value = if (operator == "*") value * right else value / right
             }
             return value
         }
@@ -315,34 +439,40 @@ class AlgebraSolver {
         private fun startsPrimary(token: String?): Boolean =
             token == "(" || token?.equals("x", true) == true || token?.firstOrNull()?.isDigit() == true
 
-        private fun unary(): Poly = when (peek()) {
+        private fun unary(): RationalExpression = when (peek()) {
             "+" -> { take(); unary() }
-            "-" -> { take(); -unary() }
+            "-" -> {
+                take()
+                val value = unary()
+                RationalExpression(-value.numerator, value.denominatorFactors)
+            }
             else -> power()
         }
 
-        private fun power(): Poly {
+        private fun power(): RationalExpression {
             val value = primary()
             if (peek() != "^") return value
             take()
+            val sign = if (peek() == "-") { take(); -1 } else 1
             val exponent = take().toIntOrNull()
                 ?: throw IllegalArgumentException("После ^ укажите целую степень")
-            return value.pow(exponent)
+            return value.pow(sign * exponent)
         }
 
-        private fun primary(): Poly {
+        private fun primary(): RationalExpression {
             val token = take()
-            return when {
+            val poly = when {
                 token == "(" -> {
                     val value = expression()
                     require(take() == ")") { "Не закрыта скобка" }
-                    value
+                    return value
                 }
                 token.equals("x", true) -> Poly.X
                 token.firstOrNull()?.isDigit() == true ->
                     Poly.constant(Rational.parseDecimal(token.replace(',', '.')))
                 else -> throw IllegalArgumentException("Ожидалось число, x или скобка")
             }
+            return RationalExpression.polynomial(poly)
         }
 
         private fun peek() = tokens.getOrNull(index)
