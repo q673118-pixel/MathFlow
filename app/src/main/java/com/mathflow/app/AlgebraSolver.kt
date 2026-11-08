@@ -71,45 +71,58 @@ class AlgebraSolver {
 
     private data class RationalExpression(
         val numerator: Poly,
-        val denominatorFactors: List<Poly> = emptyList()
+        val denominatorFactors: List<Poly> = emptyList(),
+        val domainFactors: List<Poly> = denominatorFactors.filter { it.degree > 0 }
     ) {
         fun denominatorProduct(): Poly =
             denominatorFactors.fold(Poly.ONE) { product, factor -> product * factor }
 
         operator fun plus(other: RationalExpression) = RationalExpression(
             numerator * other.denominatorProduct() + other.numerator * denominatorProduct(),
-            denominatorFactors + other.denominatorFactors
+            denominatorFactors + other.denominatorFactors,
+            domainFactors + other.domainFactors
         )
 
         operator fun minus(other: RationalExpression) = RationalExpression(
             numerator * other.denominatorProduct() - other.numerator * denominatorProduct(),
-            denominatorFactors + other.denominatorFactors
+            denominatorFactors + other.denominatorFactors,
+            domainFactors + other.domainFactors
         )
 
         operator fun times(other: RationalExpression) = RationalExpression(
             numerator * other.numerator,
-            denominatorFactors + other.denominatorFactors
+            denominatorFactors + other.denominatorFactors,
+            domainFactors + other.domainFactors
         )
 
         operator fun div(other: RationalExpression): RationalExpression {
             require(!other.numerator.isZero) { "Деление на ноль" }
-            // Keep constant factors too: they scale the denominator even though
-            // they do not add excluded x-values to the domain.
-            val newFactors = denominatorFactors + other.denominatorFactors + listOf(other.numerator)
-            return RationalExpression(numerator * other.denominatorProduct(), newFactors)
+            val newDenominator = denominatorFactors + listOf(other.numerator)
+            val newDomain = domainFactors + other.domainFactors +
+                if (other.numerator.degree > 0) listOf(other.numerator) else emptyList()
+            return RationalExpression(
+                numerator * other.denominatorProduct(),
+                newDenominator,
+                newDomain
+            )
         }
 
         fun pow(exponent: Int): RationalExpression {
             require(exponent in -4..4) { "Поддерживаются степени от −4 до 4" }
-            if (exponent >= 0) {
-                val poweredFactors = if (exponent <= 1) denominatorFactors
+            if (exponent == 0) return RationalExpression(Poly.ONE, domainFactors = domainFactors)
+            if (exponent > 0) {
+                val poweredFactors = if (exponent == 1) denominatorFactors
                     else denominatorFactors.flatMap { factor -> List(exponent) { factor } }
-                return RationalExpression(numerator.pow(exponent), poweredFactors)
+                return RationalExpression(numerator.pow(exponent), poweredFactors, domainFactors)
             }
             require(!numerator.isZero) { "Нельзя возвести ноль в отрицательную степень" }
+            val power = -exponent
+            val newDomain = domainFactors +
+                if (numerator.degree > 0) listOf(numerator) else emptyList()
             return RationalExpression(
-                denominatorProduct().pow(-exponent),
-                denominatorFactors + listOf(numerator)
+                denominatorProduct().pow(power),
+                List(power) { numerator },
+                newDomain
             )
         }
 
@@ -134,7 +147,7 @@ class AlgebraSolver {
         val right = Parser(rightText).parse()
         val reduced = left.numerator * right.denominatorProduct() -
             right.numerator * left.denominatorProduct()
-        val excludedFactors = left.denominatorFactors + right.denominatorFactors
+        val excludedFactors = left.domainFactors + right.domainFactors
         val excludedRoots = excludedFactors.flatMap { factor ->
             if (factor.degree > 0) {
                 findRealRoots((0..factor.degree).map {
