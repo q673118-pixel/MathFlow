@@ -1721,7 +1721,7 @@ private fun SettingsPage(
 
     Box(Modifier.fillMaxSize()) {
     androidx.compose.animation.AnimatedContent(
-        modifier = Modifier.fillMaxSize().padding(bottom = if (hasPendingChanges) 140.dp else 0.dp),
+        modifier = Modifier.fillMaxSize(),
         targetState = section,
         transitionSpec = {
             val forward = initialState == SettingsSection.MAIN && targetState != SettingsSection.MAIN
