@@ -1592,13 +1592,31 @@ private fun EquationSolverPage() {
         error?.let { Text(it, color = p.error, fontSize = 14.sp) }
         answer?.let { text ->
             Panel {
-                Text(text, color = p.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                androidx.compose.animation.AnimatedContent(
+                    targetState = text,
+                    transitionSpec = {
+                        (androidx.compose.animation.fadeIn(tween(200)) +
+                            androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = tween(200))) togetherWith
+                            androidx.compose.animation.fadeOut(tween(110))
+                    },
+                    label = "EquationAnswer"
+                ) { animatedAnswer ->
+                    Text(animatedAnswer, color = p.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                }
                 if (steps.isNotEmpty()) {
                     HorizontalDivider(color = p.key)
-                    steps.forEachIndexed { index, step ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("${index + 1}.", color = p.accent, fontSize = 14.sp)
-                            Text(step, fontSize = 14.sp, lineHeight = 20.sp)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = steps.isNotEmpty(),
+                        enter = androidx.compose.animation.fadeIn(tween(220)) +
+                            androidx.compose.animation.expandVertically(tween(220))
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            steps.forEachIndexed { index, step ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("${index + 1}.", color = p.accent, fontSize = 14.sp)
+                                    Text(step, fontSize = 14.sp, lineHeight = 20.sp)
+                                }
+                            }
                         }
                     }
                 }
