@@ -1394,7 +1394,15 @@ private fun ToolsPage() {
                             }
                         }
                     }
-                    if (fractionResult.isNotEmpty() || fractionError != null) ResultBox(fractionResult, fractionError)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = fractionResult.isNotEmpty() || fractionError != null,
+                        enter = androidx.compose.animation.fadeIn(tween(190)) +
+                            androidx.compose.animation.expandVertically(tween(190)),
+                        exit = androidx.compose.animation.fadeOut(tween(110)) +
+                            androidx.compose.animation.shrinkVertically(tween(110))
+                    ) {
+                        ResultBox(fractionResult, fractionError)
+                    }
                 }
                 "Проценты" -> {
                     Segmented(listOf("% от числа", "Сколько %", "± на %"), percentMode) { percentMode = it }
@@ -1425,7 +1433,15 @@ private fun ToolsPage() {
                         }.onSuccess { percentResult = it; percentError = null }
                             .onFailure { percentError = friendly(it, valuesFallback); percentResult = "" }
                     }
-                    if (percentResult.isNotEmpty() || percentError != null) ResultBox(percentResult, percentError)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = percentResult.isNotEmpty() || percentError != null,
+                        enter = androidx.compose.animation.fadeIn(tween(190)) +
+                            androidx.compose.animation.expandVertically(tween(190)),
+                        exit = androidx.compose.animation.fadeOut(tween(110)) +
+                            androidx.compose.animation.shrinkVertically(tween(110))
+                    ) {
+                        ResultBox(percentResult, percentError)
+                    }
                 }
                 "Геометрия" -> {
                     Segmented(listOf("Прямоугольник", "Круг", "Треугольник"), shape) { shape = it }
@@ -1444,7 +1460,15 @@ private fun ToolsPage() {
                         }.onSuccess { geometryResult = it; geometryError = null }
                             .onFailure { geometryError = friendly(it, sizesFallback); geometryResult = "" }
                     }
-                    if (geometryResult.isNotEmpty() || geometryError != null) ResultBox(geometryResult, geometryError)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = geometryResult.isNotEmpty() || geometryError != null,
+                        enter = androidx.compose.animation.fadeIn(tween(190)) +
+                            androidx.compose.animation.expandVertically(tween(190)),
+                        exit = androidx.compose.animation.fadeOut(tween(110)) +
+                            androidx.compose.animation.shrinkVertically(tween(110))
+                    ) {
+                        ResultBox(geometryResult, geometryError)
+                    }
                 }
                 "Конвертер" -> UnitConverterContent()
                 "График" -> GraphFunctionContent()
@@ -1641,26 +1665,34 @@ private fun EquationSolverPage() {
         ) {
             error?.let { AnimatedAnswerText(it, color = p.error, fontSize = 14.sp) }
         }
-        answer?.let { text ->
-            Panel {
-                AnimatedAnswerText(
-                    text,
-                    color = p.accent,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                if (steps.isNotEmpty()) {
-                    HorizontalDivider(color = p.key)
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = steps.isNotEmpty(),
-                        enter = androidx.compose.animation.fadeIn(tween(220)) +
-                            androidx.compose.animation.expandVertically(tween(220))
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                            steps.forEachIndexed { index, step ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("${index + 1}.", color = p.accent, fontSize = 14.sp)
-                                    Text(step, fontSize = 14.sp, lineHeight = 20.sp)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = answer != null,
+            enter = androidx.compose.animation.fadeIn(tween(210)) +
+                androidx.compose.animation.expandVertically(tween(210)),
+            exit = androidx.compose.animation.fadeOut(tween(120)) +
+                androidx.compose.animation.shrinkVertically(tween(120))
+        ) {
+            answer?.let { text ->
+                Panel {
+                    AnimatedAnswerText(
+                        text,
+                        color = p.accent,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (steps.isNotEmpty()) {
+                        HorizontalDivider(color = p.key)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = steps.isNotEmpty(),
+                            enter = androidx.compose.animation.fadeIn(tween(220)) +
+                                androidx.compose.animation.expandVertically(tween(220))
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                steps.forEachIndexed { index, step ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("${index + 1}.", color = p.accent, fontSize = 14.sp)
+                                        Text(step, fontSize = 14.sp, lineHeight = 20.sp)
+                                    }
                                 }
                             }
                         }
