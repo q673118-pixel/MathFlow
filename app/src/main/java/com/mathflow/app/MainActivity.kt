@@ -22,6 +22,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -92,10 +94,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -121,6 +128,7 @@ import androidx.core.view.WindowCompat
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -131,6 +139,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
+import kotlin.math.abs
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -1099,21 +1108,31 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                             softWrap = false
                         )
                     }
-                    Text(
-                        result,
-                        fontSize = when {
-                            result.length > 16 -> 24.sp
-                            result.length > 11 -> 32.sp
-                            result.length > 8 -> 40.sp
-                            else -> 52.sp
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = result,
+                        transitionSpec = {
+                            (androidx.compose.animation.fadeIn(tween(180)) +
+                                androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = tween(180))) togetherWith
+                                androidx.compose.animation.fadeOut(tween(100))
                         },
-                        fontWeight = FontWeight.Medium,
-                        color = if (result == "Ошибка") p.error else p.text,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.End,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                        label = "CalculatorResult"
+                    ) { animatedResult ->
+                        Text(
+                            animatedResult,
+                            fontSize = when {
+                                animatedResult.length > 16 -> 24.sp
+                                animatedResult.length > 11 -> 32.sp
+                                animatedResult.length > 8 -> 40.sp
+                                else -> 52.sp
+                            },
+                            fontWeight = FontWeight.Medium,
+                            color = if (animatedResult == "Ошибка") p.error else p.text,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     message?.let {
                         Text(it, fontSize = 13.sp, color = p.error, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
                     }
@@ -1266,7 +1285,17 @@ private fun ResultBox(text: String, error: String?) {
     Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = p.key) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (error != null) Text(error, color = p.error, fontSize = 14.sp)
-            else Text(text, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 22.sp)
+            else androidx.compose.animation.AnimatedContent(
+                targetState = text,
+                transitionSpec = {
+                    (androidx.compose.animation.fadeIn(tween(180)) +
+                        androidx.compose.animation.scaleIn(initialScale = 0.96f, animationSpec = tween(180))) togetherWith
+                        androidx.compose.animation.fadeOut(tween(100))
+                },
+                label = "ToolResult"
+            ) { animatedText ->
+                Text(animatedText, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 22.sp)
+            }
         }
     }
 }
@@ -1299,7 +1328,7 @@ private fun ToolsPage() {
     val sizesFallback = tx("sizes_error")
 
     PageColumn(tx("tools")) {
-        Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер"), tool) { tool = it }
+        Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер", "График"), tool) { tool = it }
         Panel {
             when (tool) {
                 "Дроби" -> {
@@ -1371,8 +1400,117 @@ private fun ToolsPage() {
                     if (geometryResult.isNotEmpty() || geometryError != null) ResultBox(geometryResult, geometryError)
                 }
                 "Конвертер" -> UnitConverterContent()
+                "График" -> GraphFunctionContent()
             }
         }
+    }
+}
+private data class GraphSample(val x: Double, val y: Double?)
+
+@Composable
+private fun GraphFunctionContent() {
+    val p = LocalPalette.current
+    var expression by rememberSaveable { mutableStateOf("x^2") }
+    var range by rememberSaveable { mutableStateOf(5) }
+    var samples by remember { mutableStateOf(emptyList<GraphSample>()) }
+    var selectedPoint by remember { mutableStateOf<GraphSample?>(null) }
+    var isCalculating by remember { mutableStateOf(false) }
+    var hasValidPoints by remember { mutableStateOf(false) }
+
+    LaunchedEffect(expression, range) {
+        selectedPoint = null
+        if (expression.isBlank()) {
+            samples = emptyList()
+            hasValidPoints = false
+            isCalculating = false
+            return@LaunchedEffect
+        }
+        delay(140L)
+        isCalculating = true
+        val computed = withContext(Dispatchers.Default) {
+            val engine = ExpressionEngine()
+            (0..120).map { index ->
+                val x = -range + (range * 2.0 * index / 120.0)
+                val y = runCatching {
+                    engine.calculate(expression, variables = mapOf("x" to BigDecimal.valueOf(x)), includeSteps = false).decimalValue.toDouble()
+                }.getOrNull()?.takeIf { it.isFinite() && abs(it) < 1.0e7 }
+                GraphSample(x, y)
+            }
+        }
+        samples = computed
+        hasValidPoints = computed.any { it.y != null }
+        isCalculating = false
+    }
+
+    Field(expression, { expression = it }, tx("graph_input"), Modifier.fillMaxWidth(), numeric = false)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Chip("x²", false) { expression = "x^2" }
+        Chip("sin(x)", false) { expression = "sin(x)" }
+        Chip("1/x", false) { expression = "1/x" }
+        Chip("2x+1", false) { expression = "2x+1" }
+    }
+    Text(tx("graph_range"), color = p.muted, fontSize = 12.sp)
+    Segmented(listOf("±5", "±10", "±20"), "±$range") {
+        range = it.removePrefix("±").toIntOrNull() ?: 5
+    }
+    Canvas(
+        Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(20.dp)).background(p.key)
+            .pointerInput(samples, range) {
+                detectTapGestures { tap ->
+                    val fraction = tap.x.toDouble() / size.width.coerceAtLeast(1).toDouble()
+                    val targetX = -range + fraction * range * 2.0
+                    selectedPoint = samples.filter { it.y != null }.minByOrNull { abs(it.x - targetX) }
+                }
+            }
+    ) {
+        val validY = samples.mapNotNull { it.y }
+        if (validY.isEmpty()) return@Canvas
+        val rawMin = validY.minOrNull() ?: -1.0
+        val rawMax = validY.maxOrNull() ?: 1.0
+        val padding = ((rawMax - rawMin) * 0.08).coerceAtLeast(0.5)
+        val yMin = rawMin - padding
+        val yMax = rawMax + padding
+        val ySpan = (yMax - yMin).coerceAtLeast(1.0)
+        fun plotX(x: Double) = ((x + range) / (range * 2.0) * size.width.toDouble()).toFloat()
+        fun plotY(y: Double) = (size.height.toDouble() - ((y - yMin) / ySpan * size.height.toDouble())).toFloat()
+        for (i in 0..4) {
+            val x = size.width * i / 4f
+            val y = size.height * i / 4f
+            drawLine(p.muted.copy(alpha = 0.18f), Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
+            drawLine(p.muted.copy(alpha = 0.18f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+        }
+        if (yMin <= 0.0 && yMax >= 0.0) {
+            val axisY = plotY(0.0)
+            drawLine(p.muted.copy(alpha = 0.65f), Offset(0f, axisY), Offset(size.width, axisY), 1.dp.toPx())
+        }
+        val axisX = plotX(0.0)
+        drawLine(p.muted.copy(alpha = 0.65f), Offset(axisX, 0f), Offset(axisX, size.height), 1.dp.toPx())
+        val path = Path()
+        var drawingSegment = false
+        samples.forEach { sample ->
+            val y = sample.y
+            if (y == null) drawingSegment = false
+            else {
+                val point = Offset(plotX(sample.x), plotY(y))
+                if (drawingSegment) path.lineTo(point.x, point.y) else path.moveTo(point.x, point.y)
+                drawingSegment = true
+            }
+        }
+        drawPath(path, p.accent, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        selectedPoint?.let { point -> point.y?.let { y ->
+            val center = Offset(plotX(point.x), plotY(y))
+            drawCircle(p.keyEquals, radius = 7.dp.toPx(), center = center)
+            drawCircle(p.onKeyEquals, radius = 3.dp.toPx(), center = center)
+        } }
+    }
+    when {
+        isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
+        !hasValidPoints -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
+        selectedPoint?.y != null -> Text(
+            "x = ${"%.2f".format(Locale.US, selectedPoint!!.x)}   y = ${"%.2f".format(Locale.US, selectedPoint!!.y)}",
+            color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium
+        )
+        else -> Text(tx("graph_hint"), color = p.muted, fontSize = 12.sp)
     }
 }
 private fun friendly(error: Throwable, fallback: String): String = when {
