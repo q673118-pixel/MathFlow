@@ -1,5 +1,7 @@
 package com.mathflow.app
 
+import androidx.compose.ui.draw.clip
+
 import androidx.compose.animation.core.FastOutSlowInEasing
 
 import androidx.compose.foundation.lazy.items
