@@ -80,9 +80,9 @@ internal fun AnimatedAnswerText(
         modifier = modifier,
         transitionSpec = {
             (fadeIn(tween(220, delayMillis = 20)) +
-                slideInVertically(tween(220) { it / 8 }) +
+                slideInVertically(animationSpec = tween(220)) { it / 8 } +
                 scaleIn(initialScale = 0.975f, animationSpec = tween(220))) togetherWith
-                (fadeOut(tween(120)) + slideOutVertically(tween(120) { -it / 10 }))
+                (fadeOut(tween(120)) + slideOutVertically(animationSpec = tween(120)) { -it / 10 })
         },
         label = "MathFlowAnswerTransition"
     ) { value ->
