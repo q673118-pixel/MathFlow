@@ -27,7 +27,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -1250,7 +1249,6 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
                     animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
                     label = "SegmentedLabelColor"
                 )
-                val interaction = remember(option) { MutableInteractionSource() }
                 Box(
                     Modifier.weight(1f).height(38.dp)
                         .mathFlowClickable {
