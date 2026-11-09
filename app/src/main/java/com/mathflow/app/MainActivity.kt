@@ -1107,9 +1107,11 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                     androidx.compose.animation.AnimatedContent(
                         targetState = result,
                         transitionSpec = {
-                            (androidx.compose.animation.fadeIn(tween(180)) +
-                                androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = tween(180))) togetherWith
-                                androidx.compose.animation.fadeOut(tween(100))
+                            (androidx.compose.animation.fadeIn(tween(220, delayMillis = 20)) +
+                                androidx.compose.animation.slideInVertically(tween(220) { it / 8 }) +
+                                androidx.compose.animation.scaleIn(initialScale = 0.975f, animationSpec = tween(220))) togetherWith
+                                (androidx.compose.animation.fadeOut(tween(120)) +
+                                    androidx.compose.animation.slideOutVertically(tween(120) { -it / 10 }))
                         },
                         label = "CalculatorResult"
                     ) { animatedResult ->
@@ -1129,14 +1131,28 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
-                    message?.let {
-                        Text(it, fontSize = 13.sp, color = p.error, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = message != null,
+                        enter = androidx.compose.animation.fadeIn(tween(180)) +
+                            androidx.compose.animation.expandVertically(tween(180)),
+                        exit = androidx.compose.animation.fadeOut(tween(110)) +
+                            androidx.compose.animation.shrinkVertically(tween(110))
+                    ) {
+                        message?.let {
+                            Text(it, fontSize = 13.sp, color = p.error, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
         }
 
-        if (steps.isNotEmpty() && showSteps) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = steps.isNotEmpty() && showSteps,
+            enter = androidx.compose.animation.fadeIn(tween(190)) +
+                androidx.compose.animation.expandVertically(tween(190)),
+            exit = androidx.compose.animation.fadeOut(tween(110)) +
+                androidx.compose.animation.shrinkVertically(tween(110))
+        ) {
             Surface(Modifier.fillMaxWidth().heightIn(max = 96.dp), shape = RoundedCornerShape(20.dp), color = p.surface) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
                     steps.forEachIndexed { index, step ->
@@ -1350,7 +1366,18 @@ private fun ToolsPage() {
             Chip(tx("graph"), false) { tool = "График" }
         }
         Panel {
-            when (tool) {
+            androidx.compose.animation.AnimatedContent(
+                targetState = tool,
+                transitionSpec = {
+                    (androidx.compose.animation.fadeIn(tween(190)) +
+                        androidx.compose.animation.slideInVertically(tween(190) { it / 12 })) togetherWith
+                        (androidx.compose.animation.fadeOut(tween(110)) +
+                            androidx.compose.animation.slideOutVertically(tween(110) { -it / 12 }))
+                },
+                label = "MathFlowToolContent"
+            ) { activeTool ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    when (activeTool) {
                 "Дроби" -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Field(fractionA, { fractionA = it }, "Дробь 1", Modifier.weight(1f), numeric = false)
@@ -1421,6 +1448,8 @@ private fun ToolsPage() {
                 }
                 "Конвертер" -> UnitConverterContent()
                 "График" -> GraphFunctionContent()
+                    }
+                }
             }
         }
     }
