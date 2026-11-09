@@ -2319,7 +2319,7 @@ private fun IconOptionCard(
     ) {
         Box(
             Modifier.fillMaxWidth().height(88.dp).clip(RoundedCornerShape(13.dp))
-                .background(option.previewColor.copy(alpha = 0.14f)),
+                .background(option.previewBackground.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center
         ) {
             LauncherIconPreview(
