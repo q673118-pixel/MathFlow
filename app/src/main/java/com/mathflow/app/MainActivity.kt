@@ -2248,7 +2248,7 @@ private fun SettingsPage(
     androidx.compose.animation.AnimatedVisibility(
         visible = hasPendingChanges,
         modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(bottom = 12.dp),
         enter = androidx.compose.animation.fadeIn(tween(170)) +
             androidx.compose.animation.slideInVertically(tween(240, easing = FastOutSlowInEasing)) { it },
         exit = androidx.compose.animation.fadeOut(tween(120)) +
@@ -2473,7 +2473,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
     val p = LocalPalette.current
     val shape = RoundedCornerShape(28.dp)
     Surface(
-        modifier = Modifier.fillMaxWidth().height(56.dp).clip(shape)
+        modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp).clip(shape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -2481,7 +2481,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
             ),
         shape = shape,
         color = p.keyEquals,
-        shadowElevation = 8.dp
+        shadowElevation = 10.dp
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 22.dp),
