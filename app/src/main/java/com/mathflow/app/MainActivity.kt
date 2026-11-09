@@ -1436,7 +1436,7 @@ private fun GraphFunctionContent() {
         delay(140L)
         isCalculating = true
         val computed = withContext(Dispatchers.Default) {
-            val engine = ExpressionEngine()
+            val engine = ExpressionEngine(AngleMode.RADIANS)
             (0..120).map { index ->
                 val x = -range + (range * 2.0 * index / 120.0)
                 val y = runCatching {
