@@ -69,6 +69,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -480,12 +481,17 @@ private fun MathFlowApp() {
                 maxAlpha = keyAnimationSettings.opacity * 0.20f
             )
         } else MathFlowNoIndication,
-        LocalRippleConfiguration provides if (keyAnimationSettings.colorEffectEnabled) {
-            RippleConfiguration(
-                color = if (keyAnimationSettings.pressColorArgb == 0L) palette.accent
-                    else Color(keyAnimationSettings.pressColorArgb.toInt())
+        // Material 3 ripple is suppressed so it cannot stack with our single
+        // configurable press-color indication from LocalIndication.
+        LocalRippleConfiguration provides RippleConfiguration(
+            color = Color.Transparent,
+            rippleAlpha = androidx.compose.material.ripple.RippleAlpha(
+                draggedAlpha = 0f,
+                focusedAlpha = 0f,
+                hoveredAlpha = 0f,
+                pressedAlpha = 0f
             )
-        } else null,
+        ),
         LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
         MaterialTheme(colorScheme = colors, typography = typography) {
@@ -1944,20 +1950,11 @@ private fun SettingsPage(
                             inactiveTickColor = Color.Transparent
                         )
                     )
-                    ApplySelectionButton(
-                        text = if (pendingAnimationSettings == appliedAnimationSettings) tx("already_applied") else tx("apply"),
-                        enabled = pendingAnimationSettings != appliedAnimationSettings,
-                        onClick = { onAnimationSettingsApplied(pendingAnimationSettings.normalized()) }
-                    )
                 }
 
                 Panel {
                     Row(
-                        Modifier.fillMaxWidth().clickable {
-                            pendingAnimationSettings = pendingAnimationSettings.copy(
-                                colorEffectEnabled = !pendingAnimationSettings.colorEffectEnabled
-                            )
-                        },
+                        Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -1968,9 +1965,22 @@ private fun SettingsPage(
                                 color = p.muted, fontSize = 12.sp
                             )
                         }
+                        Switch(
+                            checked = pendingAnimationSettings.colorEffectEnabled,
+                            onCheckedChange = { enabled ->
+                                pendingAnimationSettings = pendingAnimationSettings.copy(colorEffectEnabled = enabled)
+                            }
+                        )
                     }
-                    Text(tx("effect_color"), color = p.muted, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        tx("effect_color"),
+                        color = if (pendingAnimationSettings.colorEffectEnabled) p.muted else p.muted.copy(alpha = 0.45f),
+                        fontSize = 13.sp
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         listOf(0L, 0xFFB9A8F0L, 0xFF39C7FFL, 0xFF4BE2B2L, 0xFFFF9A66L).forEach { argb ->
                             val color = if (argb == 0L) p.accent else Color(argb.toInt())
                             Box(
@@ -1980,9 +1990,11 @@ private fun SettingsPage(
                                         if (pendingAnimationSettings.pressColorArgb == argb) p.text else p.muted,
                                         CircleShape
                                     )
-                                    .clickable {
-                                        pendingAnimationSettings = pendingAnimationSettings.copy(pressColorArgb = argb)
-                                    }
+                                    .then(
+                                        if (pendingAnimationSettings.colorEffectEnabled) Modifier.clickable {
+                                            pendingAnimationSettings = pendingAnimationSettings.copy(pressColorArgb = argb)
+                                        } else Modifier
+                                    )
                             )
                         }
                     }
