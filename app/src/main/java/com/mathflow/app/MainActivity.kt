@@ -1328,8 +1328,15 @@ private fun ToolsPage() {
     val sizesFallback = tx("sizes_error")
 
     PageColumn(tx("tools")) {
-        Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер"), if (tool == "График") "Дроби" else tool) { tool = it }
-        Chip(tx("graph"), tool == "График") { tool = "График" }
+        if (tool == "График") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip(tx("tools"), false) { tool = "Дроби" }
+                Chip(tx("graph"), true) { tool = "График" }
+            }
+        } else {
+            Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер"), tool) { tool = it }
+            Chip(tx("graph"), false) { tool = "График" }
+        }
         Panel {
             when (tool) {
                 "Дроби" -> {
