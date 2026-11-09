@@ -264,7 +264,7 @@ class ExpressionEngine(
         }
         require(answer.isFinite()) { "Результат не является конечным числом" }
         val decimal = BigDecimal.valueOf(answer).round(MC)
-        steps += "$name(${describe(argument)}) ≈ ${decimal.stripTrailingZeros().toPlainString()}"
+        if (recordSteps) steps += "$name(${describe(argument)}) ≈ ${decimal.stripTrailingZeros().toPlainString()}"
         return Value.Approximate(decimal)
     }
 
