@@ -1651,6 +1651,8 @@ private fun SettingsPage(
     var section by rememberSaveable { mutableStateOf(SettingsSection.MAIN) }
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
+    var pendingFontScale by remember(fontScale) { mutableFloatStateOf(fontScale) }
+    var pendingLanguage by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
     var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
     var pendingNavAnimationSettings by remember(appliedNavAnimationSettings) { mutableStateOf(appliedNavAnimationSettings) }
     var navPreviewPage by rememberSaveable { mutableStateOf(Page.HOME) }
@@ -1707,8 +1709,18 @@ private fun SettingsPage(
         }
     }
 
+    val hasPendingChanges = when (section) {
+        SettingsSection.MAIN -> pendingFontScale != fontScale
+        SettingsSection.ICONS -> pendingIconId != selectedIconId
+        SettingsSection.THEMES -> pendingThemeId != selectedThemeId
+        SettingsSection.ANIMATIONS -> pendingAnimationSettings != appliedAnimationSettings || pendingNavAnimationSettings != appliedNavAnimationSettings
+        SettingsSection.FONTS -> pendingFontPath != fontPath
+        SettingsSection.LANGUAGE -> pendingLanguage != selectedLanguage
+    }
+
+    Box(Modifier.fillMaxSize()) {
     androidx.compose.animation.AnimatedContent(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(bottom = if (hasPendingChanges) 82.dp else 0.dp),
         targetState = section,
         transitionSpec = {
             val forward = initialState == SettingsSection.MAIN && targetState != SettingsSection.MAIN
@@ -1784,8 +1796,8 @@ private fun SettingsPage(
                         Text("${(fontScale * 100).toInt()}%", fontSize = 15.sp, color = p.text)
                     }
                     Slider(
-                        value = fontScale,
-                        onValueChange = { onFontScale(Math.round(it * 20f) / 20f) },
+                        value = pendingFontScale,
+                        onValueChange = { pendingFontScale = Math.round(it * 20f) / 20f },
                         valueRange = 0.85f..1.25f,
                         steps = 7,
                         colors = SliderDefaults.colors(
@@ -2164,13 +2176,13 @@ private fun SettingsPage(
                 }
                 if (visibleLanguages.isEmpty()) Text(tx("no_languages_found"), color = p.muted, fontSize = 13.sp)
                 visibleLanguages.forEach { language ->
-                    val selected = selectedLanguage == language.tag
+                    val selected = pendingLanguage == language.tag
                     val shape = RoundedCornerShape(18.dp)
                     Row(
                         Modifier.fillMaxWidth().clip(shape)
                             .background(if (selected) p.navActive else p.surface)
                             .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
-                            .clickable { onLanguageSelected(language.tag) }
+                            .clickable { pendingLanguage = language.tag }
                             .padding(horizontal = 15.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -2232,6 +2244,33 @@ private fun SettingsPage(
                 }
             }
         }
+    }
+    androidx.compose.animation.AnimatedVisibility(
+        visible = hasPendingChanges,
+        modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        enter = androidx.compose.animation.fadeIn(tween(170)) +
+            androidx.compose.animation.slideInVertically(tween(240, easing = FastOutSlowInEasing)) { it },
+        exit = androidx.compose.animation.fadeOut(tween(120)) +
+            androidx.compose.animation.slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it }
+    ) {
+        SettingsApplyBar {
+            when (section) {
+                SettingsSection.MAIN -> onFontScale(pendingFontScale)
+                SettingsSection.ICONS -> onIconSelected(pendingIconId)
+                SettingsSection.THEMES -> onThemeSelected(pendingThemeId)
+                SettingsSection.ANIMATIONS -> {
+                    if (pendingAnimationSettings != appliedAnimationSettings) onAnimationSettingsApplied(pendingAnimationSettings.normalized())
+                    if (pendingNavAnimationSettings != appliedNavAnimationSettings) onNavAnimationSettingsApplied(pendingNavAnimationSettings.normalized())
+                }
+                SettingsSection.FONTS -> {
+                    if (pendingFontPath == null) onResetFont() else onFontSelected(pendingFontPath!!)
+                    fontMessage = fontApplySuccess
+                }
+                SettingsSection.LANGUAGE -> onLanguageSelected(pendingLanguage)
+            }
+        }
+    }
     }
 }
 
@@ -2313,19 +2352,19 @@ private fun IconOptionCard(
                 indication = null,
                 onClick = onClick
             )
-            .padding(11.dp),
+            .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Box(
-            Modifier.fillMaxWidth().height(88.dp).clip(RoundedCornerShape(13.dp))
+            Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(13.dp))
                 .background(option.previewBackground.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center
         ) {
             LauncherIconPreview(
                 drawable = option.drawable,
                 contentDescription = option.title,
-                modifier = Modifier.size(66.dp)
+                modifier = Modifier.size(50.dp)
             )
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -2378,12 +2417,12 @@ private fun ThemeOptionCard(
                 indication = null,
                 onClick = onClick
             )
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         // Tiny interface preview communicates the actual palette more clearly than swatches alone.
         Row(
-            Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(12.dp))
+            Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(10.dp))
                 .background(option.palette.background).padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -2400,7 +2439,7 @@ private fun ThemeOptionCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Box(Modifier.fillMaxWidth(0.52f).height(4.dp).clip(CircleShape).background(option.palette.text.copy(alpha = 0.8f)))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Box(Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(5.dp)).background(option.palette.key))
+                        Box(Modifier.weight(1f).height(13.dp).clip(RoundedCornerShape(5.dp)).background(option.palette.key))
                         Box(Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(5.dp)).background(option.palette.keyEquals))
                     }
                 }
@@ -2426,17 +2465,32 @@ private fun ThemeOptionCard(
 
 @Composable
 private fun ApplySelectionButton(text: String, enabled: Boolean, onClick: () -> Unit) {
+    // Legacy call sites are intentionally inert; the shared bottom bar applies changes.
+}
+
+@Composable
+private fun SettingsApplyBar(onClick: () -> Unit) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(25.dp)
+    val shape = RoundedCornerShape(28.dp)
     Surface(
-        modifier = Modifier.fillMaxWidth().height(50.dp).then(
-            if (enabled) Modifier.clip(shape).clickable(onClick = onClick) else Modifier
-        ),
+        modifier = Modifier.fillMaxWidth().height(56.dp).clip(shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            ),
         shape = shape,
-        color = if (enabled) p.keyEquals else p.key
+        color = p.keyEquals,
+        shadowElevation = 8.dp
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = if (enabled) p.onKeyEquals else p.muted)
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 22.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(Icons.Default.Check, contentDescription = null, tint = p.onKeyEquals, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.size(9.dp))
+            Text(tx("apply"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = p.onKeyEquals)
         }
     }
 }
