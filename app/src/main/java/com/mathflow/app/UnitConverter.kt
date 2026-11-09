@@ -348,27 +348,33 @@ internal fun UnitConverterContent() {
                         }
                     }
                 }
-                when {
-                    input.isBlank() -> Text(tx("enter_value"), color = p.muted, fontSize = 17.sp)
-                    converted != null -> {
-                        AnimatedAnswerText(
-                            converted,
-                            color = p.accent,
-                            fontSize = 29.sp,
-                            lineHeight = 34.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 2
-                        )
-                        Text(
-                            "${from.label}  →  ${to.label}",
-                            fontSize = 12.sp,
-                            color = p.muted
-                        )
-                    }
-                    else -> Text(
-                        tx("conversion_error"),
-                        color = p.error,
-                        fontSize = 14.sp
+                AnimatedAnswerText(
+                    text = when {
+                        input.isBlank() -> tx("enter_value")
+                        converted != null -> converted
+                        else -> tx("conversion_error")
+                    },
+                    color = when {
+                        input.isBlank() -> p.muted
+                        converted != null -> p.accent
+                        else -> p.error
+                    },
+                    fontSize = if (converted != null) 29.sp else 15.sp,
+                    lineHeight = if (converted != null) 34.sp else 20.sp,
+                    fontWeight = if (converted != null) FontWeight.SemiBold else FontWeight.Medium,
+                    maxLines = 2
+                )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = converted != null,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) +
+                        androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(180)),
+                    exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(100)) +
+                        androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(100))
+                ) {
+                    Text(
+                        "${from.label}  →  ${to.label}",
+                        fontSize = 12.sp,
+                        color = p.muted
                     )
                 }
             }
