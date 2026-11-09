@@ -1709,14 +1709,14 @@ private fun SettingsPage(
         }
     }
 
-    val hasPendingChanges = when (section) {
-        SettingsSection.MAIN -> pendingFontScale != fontScale
-        SettingsSection.ICONS -> pendingIconId != selectedIconId
-        SettingsSection.THEMES -> pendingThemeId != selectedThemeId
-        SettingsSection.ANIMATIONS -> pendingAnimationSettings != appliedAnimationSettings || pendingNavAnimationSettings != appliedNavAnimationSettings
-        SettingsSection.FONTS -> pendingFontPath != fontPath
-        SettingsSection.LANGUAGE -> pendingLanguage != selectedLanguage
-    }
+    val hasPendingChanges =
+        pendingFontScale != fontScale ||
+        pendingIconId != selectedIconId ||
+        pendingThemeId != selectedThemeId ||
+        pendingAnimationSettings != appliedAnimationSettings ||
+        pendingNavAnimationSettings != appliedNavAnimationSettings ||
+        pendingFontPath != fontPath ||
+        pendingLanguage != selectedLanguage
 
     Box(Modifier.fillMaxSize()) {
     androidx.compose.animation.AnimatedContent(
@@ -2255,20 +2255,20 @@ private fun SettingsPage(
             androidx.compose.animation.slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it }
     ) {
         SettingsApplyBar {
-            when (section) {
-                SettingsSection.MAIN -> onFontScale(pendingFontScale)
-                SettingsSection.ICONS -> onIconSelected(pendingIconId)
-                SettingsSection.THEMES -> onThemeSelected(pendingThemeId)
-                SettingsSection.ANIMATIONS -> {
-                    if (pendingAnimationSettings != appliedAnimationSettings) onAnimationSettingsApplied(pendingAnimationSettings.normalized())
-                    if (pendingNavAnimationSettings != appliedNavAnimationSettings) onNavAnimationSettingsApplied(pendingNavAnimationSettings.normalized())
-                }
-                SettingsSection.FONTS -> {
-                    if (pendingFontPath == null) onResetFont() else onFontSelected(pendingFontPath!!)
-                    fontMessage = fontApplySuccess
-                }
-                SettingsSection.LANGUAGE -> onLanguageSelected(pendingLanguage)
+            if (pendingFontScale != fontScale) onFontScale(pendingFontScale)
+            if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
+            if (pendingThemeId != selectedThemeId) onThemeSelected(pendingThemeId)
+            if (pendingAnimationSettings != appliedAnimationSettings) {
+                onAnimationSettingsApplied(pendingAnimationSettings.normalized())
             }
+            if (pendingNavAnimationSettings != appliedNavAnimationSettings) {
+                onNavAnimationSettingsApplied(pendingNavAnimationSettings.normalized())
+            }
+            if (pendingFontPath != fontPath) {
+                if (pendingFontPath == null) onResetFont() else onFontSelected(pendingFontPath!!)
+                fontMessage = fontApplySuccess
+            }
+            if (pendingLanguage != selectedLanguage) onLanguageSelected(pendingLanguage)
         }
     }
     }
