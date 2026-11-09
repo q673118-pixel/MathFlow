@@ -27,7 +27,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
@@ -726,9 +725,7 @@ private fun FirstLaunchWelcome(
                     color = palette.muted,
                     textAlign = TextAlign.Center
                 )
-                TextButton(onClick = onConfirm) {
-                    Text(ok, color = palette.accent, fontWeight = FontWeight.SemiBold)
-                }
+                MathFlowTextButton(ok, palette.accent, modifier = Modifier.fillMaxWidth(), onClick = onConfirm)
             }
         }
     }
@@ -920,7 +917,7 @@ private fun BottomNav(
                         )
                         val interactionSource = remember(item) { MutableInteractionSource() }
                         Box(
-                            Modifier.weight(1f).height(48.dp).clickable(
+                            Modifier.weight(1f).height(48.dp).mathFlowClickable(
                                 interactionSource = interactionSource,
                                 indication = null
                             ) { if (!selected) onSelect(item) },
@@ -1093,7 +1090,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 }
                 Box(
                     Modifier.align(Alignment.TopEnd).size(40.dp).clip(RoundedCornerShape(20.dp))
-                        .clickable { press("⌫") },
+                        .mathFlowClickable { press("⌫") },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Backspace, tx("delete"), tint = p.muted, modifier = Modifier.size(22.dp))
@@ -1172,7 +1169,7 @@ private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.height(32.dp).clip(RoundedCornerShape(16.dp))
             .background(if (active) p.navActive else p.key)
-            .clickable(onClick = onClick).padding(horizontal = 12.dp),
+            .mathFlowClickable(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (active) p.accent else p.muted)
@@ -1243,7 +1240,7 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
                 val interaction = remember(option) { MutableInteractionSource() }
                 Box(
                     Modifier.weight(1f).height(38.dp)
-                        .clickable(interactionSource = interaction, indication = null) {
+                        .mathFlowClickable {
                             if (!active) onSelect(option)
                         },
                     contentAlignment = Alignment.Center
@@ -1658,7 +1655,7 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                 ) {
                     Column(
                         Modifier.fillMaxWidth()
-                            .clickable(enabled = entry.steps.isNotEmpty()) { expanded = !expanded }
+                            .mathFlowClickable(enabled = entry.steps.isNotEmpty()) { expanded = !expanded }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
@@ -1677,9 +1674,7 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                 }
             }
             item(key = "clear_history") {
-                TextButton(onClick = onClear, modifier = Modifier.fillMaxWidth()) {
-                    Text(tx("clear_history"), color = p.accent)
-                }
+                MathFlowTextButton(tx("clear_history"), p.accent, modifier = Modifier.fillMaxWidth(), onClick = onClear)
             }
         }
     }
@@ -1982,7 +1977,7 @@ private fun SettingsPage(
             }
 
             SettingsSection.ICONS -> PageColumn(tx("app_icons")) {
-                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
+                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tx("icon_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 }
@@ -2034,9 +2029,7 @@ private fun SettingsPage(
 
 
             SettingsSection.ANIMATIONS -> PageColumn(tx("animations")) {
-                TextButton(onClick = { section = SettingsSection.MAIN }) {
-                    Text("← ${tx("settings")}", color = p.accent)
-                }
+                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("animation_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 KeyAnimationStyle.values().toList().chunked(2).forEach { pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -2047,7 +2040,7 @@ private fun SettingsPage(
                                 Modifier.weight(1f).clip(shape)
                                     .background(if (selected) p.navActive else p.surface)
                                     .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
-                                    .clickable { pendingAnimationSettings = pendingAnimationSettings.copy(style = style) }
+                                    .mathFlowClickable { pendingAnimationSettings = pendingAnimationSettings.copy(style = style) }
                                     .padding(horizontal = 13.dp, vertical = 14.dp),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
@@ -2163,7 +2156,7 @@ private fun SettingsPage(
                                         CircleShape
                                     )
                                     .then(
-                                        if (pendingAnimationSettings.colorEffectEnabled) Modifier.clickable {
+                                        if (pendingAnimationSettings.colorEffectEnabled) Modifier.mathFlowClickable {
                                             pendingAnimationSettings = pendingAnimationSettings.copy(pressColorArgb = argb)
                                         } else Modifier
                                     )
@@ -2178,7 +2171,7 @@ private fun SettingsPage(
                 }
                 Panel {
                     Row(
-                        Modifier.fillMaxWidth().clickable {
+                        Modifier.fillMaxWidth().mathFlowClickable {
                             pendingNavAnimationSettings = pendingNavAnimationSettings.copy(
                                 enabled = !pendingNavAnimationSettings.enabled
                             )
@@ -2203,7 +2196,7 @@ private fun SettingsPage(
                                     Modifier.weight(1f).clip(shape)
                                         .background(if (selected) p.navActive else p.surface)
                                         .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
-                                        .clickable {
+                                        .mathFlowClickable {
                                             pendingNavAnimationSettings = pendingNavAnimationSettings.copy(style = style)
                                         }
                                         .padding(horizontal = 11.dp, vertical = 11.dp),
@@ -2256,9 +2249,7 @@ private fun SettingsPage(
                 }
             }
             SettingsSection.FONTS -> PageColumn(tx("fonts")) {
-                TextButton(onClick = { section = SettingsSection.MAIN }) {
-                    Text("← ${tx("settings")}", color = p.accent)
-                }
+                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("font_library_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Panel {
                     ActionButton(tx("choose_font")) {
@@ -2278,7 +2269,7 @@ private fun SettingsPage(
                             Row(
                                 Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
                                     .background(if (selected) p.navActive else Color.Transparent)
-                                    .clickable { pendingFontPath = path }
+                                    .mathFlowClickable { pendingFontPath = path }
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -2299,7 +2290,7 @@ private fun SettingsPage(
                 Panel {
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                            .clickable { pendingFontPath = null }
+                            .mathFlowClickable { pendingFontPath = null }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -2325,7 +2316,7 @@ private fun SettingsPage(
             }
 
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
-                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
+                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
                 OutlinedTextField(
                     value = languageQuery,
@@ -2347,7 +2338,7 @@ private fun SettingsPage(
                         Modifier.fillMaxWidth().clip(shape)
                             .background(if (selected) p.navActive else p.surface)
                             .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
-                            .clickable { pendingLanguage = language.tag }
+                            .mathFlowClickable { pendingLanguage = language.tag }
                             .padding(horizontal = 15.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -2365,7 +2356,7 @@ private fun SettingsPage(
             }
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
-                TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
+                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white") }
                 val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
@@ -2472,7 +2463,7 @@ private fun SettingsEntry(
 ) {
     val p = LocalPalette.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable(onClick = onClick).padding(vertical = 5.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).mathFlowClickable(onClick = onClick).padding(vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -2512,11 +2503,7 @@ private fun IconOptionCard(
             .clip(shape)
             .background(if (selected) p.navActive else p.surface)
             .border(if (selected) 1.8.dp else 1.dp, borderColor, shape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
+            .mathFlowClickable(onClick = onClick)
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(5.dp)
@@ -2577,11 +2564,7 @@ private fun ThemeOptionCard(
             .clip(shape)
             .background(if (selected) p.navActive else p.surface)
             .border(if (selected) 1.8.dp else 1.dp, borderColor, shape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            )
+            .mathFlowClickable(onClick = onClick)
             .padding(8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
@@ -2639,11 +2622,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
     val shape = RoundedCornerShape(28.dp)
     Surface(
         modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp).clip(shape)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
+            .mathFlowClickable(onClick = onClick),
         shape = shape,
         color = p.keyEquals,
         shadowElevation = 10.dp
