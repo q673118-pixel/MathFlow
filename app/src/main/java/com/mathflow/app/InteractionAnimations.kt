@@ -13,12 +13,17 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -26,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
 
 /**
@@ -76,7 +82,7 @@ internal fun AnimatedAnswerText(
             (fadeIn(tween(220, delayMillis = 20)) +
                 slideInVertically(tween(220) { it / 8 }) +
                 scaleIn(initialScale = 0.975f, animationSpec = tween(220))) togetherWith
-                (fadeOut(tween(120)) + slideOutVertically(tween(120) { -it / 10 })
+                (fadeOut(tween(120)) + slideOutVertically(tween(120) { -it / 10 }))
         },
         label = "MathFlowAnswerTransition"
     ) { value ->
@@ -89,5 +95,22 @@ internal fun AnimatedAnswerText(
             maxLines = maxLines,
             textAlign = textAlign
         )
+    }
+}
+
+@Composable
+internal fun MathFlowTextButton(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier.clip(RoundedCornerShape(14.dp))
+            .mathFlowClickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, color = color, fontWeight = FontWeight.Medium, fontSize = 14.sp)
     }
 }
