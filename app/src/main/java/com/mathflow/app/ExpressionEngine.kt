@@ -34,9 +34,17 @@ class ExpressionEngine(
     private lateinit var tokens: List<Token>
     private var position = 0
     private val steps = mutableListOf<String>()
+    private var variables: Map<String, BigDecimal> = emptyMap()
+    private var recordSteps: Boolean = true
 
-    fun calculate(source: String): CalculationResult {
+    fun calculate(
+        source: String,
+        variables: Map<String, BigDecimal> = emptyMap(),
+        includeSteps: Boolean = true
+    ): CalculationResult {
         require(source.isNotBlank()) { "Введите выражение" }
+        this.variables = variables
+        recordSteps = includeSteps
         steps.clear()
         tokens = tokenize(source)
         position = 0
@@ -120,7 +128,7 @@ class ExpressionEngine(
             val right = parseTerm()
             val before = value
             value = binary(value, right, op.type)
-            steps += "${describe(before)} ${op.text} ${describe(right)} = ${describe(value)}"
+            if (recordSteps) steps += "${describe(before)} ${op.text} ${describe(right)} = ${describe(value)}"
         }
         return value
     }
@@ -137,7 +145,7 @@ class ExpressionEngine(
             val right = parseUnary()
             val before = value
             value = binary(value, right, op.type)
-            steps += "${describe(before)} ${op.text} ${describe(right)} = ${describe(value)}"
+            if (recordSteps) steps += "${describe(before)} ${op.text} ${describe(right)} = ${describe(value)}"
         }
         return value
     }
@@ -186,7 +194,7 @@ class ExpressionEngine(
                     }
                 }
             }
-            steps += "${describe(base)}^$n = ${describe(value)}"
+            if (recordSteps) steps += "${describe(base)}^$n = ${describe(value)}"
         }
         return value
     }
@@ -196,7 +204,7 @@ class ExpressionEngine(
         while (peek().type == TokenType.PERCENT) {
             take()
             value = binary(value, Value.Exact(Rational.of(100)), TokenType.DIVIDE)
-            steps += "Процент: ${describe(value)}"
+            if (recordSteps) steps += "Процент: ${describe(value)}"
         }
         return value
     }
@@ -216,6 +224,7 @@ class ExpressionEngine(
     }
 
     private fun parseIdentifier(name: String): Value {
+        variables[name]?.let { return Value.Approximate(it) }
         if (name == "pi") return Value.Approximate(BigDecimal(PI, MC))
         if (name == "e") return Value.Approximate(BigDecimal(E, MC))
         require(peek().type == TokenType.LEFT) { "После функции $name нужны скобки" }
@@ -224,7 +233,7 @@ class ExpressionEngine(
         expect(TokenType.RIGHT)
         if (name == "abs" && argument is Value.Exact) {
             val exact = Rational.of(argument.number.numerator.abs(), argument.number.denominator)
-            steps += "Модуль: |${describe(argument)}| = ${describe(Value.Exact(exact))}"
+            if (recordSteps) steps += "Модуль: |${describe(argument)}| = ${describe(Value.Exact(exact))}"
             return Value.Exact(exact)
         }
         if (name == "sqrt" && argument is Value.Exact) {
@@ -234,7 +243,7 @@ class ExpressionEngine(
             if (numeratorRoot.multiply(numeratorRoot) == argument.number.numerator &&
                 denominatorRoot.multiply(denominatorRoot) == argument.number.denominator) {
                 val exact = Rational.of(numeratorRoot, denominatorRoot)
-                steps += "√${describe(argument)} = ${describe(Value.Exact(exact))}"
+                if (recordSteps) steps += "√${describe(argument)} = ${describe(Value.Exact(exact))}"
                 return Value.Exact(exact)
             }
         }
