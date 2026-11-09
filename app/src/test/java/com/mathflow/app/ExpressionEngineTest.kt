@@ -39,6 +39,24 @@ class ExpressionEngineTest {
         }
     }
 
+    @Test fun evaluatesGraphVariable() {
+        val result = ExpressionEngine().calculate(
+            "x^2 + 2x + 1",
+            variables = mapOf("x" to java.math.BigDecimal.valueOf(3)),
+            includeSteps = false
+        )
+        assertEquals("16", result.displayValue)
+        assertTrue(result.steps.isEmpty())
+    }
+
+    @Test fun evaluatesGraphVariableInsideFunction() {
+        val result = ExpressionEngine().calculate(
+            "sin(x)",
+            variables = mapOf("x" to java.math.BigDecimal.valueOf(30))
+        )
+        assertEquals(0.5, result.decimalValue.toDouble(), 1e-9)
+    }
+
     @Test fun trigUsesDegreeModeByDefault() {
         val result = engine.calculate("sin(30)")
         assertEquals(0.5, result.decimalValue.toDouble(), 1e-9)
