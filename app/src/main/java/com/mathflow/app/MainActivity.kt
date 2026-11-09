@@ -247,7 +247,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                 scaleX = mScale.value
                 scaleY = mScale.value
             },
-            colorFilter = ColorFilter.tint(palette.text)
+            colorFilter = ColorFilter.tint(palette.accent)
         )
         Image(
             painter = painterResource(R.drawable.mark_dot),
@@ -259,7 +259,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                 scaleY = dotScaleY.value
                 transformOrigin = TransformOrigin(0.5f, 0.308f)
             },
-            colorFilter = ColorFilter.tint(palette.text)
+            colorFilter = ColorFilter.tint(palette.keyEquals)
         )
     }
 }
