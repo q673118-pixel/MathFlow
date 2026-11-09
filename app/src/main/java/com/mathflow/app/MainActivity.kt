@@ -1268,7 +1268,11 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
 @Composable
 private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
-    Surface(onClick = onClick, modifier = modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(25.dp), color = p.keyEquals) {
+    Surface(
+        modifier = modifier.fillMaxWidth().height(50.dp).mathFlowClickable(onClick = onClick),
+        shape = RoundedCornerShape(25.dp),
+        color = p.keyEquals
+    ) {
         Box(contentAlignment = Alignment.Center) {
             Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
         }
@@ -1280,17 +1284,29 @@ private fun ResultBox(text: String, error: String?) {
     val p = LocalPalette.current
     Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = p.key) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            if (error != null) Text(error, color = p.error, fontSize = 14.sp)
-            else androidx.compose.animation.AnimatedContent(
-                targetState = text,
-                transitionSpec = {
-                    (androidx.compose.animation.fadeIn(tween(180)) +
-                        androidx.compose.animation.scaleIn(initialScale = 0.96f, animationSpec = tween(180))) togetherWith
-                        androidx.compose.animation.fadeOut(tween(100))
-                },
-                label = "ToolResult"
-            ) { animatedText ->
-                Text(animatedText, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, lineHeight = 22.sp)
+            androidx.compose.animation.AnimatedVisibility(
+                visible = error != null,
+                enter = androidx.compose.animation.fadeIn(tween(190)) +
+                    androidx.compose.animation.expandVertically(tween(190)),
+                exit = androidx.compose.animation.fadeOut(tween(110)) +
+                    androidx.compose.animation.shrinkVertically(tween(110))
+            ) {
+                error?.let { AnimatedAnswerText(it, color = p.error, fontSize = 14.sp) }
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = error == null && text.isNotBlank(),
+                enter = androidx.compose.animation.fadeIn(tween(190)) +
+                    androidx.compose.animation.expandVertically(tween(190)),
+                exit = androidx.compose.animation.fadeOut(tween(110)) +
+                    androidx.compose.animation.shrinkVertically(tween(110))
+            ) {
+                AnimatedAnswerText(
+                    text,
+                    color = p.text,
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
@@ -1510,9 +1526,11 @@ private fun GraphFunctionContent() {
     when {
         isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
         !hasValidPoints -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
-        selectedPoint?.y != null -> Text(
+        selectedPoint?.y != null -> AnimatedAnswerText(
             "x = ${"%.2f".format(Locale.US, selectedPoint!!.x)}   y = ${"%.2f".format(Locale.US, selectedPoint!!.y)}",
-            color = p.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium
+            color = p.accent,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
         )
         else -> Text(tx("graph_hint"), color = p.muted, fontSize = 12.sp)
     }
@@ -1585,20 +1603,23 @@ private fun EquationSolverPage() {
                 }
             }
         }
-        error?.let { Text(it, color = p.error, fontSize = 14.sp) }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = error != null,
+            enter = androidx.compose.animation.fadeIn(tween(190)) +
+                androidx.compose.animation.expandVertically(tween(190)),
+            exit = androidx.compose.animation.fadeOut(tween(110)) +
+                androidx.compose.animation.shrinkVertically(tween(110))
+        ) {
+            error?.let { AnimatedAnswerText(it, color = p.error, fontSize = 14.sp) }
+        }
         answer?.let { text ->
             Panel {
-                androidx.compose.animation.AnimatedContent(
-                    targetState = text,
-                    transitionSpec = {
-                        (androidx.compose.animation.fadeIn(tween(200)) +
-                            androidx.compose.animation.scaleIn(initialScale = 0.94f, animationSpec = tween(200))) togetherWith
-                            androidx.compose.animation.fadeOut(tween(110))
-                    },
-                    label = "EquationAnswer"
-                ) { animatedAnswer ->
-                    Text(animatedAnswer, color = p.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-                }
+                AnimatedAnswerText(
+                    text,
+                    color = p.accent,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
                 if (steps.isNotEmpty()) {
                     HorizontalDivider(color = p.key)
                     androidx.compose.animation.AnimatedVisibility(
@@ -1664,9 +1685,17 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                             entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) tx("hide_solution") else tx("show_solution")) else "",
                             fontSize = 12.sp, color = p.muted
                         )
-                        if (expanded) {
-                            entry.steps.forEachIndexed { index, step ->
-                                Text("${index + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = expanded,
+                            enter = androidx.compose.animation.fadeIn(tween(180)) +
+                                androidx.compose.animation.expandVertically(tween(180)),
+                            exit = androidx.compose.animation.fadeOut(tween(110)) +
+                                androidx.compose.animation.shrinkVertically(tween(110))
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                entry.steps.forEachIndexed { index, step ->
+                                    Text("${index + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
+                                }
                             }
                         }
                     }
