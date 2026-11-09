@@ -9,7 +9,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.window.Dialog
-import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -203,7 +202,7 @@ internal fun UnitConverterContent() {
                     label = "ConverterCategoryText"
                 )
                 Surface(
-                    onClick = {
+                    modifier = Modifier.mathFlowClickable {
                         if (!selected) {
                             categoryId = item.id
                             fromId = item.units.first().id
@@ -282,14 +281,13 @@ internal fun UnitConverterContent() {
                 onClick = { selectorSide = "from" }
             )
             Surface(
-                onClick = {
+                shape = CircleShape,
+                color = p.key,
+                modifier = Modifier.size(44.dp).mathFlowClickable {
                     val previous = from.id
                     fromId = to.id
                     toId = previous
-                },
-                shape = CircleShape,
-                color = p.key,
-                modifier = Modifier.size(44.dp)
+                }
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -328,9 +326,11 @@ internal fun UnitConverterContent() {
                     )
                     if (converted != null) {
                         Surface(
-                            onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(converted)) },
                             shape = RoundedCornerShape(12.dp),
-                            color = p.surface
+                            color = p.surface,
+                            modifier = Modifier.mathFlowClickable {
+                                clipboard.setText(androidx.compose.ui.text.AnnotatedString(converted))
+                            }
                         ) {
                             Row(
                                 Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
@@ -351,14 +351,13 @@ internal fun UnitConverterContent() {
                 when {
                     input.isBlank() -> Text(tx("enter_value"), color = p.muted, fontSize = 17.sp)
                     converted != null -> {
-                        Text(
+                        AnimatedAnswerText(
                             converted,
+                            color = p.accent,
                             fontSize = 29.sp,
                             lineHeight = 34.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = p.accent,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                            maxLines = 2
                         )
                         Text(
                             "${from.label}  →  ${to.label}",
@@ -414,7 +413,7 @@ internal fun UnitConverterContent() {
                             val unit = category.units[index]
                             val active = unit.id == selectedUnit.id
                             Surface(
-                                onClick = {
+                                modifier = Modifier.mathFlowClickable {
                                     if (side == "from") fromId = unit.id else toId = unit.id
                                     selectorSide = null
                                 },
@@ -444,9 +443,11 @@ internal fun UnitConverterContent() {
                             }
                         }
                     }
-                    TextButton(onClick = { selectorSide = null }, modifier = Modifier.align(Alignment.End)) {
-                        Text(tx("cancel"), color = p.accent)
-                    }
+                    MathFlowTextButton(
+                        tx("cancel"),
+                        p.accent,
+                        modifier = Modifier.align(Alignment.End)
+                    ) { selectorSide = null }
                 }
             }
         }
@@ -462,8 +463,7 @@ private fun ConverterUnitButton(
 ) {
     val p = LocalPalette.current
     Surface(
-        onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.mathFlowClickable(onClick = onClick),
         shape = RoundedCornerShape(17.dp),
         color = p.key
     ) {
