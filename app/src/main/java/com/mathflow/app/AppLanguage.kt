@@ -205,6 +205,7 @@ internal fun displayText(source: String): String {
         "Проценты" -> "percentages"
         "Геометрия" -> "geometry"
         "Конвертер" -> "converter"
+        "График" -> "graph"
         "% от числа" -> "percent_of"
         "Сколько %" -> "what_percent"
         "± на %" -> "change_percent"
