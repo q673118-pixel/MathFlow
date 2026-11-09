@@ -1707,25 +1707,8 @@ private fun SettingsPage(
         }
     }
 
-    var horizontalDrag by remember { mutableFloatStateOf(0f) }
-    val swipeThreshold = with(LocalDensity.current) { 64.dp.toPx() }
     androidx.compose.animation.AnimatedContent(
-        modifier = Modifier.fillMaxSize().pointerInput(section) {
-            detectHorizontalDragGestures(
-                onDragStart = { horizontalDrag = 0f },
-                onHorizontalDrag = { change, dragAmount ->
-                    horizontalDrag += dragAmount
-                    change.consume()
-                },
-                onDragEnd = {
-                    if (section != SettingsSection.MAIN && horizontalDrag > swipeThreshold) {
-                        section = SettingsSection.MAIN
-                    }
-                    horizontalDrag = 0f
-                },
-                onDragCancel = { horizontalDrag = 0f }
-            )
-        },
+        modifier = Modifier.fillMaxSize(),
         targetState = section,
         transitionSpec = {
             val forward = initialState == SettingsSection.MAIN && targetState != SettingsSection.MAIN
@@ -1826,18 +1809,29 @@ private fun SettingsPage(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tx("icon_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 }
-                AppIconOptions.chunked(2).forEach { pair ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pair.forEach { option ->
-                            IconOptionCard(
-                                option = option,
-                                selected = pendingIconId == option.id,
-                                applied = selectedIconId == option.id,
-                                modifier = Modifier.weight(1f),
-                                onClick = { pendingIconId = option.id }
-                            )
+                val baseIcons = AppIconOptions.filter { it.id in setOf("vanilla", "black", "white") }
+                val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("ОСНОВНЫЕ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    baseIcons.chunked(2).forEach { pair ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            pair.forEach { option ->
+                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                                    Modifier.weight(1f)) { pendingIconId = option.id }
+                            }
+                            if (pair.size == 1) Spacer(Modifier.weight(1f))
                         }
-                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(3.dp))
+                    Text("ЦВЕТОВЫЕ ИКОНКИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    colorIcons.chunked(2).forEach { pair ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            pair.forEach { option ->
+                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                                    Modifier.weight(1f)) { pendingIconId = option.id }
+                            }
+                            if (pair.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
                 val selected = AppIconOptions.firstOrNull { it.id == pendingIconId } ?: AppIconOptions.first()
@@ -2298,22 +2292,53 @@ private fun IconOptionCard(
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(19.dp)
+    val borderColor by animateColorAsState(
+        if (selected) p.accent else p.key,
+        animationSpec = tween(190, easing = FastOutSlowInEasing),
+        label = "IconCardBorder"
+    )
+    val cardScale by animateFloatAsState(
+        if (selected) 1f else 0.985f,
+        animationSpec = spring(dampingRatio = 0.8f, stiffness = 520f),
+        label = "IconCardScale"
+    )
     Column(
-        modifier.clip(shape)
-            .background(p.surface)
-            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
-            .clickable(onClick = onClick)
-            .padding(10.dp),
+        modifier.graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+            .clip(shape)
+            .background(if (selected) p.navActive else p.surface)
+            .border(if (selected) 1.8.dp else 1.dp, borderColor, shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(11.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(7.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        LauncherIconPreview(
-            drawable = option.drawable,
-            contentDescription = option.title,
-            modifier = Modifier.size(70.dp)
-        )
-        Text(option.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1)
+        Box(
+            Modifier.fillMaxWidth().height(88.dp).clip(RoundedCornerShape(13.dp))
+                .background(option.previewColor.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center
+        ) {
+            LauncherIconPreview(
+                drawable = option.drawable,
+                contentDescription = option.title,
+                modifier = Modifier.size(66.dp)
+            )
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(option.title, modifier = Modifier.weight(1f), fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+            if (selected) {
+                Box(Modifier.size(19.dp).clip(CircleShape).background(p.accent), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Check, contentDescription = tx("selected"), tint = p.onKeyEquals, modifier = Modifier.size(13.dp))
+                }
+            }
+        }
         Text(
             when { applied -> tx("applied"); selected -> tx("selected"); else -> " " },
             fontSize = 10.sp,
