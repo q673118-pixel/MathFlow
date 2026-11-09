@@ -1721,7 +1721,7 @@ private fun SettingsPage(
 
     Box(Modifier.fillMaxSize()) {
     androidx.compose.animation.AnimatedContent(
-        modifier = Modifier.fillMaxSize().padding(bottom = if (hasPendingChanges) 82.dp else 0.dp),
+        modifier = Modifier.fillMaxSize().padding(bottom = if (hasPendingChanges) 108.dp else 0.dp),
         targetState = section,
         transitionSpec = {
             val forward = initialState == SettingsSection.MAIN && targetState != SettingsSection.MAIN
@@ -2249,7 +2249,7 @@ private fun SettingsPage(
     androidx.compose.animation.AnimatedVisibility(
         visible = hasPendingChanges,
         modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-            .padding(bottom = 12.dp),
+            .padding(bottom = 28.dp),
         enter = androidx.compose.animation.fadeIn(tween(170)) +
             androidx.compose.animation.slideInVertically(tween(240, easing = FastOutSlowInEasing)) { it },
         exit = androidx.compose.animation.fadeOut(tween(120)) +
