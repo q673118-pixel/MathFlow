@@ -914,12 +914,10 @@ private fun BottomNav(
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavSoftFocusAlpha"
                         )
-                        val interactionSource = remember(item) { MutableInteractionSource() }
                         Box(
-                            Modifier.weight(1f).height(48.dp).mathFlowClickable(
-                                interactionSource = interactionSource,
-                                indication = null
-                            ) { if (!selected) onSelect(item) },
+                            Modifier.weight(1f).height(48.dp).mathFlowClickable {
+                                if (!selected) onSelect(item)
+                            },
                             contentAlignment = Alignment.Center
                         ) {
                             if (style == BottomNavAnimationStyle.SOFT_FOCUS && settings.enabled) {
