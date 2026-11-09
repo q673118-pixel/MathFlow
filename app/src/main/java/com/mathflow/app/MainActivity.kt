@@ -1108,10 +1108,10 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                         targetState = result,
                         transitionSpec = {
                             (androidx.compose.animation.fadeIn(tween(220, delayMillis = 20)) +
-                                androidx.compose.animation.slideInVertically(tween(220) { it / 8 }) +
+                                androidx.compose.animation.slideInVertically(animationSpec = tween(220)) { it / 8 } +
                                 androidx.compose.animation.scaleIn(initialScale = 0.975f, animationSpec = tween(220))) togetherWith
                                 (androidx.compose.animation.fadeOut(tween(120)) +
-                                    androidx.compose.animation.slideOutVertically(tween(120) { -it / 10 }))
+                                    androidx.compose.animation.slideOutVertically(animationSpec = tween(120)) { -it / 10 })
                         },
                         label = "CalculatorResult"
                     ) { animatedResult ->
@@ -1370,9 +1370,9 @@ private fun ToolsPage() {
                 targetState = tool,
                 transitionSpec = {
                     (androidx.compose.animation.fadeIn(tween(190)) +
-                        androidx.compose.animation.slideInVertically(tween(190) { it / 12 })) togetherWith
+                        androidx.compose.animation.slideInVertically(animationSpec = tween(190)) { it / 12 }) togetherWith
                         (androidx.compose.animation.fadeOut(tween(110)) +
-                            androidx.compose.animation.slideOutVertically(tween(110) { -it / 12 }))
+                            androidx.compose.animation.slideOutVertically(animationSpec = tween(110)) { -it / 12 })
                 },
                 label = "MathFlowToolContent"
             ) { activeTool ->
