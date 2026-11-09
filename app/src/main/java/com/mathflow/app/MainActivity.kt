@@ -11,6 +11,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Animatable
@@ -1215,7 +1216,11 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 @Composable
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
-    Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), color = p.surface) {
+    Surface(
+        modifier.animateContentSize(tween(180)).fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = p.surface
+    ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
     }
 }
@@ -1575,12 +1580,22 @@ private fun GraphFunctionContent() {
     when {
         isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
         !hasValidPoints -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
-        selectedPoint?.y != null -> AnimatedAnswerText(
-            "x = ${"%.2f".format(Locale.US, selectedPoint!!.x)}   y = ${"%.2f".format(Locale.US, selectedPoint!!.y)}",
-            color = p.accent,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
+        selectedPoint?.y != null -> androidx.compose.animation.AnimatedVisibility(
+            visible = true,
+            enter = androidx.compose.animation.fadeIn(tween(180)) +
+                androidx.compose.animation.expandVertically(tween(180))
+        ) {
+            selectedPoint?.let { point ->
+                point.y?.let { y ->
+                    AnimatedAnswerText(
+                        "x = ${"%.2f".format(Locale.US, point.x)}   y = ${"%.2f".format(Locale.US, y)}",
+                        color = p.accent,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
         else -> Text(tx("graph_hint"), color = p.muted, fontSize = 12.sp)
     }
 }
