@@ -15,6 +15,7 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -106,7 +107,7 @@ internal fun MathFlowTextButton(
     onClick: () -> Unit
 ) {
     Box(
-        modifier.clip(RoundedCornerShape(14.dp))
+        modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
             .mathFlowClickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
