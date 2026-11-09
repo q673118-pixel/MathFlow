@@ -1,5 +1,7 @@
 package com.mathflow.app
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.heightIn
