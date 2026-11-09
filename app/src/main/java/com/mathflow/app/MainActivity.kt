@@ -57,6 +57,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
@@ -2194,19 +2195,30 @@ private fun SettingsPage(
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
                 TextButton(onClick = { section = SettingsSection.MAIN }) { Text("← ${tx("settings")}", color = p.accent) }
-                Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp)
-                ThemeOptions.chunked(2).forEach { pair ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pair.forEach { option ->
-                            ThemeOptionCard(
-                                option = option,
-                                selected = pendingThemeId == option.id,
-                                applied = selectedThemeId == option.id,
-                                modifier = Modifier.weight(1f),
-                                onClick = { pendingThemeId = option.id }
-                            )
+                Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white") }
+                val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text("ОСНОВНЫЕ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    baseThemes.chunked(2).forEach { pair ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            pair.forEach { option ->
+                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                                    Modifier.weight(1f)) { pendingThemeId = option.id }
+                            }
+                            if (pair.size == 1) Spacer(Modifier.weight(1f))
                         }
-                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
+                    Spacer(Modifier.height(3.dp))
+                    Text("ЦВЕТОВЫЕ ТЕМЫ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    colorThemes.chunked(2).forEach { pair ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            pair.forEach { option ->
+                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                                    Modifier.weight(1f)) { pendingThemeId = option.id }
+                            }
+                            if (pair.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
                 val selected = themeFor(pendingThemeId)
@@ -2320,21 +2332,64 @@ private fun ThemeOptionCard(
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(20.dp)
+    val shape = RoundedCornerShape(19.dp)
+    val borderColor by animateColorAsState(
+        if (selected) p.accent else p.key,
+        animationSpec = tween(190, easing = FastOutSlowInEasing),
+        label = "ThemeCardBorder"
+    )
+    val cardScale by animateFloatAsState(
+        if (selected) 1f else 0.985f,
+        animationSpec = spring(dampingRatio = 0.78f, stiffness = 520f),
+        label = "ThemeCardScale"
+    )
     Column(
-        modifier.clip(shape)
-            .background(p.surface)
-            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(9.dp)
+        modifier.graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+            .clip(shape)
+            .background(if (selected) p.navActive else p.surface)
+            .border(if (selected) 1.8.dp else 1.dp, borderColor, shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            listOf(option.palette.background, option.palette.surface, option.palette.keyEquals, option.palette.accent).forEach { color ->
-                Box(Modifier.size(18.dp).clip(CircleShape).background(color))
+        // Tiny interface preview communicates the actual palette more clearly than swatches alone.
+        Row(
+            Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(12.dp))
+                .background(option.palette.background).padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.weight(0.34f).fillMaxSize().clip(RoundedCornerShape(7.dp)).background(option.palette.surface)) {
+                Column(Modifier.fillMaxSize().padding(5.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(Modifier.fillMaxWidth(0.72f).height(4.dp).clip(CircleShape).background(option.palette.text.copy(alpha = 0.8f)))
+                    Box(Modifier.fillMaxWidth(0.48f).height(3.dp).clip(CircleShape).background(option.palette.muted.copy(alpha = 0.8f)))
+                    Spacer(Modifier.weight(1f))
+                    Box(Modifier.fillMaxWidth(0.62f).height(7.dp).clip(CircleShape).background(option.palette.accent))
+                }
+            }
+            Box(Modifier.weight(0.66f).fillMaxSize().clip(RoundedCornerShape(7.dp)).background(option.palette.surface).padding(5.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(Modifier.fillMaxWidth(0.52f).height(4.dp).clip(CircleShape).background(option.palette.text.copy(alpha = 0.8f)))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Box(Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(5.dp)).background(option.palette.key))
+                        Box(Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(5.dp)).background(option.palette.keyEquals))
+                    }
+                }
             }
         }
-        Text(option.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.text, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            Text(option.title, modifier = Modifier.weight(1f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                color = p.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (selected) {
+                Box(Modifier.size(19.dp).clip(CircleShape).background(p.accent), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Check, contentDescription = tx("selected"), tint = p.onKeyEquals, modifier = Modifier.size(13.dp))
+                }
+            }
+        }
         Text(
             when { applied -> tx("applied"); selected -> tx("selected"); else -> " " },
             fontSize = 10.sp,
