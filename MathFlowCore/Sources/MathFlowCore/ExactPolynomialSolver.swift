@@ -235,30 +235,86 @@ enum ExactPolynomialEquationSolver {
         return lo
     }
     private static func realRoots(_ poly:ExactPolynomial)->[Double] {
-        if poly.degree==0 { return [] }
-        if poly.degree==1 { let root = -double(poly[0])/double(poly[1]); return root.isFinite ? [root] : [] }
-        let lower = -1000.0, upper = 1000.0, count=10000, step=(upper-lower)/Double(count)
-        var roots:[Double]=[]
-        func add(_ x:Double) {
-            guard x.isFinite, abs(poly.value(x))<1e-6,
-                  !roots.contains(where:{abs($0-x)<1e-5*max(1,abs(x))}) else{return}
-            roots.append(x)
+        let coefficients = (0...poly.degree).map {
+            (Double(String(poly[$0].numerator)) ?? 0) / (Double(String(poly[$0].denominator)) ?? 1)
         }
-        var previousX=lower, previousY=poly.value(lower)
-        for i in 1...count {
-            let x=lower+Double(i)*step, y=poly.value(x)
-            if abs(previousY)<1e-10 { add(previousX) }
-            if previousY.isFinite && y.isFinite && ((previousY<0 && y>0)||(previousY>0 && y<0)) {
-                var lo=previousX, hi=x, flo=previousY
-                for _ in 0..<70 {
-                    let mid=(lo+hi)/2, fm=poly.value(mid)
-                    if abs(fm)<1e-12 { lo=mid; hi=mid; break }
-                    if (flo<0 && fm>0)||(flo>0 && fm<0) { hi=mid } else { lo=mid; flo=fm }
+        return realRoots(coefficients)
+    }
+
+    private static func realRoots(_ input:[Double])->[Double] {
+        guard !input.isEmpty, input.allSatisfy(\.isFinite) else { return [] }
+        let coefficientScale = input.map(abs).max() ?? 0
+        guard coefficientScale > 0, coefficientScale.isFinite else { return [] }
+        let normalized = input.map { $0 / coefficientScale }
+        var degree = normalized.count - 1
+        while degree > 0 && normalized[degree] == 0 { degree -= 1 }
+        if degree == 0 { return [] }
+        if degree == 1 {
+            let root = -normalized[0] / normalized[1]
+            return root.isFinite ? [root] : []
+        }
+
+        let derivative = (0..<degree).map { normalized[$0 + 1] * Double($0 + 1) }
+        let criticalPoints = realRoots(derivative).filter(\.isFinite).sorted()
+        let leading = abs(normalized[degree])
+        guard leading > 0, leading.isFinite else { return [] }
+        var ratio = 0.0
+        for index in 0..<degree { ratio = max(ratio, abs(normalized[index]) / leading) }
+        let bound = min(1.0 + ratio, 1.0e12)
+        let points = ([-bound] + criticalPoints.filter { $0 > -bound && $0 < bound } + [bound]).sorted()
+
+        func valueAt(_ x:Double)->Double {
+            var value = normalized[degree]
+            if degree > 0 {
+                for index in stride(from: degree - 1, through: 0, by: -1) {
+                    value = value * x + normalized[index]
                 }
-                add((lo+hi)/2)
             }
-            previousX=x; previousY=y
+            return value
         }
-        return roots.sorted()
+        func toleranceAt(_ x:Double)->Double {
+            let magnitude = max(1.0, abs(x))
+            var scale = 0.0
+            var power = 1.0
+            for index in 0...degree {
+                scale += abs(normalized[index]) * power
+                power *= magnitude
+            }
+            return 1.0e-10 * max(1.0, scale)
+        }
+
+        var roots:[Double] = []
+        for point in criticalPoints where point >= -bound && point <= bound {
+            if abs(valueAt(point)) <= toleranceAt(point) { roots.append(point) }
+        }
+        if points.count > 1 {
+            for index in 0..<(points.count - 1) {
+                var low = points[index]
+                var high = points[index + 1]
+                var lowValue = valueAt(low)
+                let highValue = valueAt(high)
+                guard lowValue.isFinite, highValue.isFinite, lowValue != 0, highValue != 0,
+                      (lowValue < 0) != (highValue < 0) else { continue }
+                for _ in 0..<120 {
+                    let middle = low + (high - low) / 2
+                    let middleValue = valueAt(middle)
+                    if middleValue == 0 {
+                        low = middle
+                        high = middle
+                    } else if (middleValue < 0) == (lowValue < 0) {
+                        low = middle
+                        lowValue = middleValue
+                    } else {
+                        high = middle
+                    }
+                }
+                roots.append(low + (high - low) / 2)
+            }
+        }
+        return roots.filter(\.isFinite).sorted().reduce(into: [Double]()) { result, root in
+            if result.isEmpty || abs(result[result.count - 1] - root) > 1.0e-7 * max(1.0, abs(root)) {
+                result.append(root)
+            }
+        }
     }
 }
