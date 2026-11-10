@@ -12,6 +12,9 @@ final class RationalTests: XCTestCase {
         XCTAssertEqual(try Rational.parseDecimal("1e3").fractionString, "1000")
         XCTAssertEqual(try Rational.parseDecimal("1.25E+2").fractionString, "125")
         XCTAssertEqual(try Rational.parseDecimal("1.2e-3").fractionString, "3/2500")
+        XCTAssertEqual(try Rational.parseDecimal(".5").fractionString, "1/2")
+        XCTAssertEqual(try Rational.parseDecimal("1.").fractionString, "1")
+        XCTAssertThrowsError(try Rational.parseDecimal("."))
         XCTAssertThrowsError(try Rational.parseDecimal("1e1001"))
         XCTAssertThrowsError(try Rational.parseDecimal("1e"))
     }
