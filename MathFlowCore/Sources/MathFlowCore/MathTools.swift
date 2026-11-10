@@ -194,7 +194,7 @@ public enum UnitConverter {
             guard celsius >= Decimal(string:"-273.15")! else { throw MathFlowToolError.belowAbsoluteZero }
             switch to {
             case "c": output = celsius
-            case "f": output = add(divide(multiply(celsius, 9), 5), 32)
+            case "f": output = add(try divide(multiply(celsius, 9), 5), 32)
             case "k": output = add(celsius, Decimal(string:"273.15")!)
             default: throw MathFlowToolError.unknownUnit
             }
