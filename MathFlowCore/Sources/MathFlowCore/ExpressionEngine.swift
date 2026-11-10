@@ -79,7 +79,7 @@ public struct ExpressionEngine {
 private enum MathDecimal {
     private static let locale = Locale(identifier: "en_US_POSIX")
     private static let behavior = NSDecimalNumberHandler(
-        roundingMode: .bankers, scale: 38,
+        roundingMode: .bankers, scale: 127,
         raiseOnExactness: false, raiseOnOverflow: true,
         raiseOnUnderflow: false, raiseOnDivideByZero: true
     )
