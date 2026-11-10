@@ -212,9 +212,9 @@ final class MathToolsTests: XCTestCase {
             "energy": ["j", "kj", "cal", "kcal", "wh", "kwh"],
             "data": ["b", "kb", "mb", "gb", "tb", "kib", "mib", "gib"]
         ]
-        XCTAssertEqual(Set(UnitConverter.categories.map(\\.id)), Set(expected.keys))
+        XCTAssertEqual(Set(UnitConverter.categories.map(\.id)), Set(expected.keys))
         for category in UnitConverter.categories {
-            XCTAssertEqual(category.units.map(\\.id), expected[category.id], "Unit catalog mismatch for \\(category.id)")
+            XCTAssertEqual(category.units.map(\.id), expected[category.id], "Unit catalog mismatch for \(category.id)")
         }
     }
 
@@ -232,7 +232,7 @@ final class MathToolsTests: XCTestCase {
             ("data", "1", "gb", "mb", "1000")
         ]
         for (category, value, from, to, expected) in cases {
-            XCTAssertEqual(try UnitConverter.convert(value, category: category, from: from, to: to), expected, "Conversion mismatch: \\(category) \\(from) -> \\(to)")
+            XCTAssertEqual(try UnitConverter.convert(value, category: category, from: from, to: to), expected, "Conversion mismatch: \(category) \(from) -> \(to)")
         }
     }
 
