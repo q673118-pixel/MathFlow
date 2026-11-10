@@ -374,7 +374,7 @@ struct ToolsView: View {
     @State private var graphMax = "5"
     @State private var graphPoints: [CGPoint] = []
 
-    private let options = ["Дроби", "Проценты", "Геометрия", "Конвертер", "График"]
+    private var options: [String] { ["fractions", "percentages", "geometry", "converter", "graph"].map { settings.text($0) } }
     private var category: UnitCategory { UnitConverter.categories.first(where: { $0.id == categoryID }) ?? UnitConverter.categories[0] }
     private var fromUnit: UnitDefinition { category.units.first(where: { $0.id == fromID }) ?? category.units[0] }
     private var toUnit: UnitDefinition { category.units.first(where: { $0.id == toID }) ?? category.units[min(1, category.units.count - 1)] }
@@ -382,7 +382,7 @@ struct ToolsView: View {
     var body: some View {
         let p = settings.palette
         VStack(alignment: .leading, spacing: 14) {
-            Text("Инструменты").font(.largeTitle.bold()).foregroundStyle(p.text)
+            Text(settings.text("tools")).font(.largeTitle.bold()).foregroundStyle(p.text)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(options, id: \.self) { option in
@@ -401,10 +401,10 @@ struct ToolsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     switch selected {
-                    case "Дроби": fractionContent(p)
-                    case "Проценты": percentContent(p)
-                    case "Геометрия": geometryContent(p)
-                    case "Конвертер": converterContent(p)
+                    case settings.text("fractions"): fractionContent(p)
+                    case settings.text("percentages"): percentContent(p)
+                    case settings.text("geometry"): geometryContent(p)
+                    case settings.text("converter"): converterContent(p)
                     default: graphContent(p)
                     }
                     if !result.isEmpty {
@@ -461,8 +461,8 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func fractionContent(_ p: MathFlowPalette) -> some View {
-        Text("Калькулятор дробей").font(.title2.bold()).foregroundStyle(p.text)
-        field("Первая дробь", text: $first, palette: p)
+        Text(settings.text("fractions")).font(.title2.bold()).foregroundStyle(p.text)
+        field(settings.text("fraction_one"), text: $first, palette: p)
         HStack(spacing: 8) {
             ForEach(FractionOperation.allCases, id: \.self) { item in
                 Button(item.rawValue) { operation = item }
@@ -471,7 +471,7 @@ struct ToolsView: View {
                     .foregroundStyle(operation == item ? p.onKeyEquals : p.text)
             }
         }
-        field("Вторая дробь", text: $second, palette: p)
+        field(settings.text("fraction_two"), text: $second, palette: p)
         action("Вычислить", palette: p) {
             let value = try FractionTools.calculate(first, second, operation: operation)
             return "Точный ответ: \(value.mixed)\nДесятичный вид: \(value.decimal)\nСокращённая дробь: \(value.exact)"
@@ -479,9 +479,9 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func percentContent(_ p: MathFlowPalette) -> some View {
-        Text("Процентный калькулятор").font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("percentages")).font(.title2.bold()).foregroundStyle(p.text)
         Picker("Операция", selection: $percentMode) {
-            Text("% от числа").tag(0); Text("Какой процент").tag(1); Text("Изменение").tag(2)
+            Text(settings.text("percent_of")).tag(0); Text(settings.text("what_percent")).tag(1); Text(settings.text("change_percent")).tag(2)
         }.pickerStyle(.segmented)
         field(percentMode == 1 ? "Часть" : "Процент", text: $first, palette: p)
         field(percentMode == 1 ? "Целое" : "Число", text: $second, palette: p)
@@ -500,9 +500,9 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func geometryContent(_ p: MathFlowPalette) -> some View {
-        Text("Геометрия").font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("geometry")).font(.title2.bold()).foregroundStyle(p.text)
         Picker("Фигура", selection: $geometryMode) {
-            Text("Прямоугольник").tag(0); Text("Окружность").tag(1); Text("Треугольник").tag(2)
+            Text(settings.text("rectangle")).tag(0); Text(settings.text("circle")).tag(1); Text(settings.text("triangle")).tag(2)
         }.pickerStyle(.segmented)
         if geometryMode == 0 {
             field("Сторона A", text: $first, palette: p); field("Сторона B", text: $second, palette: p)
@@ -526,7 +526,7 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func converterContent(_ p: MathFlowPalette) -> some View {
-        Text("Конвертер величин").font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("converter_title")).font(.title2.bold()).foregroundStyle(p.text)
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(UnitConverter.categories) { item in
@@ -653,9 +653,9 @@ struct SolverView: View {
     var body: some View {
         let p = settings.palette
         VStack(alignment: .leading, spacing: 16) {
-            Text("Уравнения").font(.largeTitle.bold()).foregroundStyle(p.text)
-            Text("Введите уравнение с одной переменной x").font(.subheadline).foregroundStyle(p.muted)
-            TextField("Например: 2x + 3 = 11", text: $equation)
+            Text(settings.text("solver")).font(.largeTitle.bold()).foregroundStyle(p.text)
+            Text(settings.text("equation_help")).font(.subheadline).foregroundStyle(p.muted)
+            TextField(settings.text("example_equation"), text: $equation)
                 .textFieldStyle(.plain)
                 .font(.system(size: 18, weight: .medium, design: .rounded))
                 .padding(15).background(p.key, in: RoundedRectangle(cornerRadius: 15))
@@ -671,7 +671,7 @@ struct SolverView: View {
                     answer = ""; steps = []; self.error = error.localizedDescription
                 }
             } label: {
-                Text("Решить уравнение").font(.system(size: 16, weight: .semibold))
+                Text(settings.text("solve")).font(.system(size: 16, weight: .semibold))
                     .frame(maxWidth: .infinity).padding(.vertical, 15)
                     .background(p.keyEquals, in: RoundedRectangle(cornerRadius: 15))
                     .foregroundStyle(p.onKeyEquals)
@@ -683,7 +683,7 @@ struct SolverView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
                     .background(p.surface, in: RoundedRectangle(cornerRadius: 18))
                 VStack(alignment: .leading, spacing: 9) {
-                    Text("Решение").font(.headline).foregroundStyle(p.text)
+                    Text(settings.text("steps")).font(.headline).foregroundStyle(p.text)
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         HStack(alignment: .top, spacing: 9) {
                             Text("\(index + 1).").foregroundStyle(p.accent).fontWeight(.semibold)
@@ -709,7 +709,7 @@ struct HistoryView: View {
         NavigationStack {
             List {
                 if history.entries.isEmpty {
-                    Text("Здесь появятся результаты основного калькулятора.").foregroundStyle(p.muted)
+                    Text(settings.text("history_empty")).foregroundStyle(p.muted)
                 }
                 ForEach(history.entries) { entry in
                     VStack(alignment: .leading, spacing: 5) {
@@ -725,8 +725,8 @@ struct HistoryView: View {
             }
             .scrollContentBackground(.hidden)
             .background(p.background)
-            .navigationTitle("История")
-            .toolbar { Button("Очистить") { history.clear() } }
+            .navigationTitle(settings.text("history"))
+            .toolbar { Button(settings.text("clear_history")) { history.clear() } }
         }
     }
 }
@@ -853,7 +853,7 @@ struct SettingsView: View {
                         settings.fontPath = fontPath; settings.fontPostScriptName = fontName
                         withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) { }
                     } label: {
-                        Text("Применить изменения").font(.system(size: 15, weight: .semibold))
+                        Text(settings.text("apply")).font(.system(size: 15, weight: .semibold))
                             .frame(maxWidth: .infinity).padding(.vertical, 14)
                             .background(p.keyEquals, in: Capsule()).foregroundStyle(p.onKeyEquals)
                     }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
