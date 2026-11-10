@@ -63,6 +63,12 @@ final class AppSettings: ObservableObject {
 struct RootView: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var selection = 0
+    @State private var showSplash = true
+    @State private var showWelcome = false
+    @State private var splashScale: CGFloat = 0.35
+    @State private var splashAlpha = 0.0
+    @State private var dotOffset: CGFloat = -100
+    @State private var dotAlpha = 0.0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -83,6 +89,61 @@ struct RootView: View {
         .environment(\.dynamicTypeSize, settings.textScale < 0.95 ? .small : settings.textScale > 1.3 ? .xxxLarge : settings.textScale > 1.15 ? .xxLarge : settings.textScale > 1.05 ? .xLarge : .large)
         .font(settings.fontPostScriptName.map { .custom($0, size: 17) } ?? .system(size: 17))
         .animation(.easeInOut(duration: 0.2), value: selection)
+        .overlay {
+            if showSplash {
+                ZStack {
+                    Color.black.ignoresSafeArea()
+                    ZStack {
+                        Text("M")
+                            .font(.system(size: 112, weight: .medium, design: .rounded))
+                            .foregroundStyle(settings.palette.accent)
+                            .scaleEffect(splashScale)
+                            .opacity(splashAlpha)
+                        Circle()
+                            .fill(settings.palette.accent)
+                            .frame(width: 13, height: 13)
+                            .offset(x: 35, y: dotOffset)
+                            .opacity(dotAlpha)
+                    }
+                }.transition(.opacity)
+            }
+        }
+        .alert("Добро пожаловать в MathFlow", isPresented: $showWelcome) {
+            Button("Начать") { UserDefaults.standard.set(true, forKey: "mathflow.welcomeSeen") }
+        } message: {
+            Text("Научный калькулятор и математические инструменты всегда под рукой.")
+        }
+        .onAppear(perform: runIntro)
+    }
+
+    private func runIntro() {
+        guard showSplash else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.68)) {
+                splashScale = 1.08; splashAlpha = 1
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.78)) { splashScale = 1 }
+                dotAlpha = 1
+                withAnimation(.spring(response: 0.52, dampingFraction: 0.48)) { dotOffset = 0 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.58)) { dotOffset = -13 }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.68)) { dotOffset = 0 }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                            withAnimation(.easeOut(duration: 0.35)) { dotAlpha = 0 }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                withAnimation(.easeOut(duration: 1.5)) { splashAlpha = 0; splashScale = 0.96 }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                    showSplash = false
+                                    if !UserDefaults.standard.bool(forKey: "mathflow.welcomeSeen") { showWelcome = true }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
