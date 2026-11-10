@@ -685,7 +685,7 @@ struct ToolsView: View {
                 .padding(10)
                 .background(p.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        Text("Поддерживаются выражения калькулятора и переменная x.").mathFlowFont(size: 12).foregroundStyle(p.muted)
+        Text(settings.text("graph_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted)
     }
 
     private func graphPlot(_ p: MathFlowPalette) -> some View {
