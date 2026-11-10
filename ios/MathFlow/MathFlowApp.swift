@@ -49,25 +49,43 @@ final class AppSettings: ObservableObject {
 
     init() {
         let d = UserDefaults.standard
-        themeID = d.string(forKey: "mathflow.theme") ?? "vanilla"
-        languageID = d.string(forKey: "mathflow.language") ?? "ru"
-        textScale = d.object(forKey: "mathflow.textScale") as? Double ?? 1
-        keyStyle = d.string(forKey: "mathflow.keyStyle") ?? "spring"
-        keyDuration = d.object(forKey: "mathflow.keyDuration") as? Double ?? 140
-        keyOpacity = d.object(forKey: "mathflow.keyOpacity") as? Double ?? 0.72
-        keyIntensity = d.object(forKey: "mathflow.keyIntensity") as? Double ?? 0.10
+        let themes = ["vanilla", "black", "white", "purple", "ocean", "emerald", "sunset", "rose", "midnight", "graphite"]
+        let languages = MathFlowLanguage.all.map(\.id)
+        let keyStyles = ["spring", "press", "scale", "flash", "ripple", "bounce", "elastic", "minimal"]
+        let navStyles = ["fluid_pill", "spring_motion", "light_trail", "morph", "expand", "soft_focus", "elastic_slide", "ripple_bloom"]
+        let colors = ["accent", "purple", "cyan", "green", "pink", "orange"]
+        let savedTheme = d.string(forKey: "mathflow.theme") ?? "vanilla"
+        let savedLanguage = d.string(forKey: "mathflow.language") ?? "ru"
+        themeID = themes.contains(savedTheme) ? savedTheme : "vanilla"
+        languageID = languages.contains(savedLanguage) ? savedLanguage : "ru"
+        let savedScale = d.object(forKey: "mathflow.textScale") as? Double ?? 1
+        textScale = min(1.4, max(0.8, (savedScale * 20).rounded() / 20))
+        let savedKeyStyle = d.string(forKey: "mathflow.keyStyle") ?? "spring"
+        keyStyle = keyStyles.contains(savedKeyStyle) ? savedKeyStyle : "spring"
+        keyDuration = min(400, max(70, d.object(forKey: "mathflow.keyDuration") as? Double ?? 140))
+        keyOpacity = min(1, max(0.2, d.object(forKey: "mathflow.keyOpacity") as? Double ?? 0.72))
+        keyIntensity = min(0.2, max(0.02, d.object(forKey: "mathflow.keyIntensity") as? Double ?? 0.10))
         keyColorEffect = d.object(forKey: "mathflow.keyColorEffect") as? Bool ?? false
-        keyEffectColorID = d.string(forKey: "mathflow.keyEffectColor") ?? "accent"
+        let savedColor = d.string(forKey: "mathflow.keyEffectColor") ?? "accent"
+        keyEffectColorID = colors.contains(savedColor) ? savedColor : "accent"
         navEnabled = d.object(forKey: "mathflow.navEnabled") as? Bool ?? true
-        navStyle = d.string(forKey: "mathflow.navStyle") ?? "fluid_pill"
-        navDuration = d.object(forKey: "mathflow.navDuration") as? Double ?? 280
-        navIntensity = d.object(forKey: "mathflow.navIntensity") as? Double ?? 0.65
-        navIconScale = d.object(forKey: "mathflow.navIconScale") as? Double ?? 0.08
-        navOpacity = d.object(forKey: "mathflow.navOpacity") as? Double ?? 0.85
-        iconID = d.string(forKey: "mathflow.icon") ?? "vanilla"
-        fontPath = d.string(forKey: "mathflow.fontPath")
-        fontPostScriptName = d.string(forKey: "mathflow.fontName")
-        if let path = fontPath { _ = CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: path) as CFURL, .process, nil) }
+        let savedNavStyle = d.string(forKey: "mathflow.navStyle") ?? "fluid_pill"
+        navStyle = navStyles.contains(savedNavStyle) ? savedNavStyle : "fluid_pill"
+        navDuration = min(1000, max(100, d.object(forKey: "mathflow.navDuration") as? Double ?? 280))
+        navIntensity = min(1, max(0, d.object(forKey: "mathflow.navIntensity") as? Double ?? 0.65))
+        navIconScale = min(0.2, max(0, d.object(forKey: "mathflow.navIconScale") as? Double ?? 0.08))
+        navOpacity = min(1, max(0, d.object(forKey: "mathflow.navOpacity") as? Double ?? 0.85))
+        let savedIcon = d.string(forKey: "mathflow.icon") ?? "vanilla"
+        iconID = themes.contains(savedIcon) ? savedIcon : "vanilla"
+        let savedFontPath = d.string(forKey: "mathflow.fontPath")
+        if let savedFontPath, FileManager.default.fileExists(atPath: savedFontPath) {
+            fontPath = savedFontPath
+            fontPostScriptName = d.string(forKey: "mathflow.fontName")
+            _ = CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: savedFontPath) as CFURL, .process, nil)
+        } else {
+            fontPath = nil
+            fontPostScriptName = nil
+        }
     }
     var palette: MathFlowPalette { MathFlowPalette.named(themeID) }
     var effectColor: Color {
