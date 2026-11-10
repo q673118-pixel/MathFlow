@@ -1199,13 +1199,13 @@ struct MathFlowPressStyle: ButtonStyle {
                     if style == "ripple" {
                         Circle()
                             .fill(effectColor.opacity(effectAlpha))
-                            .scaleEffect(1 + amount * 3.3)
+                            .scaleEffect(pressed ? 1 + amount * 3.3 : 0.45)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .clipShape(Capsule())
                             .allowsHitTesting(false)
                     } else {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .fill(settings.effectColor.opacity(effectAlpha))
+                        Capsule()
+                            .fill(effectColor.opacity(effectAlpha))
                             .allowsHitTesting(false)
                     }
                 }
