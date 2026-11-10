@@ -255,4 +255,10 @@ final class MathToolsTests: XCTestCase {
         }
     }
 
+    func testHighDegreeDenominatorProductFallsBackInsteadOfBecomingZeroPolynomial() throws {
+        let expression = "1/(x+1)/(x+2)/(x+3)/(x+4)/(x+5)"
+        let result = try AlgebraSolver.solve("\(expression) = \(expression)")
+        XCTAssertEqual(result.kind, "general_identity")
+    }
+
 }
