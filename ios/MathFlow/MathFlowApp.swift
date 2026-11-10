@@ -225,8 +225,10 @@ private struct BottomNavigation: View {
                     Image(systemName: items[index].0)
                         .font(.system(size: 26, weight: .regular))
                         .scaleEffect(
-                            x: enabled && selected && style == "morph" ? 1 + iconScale * 0.45 : (enabled && selected ? 1 + iconScale : 1),
-                            y: enabled && selected && style == "morph" ? 1 - iconScale * (0.35 + intensity * 0.45) : (enabled && selected ? 1 + iconScale : 1)
+                            x: enabled && selected && ["spring_motion", "morph", "soft_focus", "elastic_slide"].contains(style)
+                                ? (style == "morph" ? 1 + iconScale * 0.45 : 1 + iconScale) : 1,
+                            y: enabled && selected && ["spring_motion", "morph", "soft_focus", "elastic_slide"].contains(style)
+                                ? (style == "morph" ? 1 - iconScale * (0.35 + intensity * 0.45) : 1 + iconScale) : 1
                         )
                         .foregroundStyle(selected ? p.accent : p.muted)
                         .frame(maxWidth: .infinity).frame(height: 48)
