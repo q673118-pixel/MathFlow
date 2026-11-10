@@ -213,7 +213,6 @@ private struct BottomNavigation: View {
         let p = settings.palette
         let enabled = previewSettings?.enabled ?? settings.navEnabled
         let style = previewSettings?.style ?? settings.navStyle
-        let durationValue = previewSettings?.duration ?? settings.navDuration
         let intensity = previewSettings?.intensity ?? settings.navIntensity
         let iconScale = previewSettings?.iconScale ?? settings.navIconScale
         let opacity = previewSettings?.opacity ?? settings.navOpacity
