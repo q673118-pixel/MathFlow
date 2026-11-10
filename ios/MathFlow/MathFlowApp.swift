@@ -468,6 +468,8 @@ struct ToolsView: View {
     @State private var graphMax = "5"
     @State private var graphPoints: [CGPoint] = []
     @State private var selectedGraphIndex: Int? = nil
+    @State private var graphIsCalculating = false
+    @State private var graphHasValidPoints = false
 
     private let options = ["fractions", "percentages", "geometry", "converter", "graph"]
     private var category: UnitCategory { UnitConverter.categories.first(where: { $0.id == categoryID }) ?? UnitConverter.categories[0] }
@@ -540,6 +542,9 @@ struct ToolsView: View {
         .onChange(of: graphMax) { _ in
             selectedGraphIndex = nil
             graphPoints = []
+        }
+        .task(id: "\(selected)|\(graphExpression)|\(graphMin)|\(graphMax)") {
+            await updateGraph()
         }
     }
 
@@ -694,28 +699,11 @@ struct ToolsView: View {
             field("X от", text: $graphMin, palette: p)
             field("X до", text: $graphMax, palette: p)
         }
-        action("Построить график", palette: p) {
-            guard let lower = Double(graphMin.replacingOccurrences(of: ",", with: ".")),
-                  let upper = Double(graphMax.replacingOccurrences(of: ",", with: ".")),
-                  lower.isFinite, upper.isFinite, lower < upper else {
-                throw MathFlowToolError.invalidNumber("Некорректный диапазон X")
-            }
-            let engine = ExpressionEngine(angleMode: .radians)
-            var points: [CGPoint] = []
-            for index in 0...120 {
-                let x = lower + (upper - lower) * Double(index) / 120
-                if let value = try? engine.calculate(graphExpression, variables: ["x": x], includeSteps: false),
-                   let y = Double(value.decimalValue), y.isFinite, abs(y) < 1.0e7 {
-                    points.append(CGPoint(x: x, y: y))
-                } else {
-                    points.append(CGPoint(x: x, y: .nan))
-                }
-            }
-            graphPoints = points
-            selectedGraphIndex = nil
-            return "Построено точек: \(points.filter { $0.y.isFinite }.count) из 121"
-        }
-        if !graphPoints.isEmpty {
+        if graphIsCalculating {
+            Text(settings.text("graph_calculating")).mathFlowFont(size: 12).foregroundStyle(p.muted)
+        } else if !graphHasValidPoints {
+            Text(settings.text("graph_no_points")).mathFlowFont(size: 12).foregroundStyle(p.muted)
+        } else {
             graphPlot(p)
                 .frame(height: 250)
                 .padding(10)
@@ -729,9 +717,43 @@ struct ToolsView: View {
             } else {
                 Text(settings.text("graph_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted)
             }
-        } else {
-            Text(settings.text("graph_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted)
         }
+    }
+
+    @MainActor
+    private func updateGraph() async {
+        guard selected == "graph" else { return }
+        selectedGraphIndex = nil
+        graphPoints = []
+        graphHasValidPoints = false
+        error = nil
+        guard !graphExpression.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            graphIsCalculating = false
+            return
+        }
+        graphIsCalculating = true
+        try? await Task.sleep(nanoseconds: 140_000_000)
+        guard !Task.isCancelled else { return }
+        guard let lower = Double(graphMin.replacingOccurrences(of: ",", with: ".")),
+              let upper = Double(graphMax.replacingOccurrences(of: ",", with: ".")),
+              lower.isFinite, upper.isFinite, lower < upper else {
+            graphIsCalculating = false
+            error = "Некорректный диапазон X"
+            return
+        }
+        let engine = ExpressionEngine(angleMode: .radians)
+        let computed = (0...120).map { index -> CGPoint in
+            let x = lower + (upper - lower) * Double(index) / 120
+            if let value = try? engine.calculate(graphExpression, variables: ["x": x], includeSteps: false),
+               let y = Double(value.decimalValue), y.isFinite, abs(y) < 1.0e7 {
+                return CGPoint(x: x, y: y)
+            }
+            return CGPoint(x: x, y: .nan)
+        }
+        guard !Task.isCancelled else { return }
+        graphPoints = computed
+        graphHasValidPoints = computed.contains { $0.y.isFinite }
+        graphIsCalculating = false
     }
 
     private func graphPlot(_ p: MathFlowPalette) -> some View {
