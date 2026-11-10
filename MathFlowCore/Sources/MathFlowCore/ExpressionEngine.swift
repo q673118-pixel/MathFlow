@@ -22,6 +22,9 @@ public struct ExpressionEngine {
         guard !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw MathFlowMathError.malformedExpression
         }
+        guard variables.values.allSatisfy(\.isFinite) else {
+            throw MathFlowMathError.invalidNumber
+        }
         let parser = try Parser(source: source, angleMode: angleMode, variables: variables, includeSteps: includeSteps, allowsFractionalPowers: allowsFractionalPowers)
         let value = try parser.parse()
         switch value {
@@ -85,9 +88,26 @@ private enum MathValue {
     var doubleValue: Double {
         switch self {
         case .exact(let value):
-            return (Double(String(value.numerator)) ?? 0) / (Double(String(value.denominator)) ?? 1)
+            return Self.approximateRatio(value.numerator, value.denominator)
         case .approximate(let value): return value
         }
+    }
+
+    private static func approximateRatio(_ numerator: BigInt, _ denominator: BigInt) -> Double {
+        guard numerator != 0 else { return 0 }
+        let negative = numerator < 0
+        let numeratorDigits = String(negative ? -numerator : numerator)
+        let denominatorDigits = String(denominator)
+        let precision = 17
+        let numeratorHeadText = String(numeratorDigits.prefix(precision))
+        let denominatorHeadText = String(denominatorDigits.prefix(precision))
+        guard let numeratorHead = Double(numeratorHeadText),
+              let denominatorHead = Double(denominatorHeadText),
+              denominatorHead != 0 else { return .nan }
+        let exponent = (numeratorDigits.count - numeratorHeadText.count) -
+            (denominatorDigits.count - denominatorHeadText.count)
+        let magnitude = (numeratorHead / denominatorHead) * pow(10.0, Double(exponent))
+        return negative ? -magnitude : magnitude
     }
 
     var description: String {
