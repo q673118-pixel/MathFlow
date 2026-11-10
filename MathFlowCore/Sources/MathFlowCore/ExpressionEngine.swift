@@ -77,19 +77,12 @@ public struct ExpressionEngine {
 }
 
 private enum MathDecimal {
-    private static let locale = Locale(identifier: "en_US_POSIX")
-    private static let behavior = NSDecimalNumberHandler(
-        roundingMode: .bankers, scale: 127,
-        raiseOnExactness: false, raiseOnOverflow: true,
-        raiseOnUnderflow: false, raiseOnDivideByZero: true
-    )
-
-    static func fromDouble(_ value: Double) -> Decimal {
-        guard value.isFinite, let decimal = Decimal(string: String(value), locale: locale) else { return .zero }
-        return decimal
+    static func fromDouble(_ value: Double) -> Rational {
+        guard value.isFinite, let parsed = try? Rational.parseDecimal(String(value)) else { return .zero }
+        return rounded(parsed)
     }
 
-    static func fromBinaryDouble(_ value: Double) -> Decimal {
+    static func fromBinaryDouble(_ value: Double) -> Rational {
         guard value.isFinite, value != 0 else { return .zero }
         let bits = value.bitPattern
         let exponentBits = Int((bits >> 52) & 0x7ff)
@@ -105,67 +98,49 @@ private enum MathDecimal {
             for _ in 0..<(-binaryExponent) { denominator *= 2 }
         }
         if (bits >> 63) == 1 { numerator = -numerator }
-        let exact = try! Rational(numerator, denominator)
-        return Decimal(string: exact.decimalString(scale: 24, rounding: .halfEven), locale: locale) ?? .zero
+        return rounded(try! Rational(numerator, denominator))
     }
 
-    static func fromRational(_ value: Rational) -> Decimal {
-        let source = value.decimalString(scale: 24, rounding: .halfEven)
-        return Decimal(string: source, locale: locale) ?? .zero
+    static func fromRational(_ value: Rational) -> Rational {
+        rounded(value)
     }
 
-    static func rounded(_ value: Decimal) -> Decimal {
-        let magnitude = abs(NSDecimalNumber(decimal: value).doubleValue)
-        guard magnitude.isFinite, magnitude > 0 else { return value }
-        var input = value
-        var result = value
-        // Kotlin ExpressionEngine uses MathContext(24, HALF_EVEN).
-        let scale = max(-128, min(127, 23 - Int(floor(log10(magnitude)))))
-        NSDecimalRound(&result, &input, scale, .bankers)
-        return result
+    static func rounded(_ value: Rational) -> Rational {
+        try! Rational.parseDecimal(value.decimalString(scale: 24, rounding: .halfEven))
     }
 
-    static func power(_ base: Decimal, exponent: Int) throws -> Decimal {
-        let rational = try Rational.parseDecimal(string(base))
-        let magnitude = try rational.power(abs(exponent))
-        let powered = Decimal(string: magnitude.decimalString(scale: 24, rounding: .halfEven), locale: locale) ?? .zero
-        if exponent >= 0 { return powered }
-        return try calculate(1, powered, operation: .divide)
+    static func power(_ base: Rational, exponent: Int) throws -> Rational {
+        let magnitude = rounded(try base.power(abs(exponent)))
+        if exponent >= 0 { return magnitude }
+        return try calculate(.one, magnitude, operation: .divide)
     }
 
-    static func calculate(_ lhs: Decimal, _ rhs: Decimal, operation: TokenKind) throws -> Decimal {
-        let a = NSDecimalNumber(decimal: lhs)
-        let b = NSDecimalNumber(decimal: rhs)
-        let result: NSDecimalNumber
+    static func calculate(_ lhs: Rational, _ rhs: Rational, operation: TokenKind) throws -> Rational {
+        let result: Rational
         switch operation {
-        case .plus: result = a.adding(b, withBehavior: behavior)
-        case .minus: result = a.subtracting(b, withBehavior: behavior)
-        case .multiply: result = a.multiplying(by: b, withBehavior: behavior)
-        case .divide:
-            guard rhs != 0 else { throw MathFlowMathError.divisionByZero }
-            result = a.dividing(by: b, withBehavior: behavior)
+        case .plus: result = lhs + rhs
+        case .minus: result = lhs - rhs
+        case .multiply: result = lhs * rhs
+        case .divide: result = try lhs.divided(by: rhs)
         default: throw MathFlowMathError.malformedExpression
         }
-        guard !result.decimalValue.isNaN else { throw MathFlowMathError.invalidNumber }
-        return rounded(result.decimalValue)
+        return rounded(result)
     }
 
-    static func string(_ value: Decimal) -> String {
-        var value = value
-        var result = NSDecimalString(&value, locale)
-        if result.contains(".") {
-            while result.last == "0" { result.removeLast() }
-            if result.last == "." { result.removeLast() }
-        }
-        return result == "-0" ? "0" : result
+    static func string(_ value: Rational) -> String {
+        value.decimalString(scale: 24, rounding: .halfEven)
+    }
+
+    static func doubleValue(_ value: Rational) -> Double {
+        Double(string(value)) ?? (value.numerator < 0 ? -.infinity : .infinity)
     }
 }
 
 private enum MathValue {
     case exact(Rational)
-    case approximate(Decimal)
+    case approximate(Rational)
 
-    var decimalValue: Decimal {
+    var rationalValue: Rational {
         switch self {
         case .exact(let value): return MathDecimal.fromRational(value)
         case .approximate(let value): return value
@@ -173,10 +148,7 @@ private enum MathValue {
     }
 
     var doubleValue: Double {
-        switch self {
-        case .exact(let value): return NSDecimalNumber(decimal: MathDecimal.fromRational(value)).doubleValue
-        case .approximate(let value): return NSDecimalNumber(decimal: value).doubleValue
-        }
+        MathDecimal.doubleValue(rationalValue)
     }
 
     var description: String {
@@ -422,7 +394,7 @@ private final class Parser {
             default: throw MathFlowMathError.malformedExpression
             }
         }
-        return .approximate(try MathDecimal.calculate(lhs.decimalValue, rhs.decimalValue, operation: op))
+        return .approximate(try MathDecimal.calculate(lhs.rationalValue, rhs.rationalValue, operation: op))
     }
 
     private func integerSquareRoot(_ value: BigInt) -> BigInt {
