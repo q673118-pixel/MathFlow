@@ -76,7 +76,7 @@ Audited against the Android source above. The native port is substantially imple
 - Ten alternate iOS app icon sets. A macOS build script renders the original Android vector paths and launcher backgrounds into iOS icon assets; the app uses `UIApplication.setAlternateIconName`.
 - Eight calculator-key animation styles and eight bottom-navigation styles, with staged settings and an explicit Apply action.
 - Native vector MathFlow mark and a two-impact splash animation based on the Android launcher artwork.
-- GitHub Actions workflow generates icon assets, runs Swift package tests, builds the unsigned iOS Simulator app and compiles the native iOS test bundle.
+- GitHub Actions workflow generates icon assets, runs Swift package tests, builds the unsigned iOS Simulator app, executes the native iOS simulator tests and verifies alternate icon registration.
 
 ### Confirmed corrections from source comparison
 - Tool selection now stores stable IDs rather than translated labels, preventing the wrong tool screen from opening in non-Russian languages.
@@ -97,12 +97,12 @@ Audited against the Android source above. The native port is substantially imple
 - Key and navigation animation styles are available, and both settings sections now have live previews driven by the staged slider/style values. SwiftUI timing/rendering remains an approximation of Compose; exact per-frame parity has not been validated.
 - Approximate calculator operations use Swift Double rather than Android's 24-digit BigDecimal context. Exact rational operations remain arbitrary precision; unit conversion uses Decimal at 34-digit precision; percentage/geometry tools use the Android 16-significant-digit rounding policy.
 - The current CI artifact is an unsigned Simulator app. It is not an installable signed iPhone IPA. Device signing/TestFlight still require an Apple Developer team, certificate and provisioning profile, and a real iPhone test.
-- The iOS test target contains checks for all 15 locales and all ten palettes. CI compiles this test bundle but does not execute it because the simulator-host test launch was hanging; there are no screenshot-diff or end-to-end interaction tests for calculator, settings and tool navigation.
+- The iOS test target checks all 15 locales and all ten palettes; CI executes these tests successfully. There are still no screenshot-diff or end-to-end interaction tests for calculator, settings and tool navigation.
 
 ### Build verification snapshot
-- Last successful run known at audit time: run `42793368439`, commit `0a7c6a0c7c949453e23cb3d89c1d9cffdf47c61b`.
-- That run generated all ten icon PNGs, passed 37 MathFlowCore tests and built the iOS Simulator app.
-- Later changes to the equation solver, tool precision and calculator/navigation UI are newer than that successful run. Do not treat the earlier success as verification of the latest HEAD.
+- Last fully successful simulator run: [run 42796139721](https://github.com/q673118-pixel/MathFlow/actions/runs/42796139721), commit `8a2825d33a5462501bdd67cbefa168a6ad699d0a`.
+- That run passed 47 MathFlowCore tests and 2 native iOS smoke tests, built the Simulator app and verified all 9 alternate icons in `CFBundleAlternateIcons`.
+- Later UI preview, icon-generator color parsing and welcome-dialog changes are newer than that successful run. Do not treat run 42796139721 as verification of the latest HEAD.
 
 ## Existing Android tests
 - Expression engine: exact decimal/fraction math, precedence, parentheses, powers, percent, divide-by-zero, degree trig, implicit multiplication, exact roots and abs, approximate negative powers.
