@@ -186,19 +186,14 @@ private struct BottomNavigation: View {
                 Button {
                     withAnimation(animation) { selection = index }
                 } label: {
-                    VStack(spacing: 5) {
-                        Image(systemName: items[index].0)
-                            .font(.system(size: selected ? 20 : 18, weight: selected ? .semibold : .regular))
-                            .scaleEffect(
-                                x: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 + settings.navIconScale * 0.45 : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1),
-                                y: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 - settings.navIconScale * (0.35 + settings.navIntensity * 0.45) : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1)
-                            )
-                        Text(settings.text(items[index].1))
-                            .font(.system(size: 10, weight: selected ? .semibold : .medium))
-                            .lineLimit(1).minimumScaleFactor(0.75)
-                    }
-                    .foregroundStyle(selected ? p.accent : p.muted)
-                    .frame(maxWidth: .infinity).frame(height: 58)
+                    Image(systemName: items[index].0)
+                        .font(.system(size: 26, weight: .regular))
+                        .scaleEffect(
+                            x: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 + settings.navIconScale * 0.45 : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1),
+                            y: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 - settings.navIconScale * (0.35 + settings.navIntensity * 0.45) : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1)
+                        )
+                        .foregroundStyle(selected ? p.accent : p.muted)
+                        .frame(maxWidth: .infinity).frame(height: 48)
                     .background {
                         if selected && settings.navEnabled && !["soft_focus", "light_trail"].contains(settings.navStyle) {
                             RoundedRectangle(cornerRadius: settings.navStyle == "morph" ? 15 : 22, style: .continuous)
