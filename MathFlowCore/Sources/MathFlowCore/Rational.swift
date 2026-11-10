@@ -122,6 +122,24 @@ public struct Rational: Equatable, Comparable, Sendable {
         return result
     }
 
+
+    public var doubleValue: Double {
+        guard numerator != 0 else { return 0 }
+        let negative = numerator < 0
+        let numeratorDigits = String(negative ? -numerator : numerator)
+        let denominatorDigits = String(denominator)
+        let precision = 17
+        let numeratorHeadText = String(numeratorDigits.prefix(precision))
+        let denominatorHeadText = String(denominatorDigits.prefix(precision))
+        guard let numeratorHead = Double(numeratorHeadText),
+              let denominatorHead = Double(denominatorHeadText),
+              denominatorHead != 0 else { return .nan }
+        let exponent = (numeratorDigits.count - numeratorHeadText.count) -
+            (denominatorDigits.count - denominatorHeadText.count)
+        let magnitude = (numeratorHead / denominatorHead) * pow(10.0, Double(exponent))
+        return negative ? -magnitude : magnitude
+    }
+
     public var isInteger: Bool { denominator == 1 }
     public var fractionString: String {
         denominator == 1 ? String(numerator) : "\(numerator)/\(denominator)"
