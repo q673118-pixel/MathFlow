@@ -1,3 +1,4 @@
+// Native SwiftUI port; Android remains unchanged on the redesign-ui branch.
 import SwiftUI
 import MathFlowCore
 import UniformTypeIdentifiers
