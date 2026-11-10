@@ -355,7 +355,7 @@ struct CalculatorView: View {
 
 struct ToolsView: View {
     @EnvironmentObject private var settings: AppSettings
-    @State private var selected = "Дроби"
+    @State private var selected = "fractions"
     @State private var first = ""
     @State private var second = ""
     @State private var third = ""
@@ -386,7 +386,7 @@ struct ToolsView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(options, id: \.self) { option in
-                        Button(option) {
+                        Button(settings.text(option)) {
                             withAnimation(.easeInOut(duration: 0.2)) {
                                 selected = option; result = ""; error = nil
                             }
@@ -401,10 +401,10 @@ struct ToolsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     switch selected {
-                    case settings.text("fractions"): fractionContent(p)
-                    case settings.text("percentages"): percentContent(p)
-                    case settings.text("geometry"): geometryContent(p)
-                    case settings.text("converter"): converterContent(p)
+                    case "fractions": fractionContent(p)
+                    case "percentages": percentContent(p)
+                    case "geometry": geometryContent(p)
+                    case "converter": converterContent(p)
                     default: graphContent(p)
                     }
                     if !result.isEmpty {
@@ -530,7 +530,7 @@ struct ToolsView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(UnitConverter.categories) { item in
-                    Button(item.title) { categoryID = item.id }
+                    Button(settings.text(item.id)) { categoryID = item.id }
                         .font(.caption.weight(.semibold)).padding(.horizontal, 12).padding(.vertical, 9)
                         .background(categoryID == item.id ? p.keyEquals : p.key, in: Capsule())
                         .foregroundStyle(categoryID == item.id ? p.onKeyEquals : p.text)
@@ -819,7 +819,7 @@ struct SettingsView: View {
                 }
                 Section("Анимация клавиш") {
                     Picker("Стиль", selection: $keyStyle) {
-                        ForEach(keyStyles, id: \.0) { Text($0.1).tag($0.0) }
+                        ForEach(Array(keyStyles.enumerated()), id: \.offset) { _, item in Text(item.1).tag(item.0) }
                     }.listRowBackground(p.surface)
                     settingSlider("Длительность", value: $keyDuration, range: 70...400, suffix: " мс", p: p)
                     settingSlider("Непрозрачность", value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
@@ -829,7 +829,7 @@ struct SettingsView: View {
                 Section("Анимация навигации") {
                     Toggle("Включить анимацию", isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
                     Picker("Стиль", selection: $navStyle) {
-                        ForEach(navStyles, id: \.0) { Text($0.1).tag($0.0) }
+                        ForEach(Array(navStyles.enumerated()), id: \.offset) { _, item in Text(item.1).tag(item.0) }
                     }.listRowBackground(p.surface)
                     settingSlider("Длительность", value: $navDuration, range: 100...1000, suffix: " мс", p: p)
                     settingSlider("Интенсивность", value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
