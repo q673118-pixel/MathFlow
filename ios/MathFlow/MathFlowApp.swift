@@ -673,7 +673,7 @@ struct ToolsView: View {
         field(settings.text("graph_input"), text: $graphExpression, palette: p, decimal: false)
         HStack(spacing: 8) {
             ForEach([5, 10, 20], id: \.self) { range in
-                Button("±\\(range)") {
+                Button("±\(range)") {
                     graphMin = String(-range)
                     graphMax = String(range)
                     selectedGraphIndex = nil
@@ -707,7 +707,7 @@ struct ToolsView: View {
             }
             graphPoints = points
             selectedGraphIndex = nil
-            return "Построено точек: \\(points.filter { $0.y.isFinite }.count) из 121"
+            return "Построено точек: \(points.filter { $0.y.isFinite }.count) из 121"
         }
         if !graphPoints.isEmpty {
             graphPlot(p)
