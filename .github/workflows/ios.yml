@@ -46,6 +46,10 @@ jobs:
         run: |
           xcodebuild build -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
 
+      - name: Run native iOS simulator tests
+        run: |
+          xcodebuild test -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
+
       - name: Verify all alternate icons are registered in the app bundle
         run: |
           INFO_PLIST="build/ios/Build/Products/Debug-iphonesimulator/MathFlow.app/Info.plist"
