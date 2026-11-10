@@ -28,6 +28,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Generate native iOS app icons from Android vectors
+        run: swift scripts/generate_ios_icons.swift
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
