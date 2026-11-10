@@ -90,8 +90,8 @@ final class ExpressionEngineTests: XCTestCase {
     }
 
     func testLargeExactRationalIsConvertedWithoutOverflowDuringFunctionEvaluation() throws {
-        let result = try ExpressionEngine().calculate("sin(10^400/10^399)")
-        XCTAssertEqual(Double(result.decimalValue)!, sin(Double.pi / 18), accuracy: 1e-12)
+        let result = try ExpressionEngine().calculate("sin((10^400+1)/10^400)")
+        XCTAssertEqual(Double(result.decimalValue)!, sin(Double.pi / 180), accuracy: 1e-12)
     }
 
     func testNonFiniteGraphVariableIsRejected() {
@@ -100,8 +100,8 @@ final class ExpressionEngineTests: XCTestCase {
     }
 
     func testNegativeLargeRationalIsPreservedDuringFunctionEvaluation() throws {
-        let result = try ExpressionEngine().calculate("sin(-10^400/10^399)")
-        XCTAssertEqual(Double(result.decimalValue)!, -sin(Double.pi / 18), accuracy: 1e-12)
+        let result = try ExpressionEngine().calculate("sin(-((10^400+1)/10^400))")
+        XCTAssertEqual(Double(result.decimalValue)!, -sin(Double.pi / 180), accuracy: 1e-12)
     }
 
 }
