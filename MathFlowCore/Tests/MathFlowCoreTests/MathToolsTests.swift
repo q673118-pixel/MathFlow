@@ -154,6 +154,12 @@ final class MathToolsTests: XCTestCase {
         XCTAssertTrue(try AlgebraSolver.solve("max(x, 1) = 2").answer.contains("2"))
         XCTAssertTrue(try AlgebraSolver.solve("exp(x) = e").answer.contains("1"))
         XCTAssertTrue(try AlgebraSolver.solve("asin(x) = 0").answer.contains("0"))
+        XCTAssertTrue(try AlgebraSolver.solve("sin(x) = 0.5").answer.contains("0.5235987756"))
+    }
+
+    func testGeneralSolverReportsIdentityAndFiniteRangeNoRoots() throws {
+        XCTAssertEqual(try AlgebraSolver.solve("sin(x) = sin(x)").kind, "general_identity")
+        XCTAssertEqual(try AlgebraSolver.solve("sin(x) = 2").kind, "general_no_roots_in_range")
     }
 
 }
