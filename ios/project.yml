@@ -1,0 +1,38 @@
+name: MathFlow
+options:
+  bundleIdPrefix: com.mathflow
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  MathFlowCore:
+    path: ../MathFlowCore
+targets:
+  MathFlow:
+    type: application
+    platform: iOS
+    sources:
+      - path: MathFlow
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mathflow.ios
+        PRODUCT_NAME: MathFlow
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: MathFlow
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    dependencies:
+      - package: MathFlowCore
+  MathFlowTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: MathFlowTests
+    dependencies:
+      - target: MathFlow
+      - package: MathFlowCore
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.9"
