@@ -97,7 +97,7 @@ final class AppSettings: ObservableObject {
 struct RootView: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var selection = 0
-    @State private var showSplash = true
+    @State private var showSplash = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
     @State private var showWelcome = false
     @State private var splashScale: CGFloat = 0
     @State private var splashAlpha = 1.0
@@ -179,7 +179,7 @@ struct RootView: View {
                                             withAnimation(.easeOut(duration: 1.0)) { splashAlpha = 0; dotAlpha = 0; splashScale = 0.96 }
                                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                                                 showSplash = false
-                                                if !UserDefaults.standard.bool(forKey: "mathflow.welcomeSeen") { showWelcome = true }
+                                                if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil && !UserDefaults.standard.bool(forKey: "mathflow.welcomeSeen") { showWelcome = true }
                                             }
                                         }
                                     }
