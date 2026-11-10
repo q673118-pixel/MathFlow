@@ -42,18 +42,24 @@ private struct ExactRationalExpression {
     let numerator: ExactPolynomial
     let denominatorFactors: [ExactPolynomial]
     let domainFactors: [ExactPolynomial]
-    var denominatorProduct: ExactPolynomial {
-        denominatorFactors.reduce(.one) { partial, factor in (try? partial.multiplied(by: factor)) ?? .zero }
+    func denominatorProduct() throws -> ExactPolynomial {
+        try denominatorFactors.reduce(.one) { partial, factor in
+            try partial.multiplied(by: factor)
+        }
     }
     static func polynomial(_ value: ExactPolynomial) -> ExactRationalExpression {
         ExactRationalExpression(numerator:value, denominatorFactors:[], domainFactors:[])
     }
     func adding(_ other: ExactRationalExpression) throws -> ExactRationalExpression {
-        let n = try numerator.multiplied(by: other.denominatorProduct).adding(other.numerator.multiplied(by: denominatorProduct))
+        let leftDenominator = try other.denominatorProduct()
+        let rightDenominator = try denominatorProduct()
+        let n = try numerator.multiplied(by: leftDenominator).adding(other.numerator.multiplied(by: rightDenominator))
         return ExactRationalExpression(numerator:n, denominatorFactors:denominatorFactors+other.denominatorFactors, domainFactors:domainFactors+other.domainFactors)
     }
     func subtracting(_ other: ExactRationalExpression) throws -> ExactRationalExpression {
-        let n = try numerator.multiplied(by: other.denominatorProduct).subtracting(other.numerator.multiplied(by: denominatorProduct))
+        let leftDenominator = try other.denominatorProduct()
+        let rightDenominator = try denominatorProduct()
+        let n = try numerator.multiplied(by: leftDenominator).subtracting(other.numerator.multiplied(by: rightDenominator))
         return ExactRationalExpression(numerator:n, denominatorFactors:denominatorFactors+other.denominatorFactors, domainFactors:domainFactors+other.domainFactors)
     }
     func multiplied(by other: ExactRationalExpression) throws -> ExactRationalExpression {
@@ -61,7 +67,7 @@ private struct ExactRationalExpression {
     }
     func divided(by other: ExactRationalExpression) throws -> ExactRationalExpression {
         guard !other.numerator.isZero else { throw MathFlowMathError.divisionByZero }
-        let denominator = try numerator.multiplied(by: other.denominatorProduct)
+        let denominator = try numerator.multiplied(by: other.denominatorProduct())
         let domains = domainFactors + other.domainFactors + (other.numerator.degree > 0 ? [other.numerator] : [])
         return ExactRationalExpression(numerator:denominator, denominatorFactors:denominatorFactors+[other.numerator], domainFactors:domains)
     }
@@ -76,7 +82,7 @@ private struct ExactRationalExpression {
         guard !numerator.isZero else { throw MathFlowMathError.divisionByZero }
         let degree = -exponent
         let newDomain = domainFactors + (numerator.degree > 0 ? [numerator] : [])
-        return ExactRationalExpression(numerator:try denominatorProduct.power(degree), denominatorFactors:Array(repeating:numerator,count:degree), domainFactors:newDomain)
+        return ExactRationalExpression(numerator:try denominatorProduct().power(degree), denominatorFactors:Array(repeating:numerator,count:degree), domainFactors:newDomain)
     }
 }
 
@@ -181,7 +187,9 @@ enum ExactPolynomialEquationSolver {
               !parts[1].trimmingCharacters(in:.whitespaces).isEmpty else { throw MathFlowMathError.malformedExpression }
         var leftParser=try ExactEquationParser(parts[0]), rightParser=try ExactEquationParser(parts[1])
         let left=try leftParser.parse(), right=try rightParser.parse()
-        let reduced=try left.numerator.multiplied(by:right.denominatorProduct).subtracting(right.numerator.multiplied(by:left.denominatorProduct))
+        let leftDenominator = try left.denominatorProduct()
+        let rightDenominator = try right.denominatorProduct()
+        let reduced=try left.numerator.multiplied(by:rightDenominator).subtracting(right.numerator.multiplied(by:leftDenominator))
         let excluded=(left.domainFactors+right.domainFactors).flatMap { realRoots($0) }.sorted()
         func allowed(_ x:Double)->Bool { excluded.allSatisfy { abs($0-x)>1e-7*max(1,abs(x)) } }
         let domainLine=excluded.isEmpty ? [] : ["ОДЗ: исключаем x = "+excluded.map(format).joined(separator:", ")]
