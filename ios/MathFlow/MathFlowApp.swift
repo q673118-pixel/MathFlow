@@ -105,6 +105,7 @@ struct RootView: View {
     @State private var dotAlpha = 0.0
     @State private var dotScaleX: CGFloat = 1
     @State private var dotScaleY: CGFloat = 1
+    @ScaledMetric(relativeTo: .body) private var inheritedFontSize: CGFloat = 17
 
     var body: some View {
         VStack(spacing: 0) {
@@ -122,7 +123,7 @@ struct RootView: View {
         }
         .background(settings.palette.background.ignoresSafeArea())
         .environment(\.layoutDirection, settings.languageID == "ar" ? .rightToLeft : .leftToRight)
-        .font(settings.fontPostScriptName.map { .custom($0, size: 17 * CGFloat(settings.textScale)) } ?? .system(size: 17 * CGFloat(settings.textScale)))
+        .font(settings.fontPostScriptName.map { .custom($0, size: inheritedFontSize * CGFloat(settings.textScale)) } ?? .system(size: inheritedFontSize * CGFloat(settings.textScale)))
         .animation(.easeInOut(duration: 0.2), value: selection)
         .overlay {
             if showSplash {
