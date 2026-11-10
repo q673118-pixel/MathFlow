@@ -533,8 +533,14 @@ struct ToolsView: View {
             selectedGraphIndex = nil
             graphPoints = []
         }
-        .onChange(of: graphMin) { _ in selectedGraphIndex = nil }
-        .onChange(of: graphMax) { _ in selectedGraphIndex = nil }
+        .onChange(of: graphMin) { _ in
+            selectedGraphIndex = nil
+            graphPoints = []
+        }
+        .onChange(of: graphMax) { _ in
+            selectedGraphIndex = nil
+            graphPoints = []
+        }
     }
 
     private func field(_ title: String, text: Binding<String>, palette p: MathFlowPalette, decimal: Bool = true) -> some View {
