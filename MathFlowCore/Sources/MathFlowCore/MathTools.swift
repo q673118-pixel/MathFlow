@@ -183,7 +183,7 @@ public enum UnitConverter {
         "data":["b":"1","kb":"1000","mb":"1000000","gb":"1000000000","tb":"1000000000000","kib":"1024","mib":"1048576","gib":"1073741824"]
     ]
 
-    private static let behavior = NSDecimalNumberHandler(roundingMode: .bankers, scale: 38, raiseOnExactness: false, raiseOnOverflow: true, raiseOnUnderflow: false, raiseOnDivideByZero: true)
+    private static let behavior = NSDecimalNumberHandler(roundingMode: .bankers, scale: 127, raiseOnExactness: false, raiseOnOverflow: true, raiseOnUnderflow: false, raiseOnDivideByZero: true)
 
     private static func rounded34(_ value: Decimal) -> Decimal {
         let magnitude = abs(NSDecimalNumber(decimal: value).doubleValue)
