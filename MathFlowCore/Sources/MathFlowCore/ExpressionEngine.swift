@@ -39,7 +39,14 @@ public struct ExpressionEngine {
         // Expand scientific notation because Android's BigDecimal.stripTrailingZeros()
         // returns a plain decimal string for the same Double result.
         let raw = String(value).lowercased()
-        guard let exponentMarker = raw.firstIndex(of: "e") else { return raw }
+        guard let exponentMarker = raw.firstIndex(of: "e") else {
+            var normalized = raw
+            if normalized.contains(".") {
+                while normalized.last == "0" { normalized.removeLast() }
+                if normalized.last == "." { normalized.removeLast() }
+            }
+            return normalized
+        }
         let mantissa = String(raw[..<exponentMarker])
         let exponentText = String(raw[raw.index(after: exponentMarker)...])
         guard let exponent = Int(exponentText) else { return raw }
