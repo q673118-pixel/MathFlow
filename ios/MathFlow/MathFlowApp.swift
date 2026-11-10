@@ -775,10 +775,10 @@ struct ToolsView: View {
             let minY = rawMinY - padding
             let maxY = rawMaxY + padding
             let spanY = max(1.0, maxY - minY)
-            func plotX(_ x: Double) -> CGFloat {
+            let plotX: (Double) -> CGFloat = { x in
                 CGFloat((x - minX) / max(0.000001, maxX - minX)) * geometry.size.width
             }
-            func plotY(_ y: Double) -> CGFloat {
+            let plotY: (Double) -> CGFloat = { y in
                 CGFloat(1 - (y - minY) / spanY) * geometry.size.height
             }
             ZStack {
