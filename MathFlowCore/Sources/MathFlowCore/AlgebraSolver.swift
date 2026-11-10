@@ -8,7 +8,7 @@ public struct EquationSolution: Sendable {
 
 public enum AlgebraSolver {
     public static func solve(_ equation: String, searchRange: ClosedRange<Double> = -1000...1000) throws -> EquationSolution {
-        if let exact = try? ExactPolynomialEquationSolver.solve(equation), let exact { return exact }
+        if let exact = try? ExactPolynomialEquationSolver.solve(equation) { return exact }
         let parts = equation.components(separatedBy: "=")
         guard parts.count == 2, !parts[0].trimmingCharacters(in: .whitespaces).isEmpty,
               !parts[1].trimmingCharacters(in: .whitespaces).isEmpty else {
