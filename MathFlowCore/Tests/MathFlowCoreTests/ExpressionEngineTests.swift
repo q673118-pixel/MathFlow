@@ -35,4 +35,37 @@ final class ExpressionEngineTests: XCTestCase {
     func testDivisionByZeroThrows() {
         XCTAssertThrowsError(try ExpressionEngine().calculate("1/0"))
     }
+
+    func testImplicitMultiplicationWithConstant() throws {
+        let result = try ExpressionEngine().calculate("2pi")
+        XCTAssertNil(result.exactValue)
+        XCTAssertEqual(Double(result.decimalValue)!, 2 * Double.pi, accuracy: 1e-9)
+    }
+
+    func testGraphVariableInsidePolynomial() throws {
+        let result = try ExpressionEngine().calculate("x^2 + 2x + 1", variables: ["x": 3], includeSteps: false)
+        XCTAssertEqual(result.displayValue, "16")
+        XCTAssertTrue(result.steps.isEmpty)
+    }
+
+    func testGraphVariableInsideTrigonometricFunction() throws {
+        let result = try ExpressionEngine().calculate("sin(x)", variables: ["x": 30])
+        XCTAssertEqual(Double(result.decimalValue)!, 0.5, accuracy: 1e-9)
+    }
+
+    func testAbsoluteValueAndExactSquareRoot() throws {
+        let absolute = try ExpressionEngine().calculate("abs(-7/3)")
+        XCTAssertEqual(absolute.displayValue, "2 1/3")
+        let root = try ExpressionEngine().calculate("sqrt(81/16)")
+        XCTAssertEqual(root.displayValue, "2 1/4")
+    }
+
+    func testNegativeIntegerPowerOfPi() throws {
+        let result = try ExpressionEngine().calculate("pi^-1")
+        XCTAssertEqual(Double(result.decimalValue)!, 1 / Double.pi, accuracy: 1e-9)
+    }
+
+    func testCommaDecimalInput() throws {
+        XCTAssertEqual(try ExpressionEngine().calculate("1,5 + 2,5").displayValue, "4")
+    }
 }
