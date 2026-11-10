@@ -91,13 +91,13 @@ Audited against the Android source above. The native port is substantially imple
 - The latest code changes still require a successful CI run. The last successful simulator build was an earlier commit; it does not verify the subsequent navigation, calculator typography and expanded equation-solver changes.
 - There is no Android/iPhone screenshot baseline in the repository, so pixel-level visual comparison has not been performed. Source-level comparison is complete, but actual-device appearance is not certified.
 - The iOS Settings screen is a single native List rather than Android's separate animated settings subpages. It includes the controls, but page structure, transition choreography and in-place animation previews are not yet equivalent.
-- Text scaling exposes the same 80–140% range and 5% slider step, but the current SwiftUI implementation maps it to a small number of Dynamic Type categories. It does not yet reproduce every 5% increment exactly.
-- Imported fonts can be stored, registered and selected, but explicit system-font declarations in several SwiftUI subviews still override the inherited custom font. A custom font is therefore not guaranteed to replace every text style.
+- Text scaling now uses the full 80–140% range in exact 5% increments. The custom multiplier is combined with SwiftUI `ScaledMetric`, so the iOS accessibility text-size setting is still respected.
+- Imported fonts are copied into the app's Documents/Fonts folder, registered with CoreText, listed for later selection and applied through a shared text-font modifier. The exact appearance of synthetic bold/semibold weights can still vary when the imported file contains only one font face.
 - The localization catalog covers all 15 Android languages, but some result descriptions, welcome text and secondary UI labels remain hard-coded. Full visible-string localization is not complete.
 - Key and navigation animation styles are available and behaviorally mapped, but SwiftUI timing/rendering is an approximation of Compose. Exact per-frame parity and Android-style settings previews have not been validated.
 - Approximate calculator operations use Swift Double rather than Android's 24-digit BigDecimal context. Exact rational operations remain arbitrary precision; unit conversion uses Decimal at 34-digit precision; percentage/geometry tools use the Android 16-significant-digit rounding policy.
 - The current CI artifact is an unsigned Simulator app. It is not an installable signed iPhone IPA. Device signing/TestFlight still require an Apple Developer team, certificate and provisioning profile, and a real iPhone test.
-- The iOS UI test target remains a smoke-test placeholder; most automated coverage currently lives in MathFlowCore unit tests.
+- The iOS test target now checks all 15 locales and all ten palettes, and CI runs the native simulator test scheme. There are still no screenshot-diff or end-to-end interaction tests for calculator, settings and tool navigation.
 
 ### Build verification snapshot
 - Last successful run known at audit time: run `42793368439`, commit `0a7c6a0c7c949453e23cb3d89c1d9cffdf47c61b`.
