@@ -244,7 +244,7 @@ struct CalculatorView: View {
     @State private var didEvaluate = false
 
     private let basicRows = [
-        ["(", ")", "⌫", "÷"],
+        ["AC", "(", ")", "÷"],
         ["7", "8", "9", "×"],
         ["4", "5", "6", "−"],
         ["1", "2", "3", "+"],
@@ -252,8 +252,8 @@ struct CalculatorView: View {
     ]
     private let scientificRows = [
         ["sin", "cos", "tan", "ln"],
-        ["log", "abs", "e", "AC"],
-        ["√", "x²", "xʸ", "π"]
+        ["log", "abs", "π", "e"],
+        ["√", "x²", "xʸ", "⌫"]
     ]
 
     var body: some View {
