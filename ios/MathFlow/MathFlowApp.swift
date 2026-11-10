@@ -296,7 +296,7 @@ struct CalculatorView: View {
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 Text(result)
-                    .font(.system(size: result.count > 16 ? 25 : result.count > 11 ? 32 : 48, weight: .medium, design: .rounded))
+                    .font(.system(size: result.count > 16 ? 24 : result.count > 11 ? 32 : result.count > 8 ? 40 : 52, weight: .medium, design: .rounded))
                     .foregroundStyle(error == nil ? p.text : p.error)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
@@ -328,7 +328,7 @@ struct CalculatorView: View {
                         ForEach(row, id: \.self) { key in
                             Button { press(key) } label: {
                                 Text(key)
-                                    .font(.system(size: 18, weight: .medium, design: .rounded))
+                                    .font(.system(size: key.count > 1 && key != "AC" ? (scientific ? 18 : 20) : (scientific ? 22 : 28), weight: .regular, design: .rounded))
                                     .frame(maxWidth: .infinity, minHeight: 50)
                                      .background(key == "=" ? p.keyEquals : (key == "AC" || ["÷", "×", "−", "+"].contains(key)) ? p.keyAccent : p.key,
                                                 in: Capsule())
