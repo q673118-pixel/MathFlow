@@ -195,14 +195,14 @@ enum ExactPolynomialEquationSolver {
             let root=try Rational(-reduced[0].numerator*reduced[1].denominator,reduced[0].denominator*reduced[1].numerator)
             let x=double(root)
             guard allowed(x) else { return EquationSolution(kind:"no_solution",answer:"Решений нет",steps:["Корень исключён условиями ОДЗ"]+domainLine) }
-            return EquationSolution(kind:"linear",answer:"x = \(root.mixedString) (\(root.decimalString()))",steps:["Переносим всё в левую часть: \(reduced[1].fractionString)x = \(fraction(-reduced[0]))","Делим обе части на коэффициент при x.","x = \(root.fractionString)"]+domainLine)
+            return EquationSolution(kind:"linear",answer:"x = \(root.mixedString) (\(root.decimalString()))",steps:["Переносим всё в левую часть: \(reduced[1].fractionString)x = \(fraction(Rational.zero - reduced[0]))","Делим обе части на коэффициент при x.","x = \(root.fractionString)"]+domainLine)
         }
         if degree==2 {
             let a=reduced[2], b=reduced[1], c=reduced[0]
-            let d=b*b-Rational(4)*a*c
+            let d=b*b-(try Rational(4))*a*c
             if d < .zero { return EquationSolution(kind:"no_real_roots",answer:"Действительных корней нет",steps:["Дискриминант D = \(d.fractionString) < 0. Действительных корней нет."]+domainLine) }
             if let sd=exactSquareRoot(d) {
-                let denom=Rational(2)*a
+                let denom=(try Rational(2))*a
                 let x1=try (Rational.zero-b+sd).divided(by:denom), x2=try (Rational.zero-b-sd).divided(by:denom)
                 let roots=(x1 == x2 ? [x1] : [x1,x2]).filter { allowed(double($0)) }.sorted()
                 guard !roots.isEmpty else { return EquationSolution(kind:"no_solution",answer:"Решений нет",steps:["Все корни исключены ОДЗ"]+domainLine) }
