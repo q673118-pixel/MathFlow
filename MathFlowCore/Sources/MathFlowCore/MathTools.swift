@@ -127,43 +127,83 @@ public struct UnitCategory: Identifiable, Sendable {
 
 public enum UnitConverter {
     public static let categories: [UnitCategory] = [
-        UnitCategory(id:"length",title:"Длина",units:[("mm","мм"),("cm","см"),("m","м"),("km","км"),("in","дюйм"),("ft","фут"),("yd","ярд"),("mi","миля")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"mass",title:"Масса",units:[("mg","мг"),("g","г"),("kg","кг"),("t","т"),("oz","унция"),("lb","фунт")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"area",title:"Площадь",units:[("mm2","мм²"),("cm2","см²"),("m2","м²"),("ha","га"),("km2","км²"),("ft2","фут²"),("acre","акр")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"volume",title:"Объём",units:[("ml","мл"),("l","л"),("m3","м³"),("tsp","ч. л."),("tbsp","ст. л."),("cup","чашка"),("gal","галлон")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"temperature",title:"Температура",units:[("c","°C"),("f","°F"),("k","K")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"speed",title:"Скорость",units:[("ms","м/с"),("kmh","км/ч"),("mph","миль/ч"),("knot","узел")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"time",title:"Время",units:[("ms","мс"),("s","с"),("min","мин"),("h","ч"),("day","день"),("week","неделя")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"pressure",title:"Давление",units:[("pa","Па"),("kpa","кПа"),("bar","бар"),("atm","атм"),("mmhg","мм рт. ст.")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"energy",title:"Энергия",units:[("j","Дж"),("kj","кДж"),("cal","кал"),("kcal","ккал"),("wh","Вт·ч"),("kwh","кВт·ч")].map { UnitDefinition(id: $0.0, label: $0.1) }),
-        UnitCategory(id:"data",title:"Данные",units:[("b","Б"),("kb","КБ"),("mb","МБ"),("gb","ГБ"),("tb","ТБ"),("kib","КиБ"),("mib","МиБ"),("gib","ГиБ"),("tib","ТиБ")].map { UnitDefinition(id: $0.0, label: $0.1) })
+        UnitCategory(id:"length",title:"Длина",units:[("mm","mm"),("cm","cm"),("m","m"),("km","km"),("in","in"),("ft","ft"),("yd","yd"),("mi","mi")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"mass",title:"Масса",units:[("mg","mg"),("g","g"),("kg","kg"),("t","t"),("oz","oz"),("lb","lb")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"area",title:"Площадь",units:[("mm2","mm²"),("cm2","cm²"),("m2","m²"),("ha","ha"),("km2","km²"),("acre","ac")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"volume",title:"Объём",units:[("ml","mL"),("l","L"),("m3","m³"),("tsp","tsp"),("cup","cup"),("gal","gal")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"temperature",title:"Температура",units:[("c","°C"),("f","°F"),("k","K")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"speed",title:"Скорость",units:[("ms","m/s"),("kmh","km/h"),("mph","mph"),("kn","kn")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"time",title:"Время",units:[("ms","ms"),("s","s"),("min","min"),("h","h"),("day","d")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"pressure",title:"Давление",units:[("pa","Pa"),("kpa","kPa"),("mpa","MPa"),("bar","bar"),("atm","atm"),("mmhg","mmHg")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"energy",title:"Энергия",units:[("j","J"),("kj","kJ"),("cal","cal"),("kcal","kcal"),("wh","Wh"),("kwh","kWh")].map { UnitDefinition(id:$0.0,label:$0.1) }),
+        UnitCategory(id:"data",title:"Данные",units:[("b","B"),("kb","kB"),("mb","MB"),("gb","GB"),("tb","TB"),("kib","KiB"),("mib","MiB"),("gib","GiB")].map { UnitDefinition(id:$0.0,label:$0.1) })
     ]
 
-    private static let factors: [String: [String: Double]] = [
-        "length":["mm":0.001,"cm":0.01,"m":1,"km":1000,"in":0.0254,"ft":0.3048,"yd":0.9144,"mi":1609.344],
-        "mass":["mg":0.000001,"g":0.001,"kg":1,"t":1000,"oz":0.028349523125,"lb":0.45359237],
-        "area":["mm2":0.000001,"cm2":0.0001,"m2":1,"ha":10000,"km2":1000000,"ft2":0.09290304,"acre":4046.8564224],
-        "volume":["ml":0.001,"l":1,"m3":1000,"tsp":0.00492892159375,"tbsp":0.01478676478125,"cup":0.2365882365,"gal":3.785411784],
-        "speed":["ms":1,"kmh":1/3.6,"mph":0.44704,"knot":0.514444444444],
-        "time":["ms":0.001,"s":1,"min":60,"h":3600,"day":86400,"week":604800],
-        "pressure":["pa":1,"kpa":1000,"bar":100000,"atm":101325,"mmhg":133.322387415],
-        "energy":["j":1,"kj":1000,"cal":4.184,"kcal":4184,"wh":3600,"kwh":3600000],
-        "data":["b":1,"kb":1000,"mb":1000000,"gb":1000000000,"tb":1000000000000,"kib":1024,"mib":1048576,"gib":1073741824,"tib":1099511627776]
+    private static let factors: [String: [String: String]] = [
+        "length":["mm":"0.001","cm":"0.01","m":"1","km":"1000","in":"0.0254","ft":"0.3048","yd":"0.9144","mi":"1609.344"],
+        "mass":["mg":"0.000001","g":"0.001","kg":"1","t":"1000","oz":"0.028349523125","lb":"0.45359237"],
+        "area":["mm2":"0.000001","cm2":"0.0001","m2":"1","ha":"10000","km2":"1000000","acre":"4046.8564224"],
+        "volume":["ml":"0.001","l":"1","m3":"1000","tsp":"0.00492892159375","cup":"0.2365882365","gal":"3.785411784"],
+        "speed":["ms":"1","kmh":"0.2777777777777777777777777777777778","mph":"0.44704","kn":"0.5144444444444444444444444444444444"],
+        "time":["ms":"0.001","s":"1","min":"60","h":"3600","day":"86400"],
+        "pressure":["pa":"1","kpa":"1000","mpa":"1000000","bar":"100000","atm":"101325","mmhg":"133.322387415"],
+        "energy":["j":"1","kj":"1000","cal":"4.184","kcal":"4184","wh":"3600","kwh":"3600000"],
+        "data":["b":"1","kb":"1000","mb":"1000000","gb":"1000000000","tb":"1000000000000","kib":"1024","mib":"1048576","gib":"1073741824"]
     ]
 
-    public static func convert(_ value: String, category: String, from: String, to: String) throws -> String {
-        let input = NSDecimalNumber(decimal: try toolDecimal(value)).doubleValue
-        let output: Double
-        if category == "temperature" {
-            let celsius: Double
-            switch from { case "c": celsius = input; case "f": celsius = (input - 32) * 5 / 9; case "k": celsius = input - 273.15; default: throw MathFlowToolError.unknownUnit }
-            guard celsius >= -273.15 else { throw MathFlowToolError.belowAbsoluteZero }
-            switch to { case "c": output = celsius; case "f": output = celsius * 9 / 5 + 32; case "k": output = celsius + 273.15; default: throw MathFlowToolError.unknownUnit }
-        } else {
-            guard let categoryFactors = factors[category], let a = categoryFactors[from], let b = categoryFactors[to] else { throw MathFlowToolError.unknownUnit }
-            output = input * a / b
+    private static let behavior = NSDecimalNumberHandler(roundingMode: .bankers, scale: 34, raiseOnExactness: false, raiseOnOverflow: true, raiseOnUnderflow: false, raiseOnDivideByZero: true)
+
+    private static func decimal(_ source: String) throws -> Decimal {
+        guard let value = Decimal(string: source, locale: Locale(identifier:"en_US_POSIX")) else { throw MathFlowToolError.unknownUnit }
+        return value
+    }
+    private static func multiply(_ a: Decimal, _ b: Decimal) -> Decimal {
+        NSDecimalNumber(decimal:a).multiplying(by:NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+    }
+    private static func divide(_ a: Decimal, _ b: Decimal) throws -> Decimal {
+        guard b != 0 else { throw MathFlowToolError.divisionByZero }
+        return NSDecimalNumber(decimal:a).dividing(by:NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+    }
+    private static func add(_ a: Decimal, _ b: Decimal) -> Decimal {
+        NSDecimalNumber(decimal:a).adding(NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+    }
+    private static func subtract(_ a: Decimal, _ b: Decimal) -> Decimal {
+        NSDecimalNumber(decimal:a).subtracting(NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+    }
+    private static func formatted(_ value: Decimal) -> String {
+        var value = value
+        var text = NSDecimalString(&value, Locale(identifier:"en_US_POSIX"))
+        if text.contains(".") {
+            while text.last == "0" { text.removeLast() }
+            if text.last == "." { text.removeLast() }
         }
-        guard output.isFinite else { throw MathFlowToolError.invalidNumber(value) }
-        return String(format: "%.15g", output)
+        return text == "-0" ? "0" : text
+    }
+
+    public static func convert(_ source: String, category: String, from: String, to: String) throws -> String {
+        let input = try toolDecimal(source)
+        let output: Decimal
+        if category == "temperature" {
+            let celsius: Decimal
+            switch from {
+            case "c": celsius = input
+            case "f": celsius = try divide(multiply(subtract(input, 32), 5), 9)
+            case "k": celsius = subtract(input, Decimal(string:"273.15")!)
+            default: throw MathFlowToolError.unknownUnit
+            }
+            guard celsius >= Decimal(string:"-273.15")! else { throw MathFlowToolError.belowAbsoluteZero }
+            switch to {
+            case "c": output = celsius
+            case "f": output = add(divide(multiply(celsius, 9), 5), 32)
+            case "k": output = add(celsius, Decimal(string:"273.15")!)
+            default: throw MathFlowToolError.unknownUnit
+            }
+        } else {
+            guard let categoryFactors = factors[category], let fromText = categoryFactors[from],
+                  let toText = categoryFactors[to] else { throw MathFlowToolError.unknownUnit }
+            let fromFactor = try decimal(fromText), toFactor = try decimal(toText)
+            output = try divide(multiply(input, fromFactor), toFactor)
+        }
+        return formatted(output)
     }
 }
