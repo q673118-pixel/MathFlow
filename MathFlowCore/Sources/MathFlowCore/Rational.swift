@@ -45,16 +45,34 @@ public struct Rational: Equatable, Comparable, Sendable {
     public static func parseDecimal(_ source: String) throws -> Rational {
         let normalized = source.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
         guard !normalized.isEmpty else { throw MathFlowMathError.invalidNumber }
-        let pieces = normalized.split(separator: ".", omittingEmptySubsequences: false)
+        let exponentParts = normalized.lowercased().split(separator: "e", omittingEmptySubsequences: false)
+        guard exponentParts.count <= 2 else { throw MathFlowMathError.invalidNumber }
+        let mantissa = String(exponentParts[0])
+        let exponent: Int
+        if exponentParts.count == 2 {
+            guard let parsed = Int(exponentParts[1]), (-1000...1000).contains(parsed) else {
+                throw MathFlowMathError.invalidNumber
+            }
+            exponent = parsed
+        } else {
+            exponent = 0
+        }
+        let pieces = mantissa.split(separator: ".", omittingEmptySubsequences: false)
         guard pieces.count <= 2 else { throw MathFlowMathError.invalidNumber }
         let whole = String(pieces[0]).isEmpty ? "0" : String(pieces[0])
         let fraction = pieces.count == 2 ? String(pieces[1]) : ""
         guard whole.allSatisfy({ $0.isNumber || $0 == "-" || $0 == "+" }),
               fraction.allSatisfy({ $0.isNumber }) else { throw MathFlowMathError.invalidNumber }
         guard let integer = BigInt(whole + fraction) else { throw MathFlowMathError.invalidNumber }
+        let decimalScale = fraction.count - exponent
         var scale: BigInt = 1
-        for _ in fraction { scale *= 10 }
-        return try Rational(integer, scale)
+        if decimalScale >= 0 {
+            for _ in 0..<decimalScale { scale *= 10 }
+            return try Rational(integer, scale)
+        }
+        var multiplier: BigInt = 1
+        for _ in 0..<(-decimalScale) { multiplier *= 10 }
+        return try Rational(integer * multiplier, 1)
     }
 
     public static func < (lhs: Rational, rhs: Rational) -> Bool {
