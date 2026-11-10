@@ -14,11 +14,11 @@ public struct ExpressionEngine {
     private let angleMode: AngleMode
     public init(angleMode: AngleMode = .degrees) { self.angleMode = angleMode }
 
-    public func calculate(_ source: String, includeSteps: Bool = true) throws -> CalculationResult {
+    public func calculate(_ source: String, variables: [String: Double] = [:], includeSteps: Bool = true) throws -> CalculationResult {
         guard !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw MathFlowMathError.malformedExpression
         }
-        let parser = try Parser(source: source, angleMode: angleMode, includeSteps: includeSteps)
+        let parser = try Parser(source: source, angleMode: angleMode, variables: variables, includeSteps: includeSteps)
         let value = try parser.parse()
         switch value {
         case .exact(let rational):
@@ -76,10 +76,12 @@ private final class Parser {
     private var index = 0
     private let angleMode: AngleMode
     private let includeSteps: Bool
+    private let variables: [String: Double]
     fileprivate var steps: [String] = []
 
-    init(source: String, angleMode: AngleMode, includeSteps: Bool) throws {
+    init(source: String, angleMode: AngleMode, variables: [String: Double], includeSteps: Bool) throws {
         self.angleMode = angleMode
+        self.variables = variables
         self.includeSteps = includeSteps
         self.tokens = try Self.tokenize(source)
     }
@@ -231,6 +233,7 @@ private final class Parser {
     }
 
     private func parseIdentifier(_ name: String) throws -> MathValue {
+        if let variable = variables[name] { return .approximate(variable) }
         if name == "pi" { return .approximate(Double.pi) }
         if name == "e" { return .approximate(M_E) }
         try expect(.left)
