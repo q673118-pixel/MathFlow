@@ -17,7 +17,8 @@ final class ExpressionEngineTests: XCTestCase {
         XCTAssertEqual(try ExpressionEngine().calculate("2(3+4)").displayValue, "14")
     }
 
-    func testPostfixPercent() throws {
+    func testIntegerPowersAndPostfixPercent() throws {
+        XCTAssertEqual(try ExpressionEngine().calculate("3^4").displayValue, "81")
         XCTAssertEqual(try ExpressionEngine().calculate("25%").displayValue, "1/4")
     }
 
