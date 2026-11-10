@@ -9,7 +9,13 @@ public struct EquationSolution: Sendable {
 public enum AlgebraSolver {
     public static func solve(_ equation: String, searchRange: ClosedRange<Double> = -1000...1000) throws -> EquationSolution {
         let normalizedEquation = normalizeAbsoluteBars(equation)
-        if let exact = try? ExactPolynomialEquationSolver.solve(normalizedEquation) { return exact }
+        do {
+            if let exact = try ExactPolynomialEquationSolver.solve(normalizedEquation) { return exact }
+        } catch MathFlowMathError.divisionByZero {
+            throw MathFlowMathError.divisionByZero
+        } catch {
+            // Non-polynomial and unsupported symbolic forms are handled by the numerical evaluator below.
+        }
         let parts = normalizedEquation.components(separatedBy: "=")
         guard parts.count == 2, !parts[0].trimmingCharacters(in: .whitespaces).isEmpty,
               !parts[1].trimmingCharacters(in: .whitespaces).isEmpty else {
