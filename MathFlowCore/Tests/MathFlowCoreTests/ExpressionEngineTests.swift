@@ -89,4 +89,19 @@ final class ExpressionEngineTests: XCTestCase {
         XCTAssertEqual(Double(result.decimalValue) ?? .nan, 3.0, accuracy: 1e-12)
     }
 
+    func testLargeExactRationalIsConvertedWithoutOverflowDuringFunctionEvaluation() throws {
+        let result = try ExpressionEngine().calculate("sin(1e400/1e399)")
+        XCTAssertEqual(Double(result.decimalValue)!, sin(Double.pi / 18), accuracy: 1e-12)
+    }
+
+    func testNonFiniteGraphVariableIsRejected() {
+        XCTAssertThrowsError(try ExpressionEngine().calculate("x", variables: ["x": .infinity]))
+        XCTAssertThrowsError(try ExpressionEngine().calculate("x", variables: ["x": .nan]))
+    }
+
+    func testNegativeLargeRationalIsPreservedDuringFunctionEvaluation() throws {
+        let result = try ExpressionEngine().calculate("sin(-1e400/1e399)")
+        XCTAssertEqual(Double(result.decimalValue)!, -sin(Double.pi / 18), accuracy: 1e-12)
+    }
+
 }
