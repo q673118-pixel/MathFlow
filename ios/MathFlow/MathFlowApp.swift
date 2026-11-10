@@ -180,6 +180,10 @@ struct ToolsView: View {
     @State private var categoryID = "length"
     @State private var fromID = "km"
     @State private var toID = "m"
+    @State private var graphExpression = "x^2"
+    @State private var graphMin = "-5"
+    @State private var graphMax = "5"
+    @State private var graphPoints: [CGPoint] = []
 
     private let options = ["Дроби", "Проценты", "Геометрия", "Конвертер", "График"]
     private var category: UnitCategory { UnitConverter.categories.first(where: { $0.id == categoryID }) ?? UnitConverter.categories[0] }
@@ -376,11 +380,77 @@ struct ToolsView: View {
 
     @ViewBuilder private func graphContent(_ p: MathFlowPalette) -> some View {
         Text("График функции").font(.title2.bold()).foregroundStyle(p.text)
-        Text("Построение y = f(x) по диапазону значений.").font(.subheadline).foregroundStyle(p.muted)
-        Text("Графический модуль будет подключён после переноса вычислителя с поддержкой переменной x; показывать фиктивный график вместо вычислений нельзя.")
-            .font(.caption).foregroundStyle(p.muted)
-            .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-            .background(p.surface, in: RoundedRectangle(cornerRadius: 14))
+        field("Функция y =", text: $graphExpression, palette: p, decimal: false)
+        HStack(spacing: 10) {
+            field("X от", text: $graphMin, palette: p)
+            field("X до", text: $graphMax, palette: p)
+        }
+        action("Построить график", palette: p) {
+            guard let lower = Double(graphMin.replacingOccurrences(of: ",", with: ".")),
+                  let upper = Double(graphMax.replacingOccurrences(of: ",", with: ".")),
+                  lower.isFinite, upper.isFinite, lower < upper else {
+                throw MathFlowToolError.invalidNumber("Некорректный диапазон X")
+            }
+            let engine = ExpressionEngine()
+            var points: [CGPoint] = []
+            for index in 0...240 {
+                let x = lower + (upper - lower) * Double(index) / 240
+                if let value = try? engine.calculate(graphExpression, variables: ["x": x], includeSteps: false),
+                   let y = Double(value.decimalValue), y.isFinite, abs(y) < 1.0e9 {
+                    points.append(CGPoint(x: x, y: y))
+                } else {
+                    points.append(CGPoint(x: x, y: .nan))
+                }
+            }
+            graphPoints = points
+            return "Построено точек: \(points.filter { $0.y.isFinite }.count) из 241"
+        }
+        if !graphPoints.isEmpty {
+            graphPlot(p)
+                .frame(height: 250)
+                .padding(10)
+                .background(p.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        }
+        Text("Поддерживаются выражения калькулятора и переменная x.").font(.caption).foregroundStyle(p.muted)
+    }
+
+    private func graphPlot(_ p: MathFlowPalette) -> some View {
+        GeometryReader { geometry in
+            let valid = graphPoints.filter { $0.x.isFinite && $0.y.isFinite }
+            let minX = graphPoints.first?.x ?? -5
+            let maxX = graphPoints.last?.x ?? 5
+            let minY = max(-100.0, valid.map(\.y).min() ?? -1)
+            let maxY = min(100.0, valid.map(\.y).max() ?? 1)
+            let spanY = max(0.000001, maxY - minY)
+            ZStack {
+                Path { path in
+                    for step in 0...4 {
+                        let y = geometry.size.height * CGFloat(step) / 4
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                    }
+                    if minX <= 0 && maxX >= 0 {
+                        let x = geometry.size.width * CGFloat((0 - minX) / (maxX - minX))
+                        path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: geometry.size.height))
+                    }
+                    if minY <= 0 && maxY >= 0 {
+                        let y = geometry.size.height * CGFloat(maxY / spanY)
+                        path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                    }
+                }.stroke(p.muted.opacity(0.25), lineWidth: 1)
+                Path { path in
+                    var active = false
+                    for point in graphPoints {
+                        guard point.y.isFinite else { active = false; continue }
+                        let x = CGFloat((point.x - minX) / max(0.000001, maxX - minX)) * geometry.size.width
+                        let clippedY = min(max(point.y, minY), maxY)
+                        let y = CGFloat((maxY - clippedY) / spanY) * geometry.size.height
+                        if active { path.addLine(to: CGPoint(x: x, y: y)) }
+                        else { path.move(to: CGPoint(x: x, y: y)); active = true }
+                    }
+                }.stroke(p.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+            }
+        }
     }
 }
 
