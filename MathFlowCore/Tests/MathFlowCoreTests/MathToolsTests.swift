@@ -40,4 +40,34 @@ final class MathToolsTests: XCTestCase {
         XCTAssertEqual(try UnitConverter.convert("1", category: "data", from: "kib", to: "b"), "1024")
         XCTAssertThrowsError(try UnitConverter.convert("-1", category: "temperature", from: "k", to: "c"))
     }
+    func testExactLinearAndQuadraticEquationSolving() throws {
+        XCTAssertTrue(try AlgebraSolver.solve("2x + 3 = 11").answer.contains("4"))
+        let quadratic = try AlgebraSolver.solve("x^2 - 5x + 6 = 0")
+        XCTAssertEqual(quadratic.kind, "quadratic")
+        XCTAssertTrue(quadratic.answer.contains("3"))
+        XCTAssertTrue(quadratic.answer.contains("2"))
+    }
+
+    func testRationalEquationDomainExclusions() throws {
+        let result = try AlgebraSolver.solve("(x^2 - 1)/(x - 1) = 0")
+        XCTAssertTrue(result.answer.contains("-1"))
+        XCTAssertFalse(result.answer.contains("x₂"))
+        XCTAssertTrue(result.steps.contains(where: { $0.contains("ОДЗ") }))
+    }
+
+    func testPolynomialAndRepeatedRoots() throws {
+        let quartic = try AlgebraSolver.solve("x^4 - 5x^2 + 4 = 0")
+        XCTAssertTrue(quartic.answer.contains("-2"))
+        XCTAssertTrue(quartic.answer.contains("2"))
+        let repeated = try AlgebraSolver.solve("x^2 - 4x + 4 = 0")
+        XCTAssertTrue(repeated.answer.contains("2"))
+    }
+
+    func testUnitCatalogMatchesAndroidCategories() throws {
+        XCTAssertEqual(UnitConverter.categories.count, 10)
+        XCTAssertEqual(try UnitConverter.convert("1", category: "pressure", from: "mpa", to: "pa"), "1000000")
+        XCTAssertEqual(try UnitConverter.convert("1", category: "speed", from: "kmh", to: "ms"), "0.2777777777777777777777777777777778")
+        XCTAssertThrowsError(try UnitConverter.convert("1", category: "time", from: "week", to: "day"))
+    }
+
 }
