@@ -122,4 +122,24 @@ final class MathToolsTests: XCTestCase {
         XCTAssertTrue(result.answer.contains("9"))
     }
 
+    func testDivisionByIdenticallyZeroExpressionThrows() {
+        XCTAssertThrowsError(try AlgebraSolver.solve("1/(x - x) = 2")) { error in
+            XCTAssertEqual(error as? MathFlowMathError, .divisionByZero)
+        }
+    }
+
+    func testUnicodeMinusAndSuperscriptQuadratic() throws {
+        let result = try AlgebraSolver.solve("x² − 5x + 6 = 0")
+        XCTAssertEqual(result.kind, "quadratic")
+        XCTAssertTrue(result.answer.contains("x₁ = 3"))
+        XCTAssertTrue(result.answer.contains("x₂ = 2"))
+    }
+
+    func testRepeatedQuarticRootsAreRetained() throws {
+        let result = try AlgebraSolver.solve("x^4 - 2x^2 + 1 = 0")
+        XCTAssertEqual(result.kind, "polynomial_numeric")
+        XCTAssertTrue(result.answer.contains("-1"))
+        XCTAssertTrue(result.answer.contains("1"))
+    }
+
 }
