@@ -70,4 +70,42 @@ final class MathToolsTests: XCTestCase {
         XCTAssertThrowsError(try UnitConverter.convert("1", category: "time", from: "week", to: "day"))
     }
 
+    func testLinearEquationWithParenthesesAndQuadraticDoubleRoot() throws {
+        XCTAssertTrue(try AlgebraSolver.solve("3(x - 2) = 9").answer.contains("5"))
+        let result = try AlgebraSolver.solve("x^2 - 4x + 4 = 0")
+        XCTAssertEqual(result.kind, "quadratic_double")
+        XCTAssertTrue(result.answer.contains("2"))
+    }
+
+    func testIdentityAndContradiction() throws {
+        XCTAssertEqual(try AlgebraSolver.solve("2x + 2 = 2(x + 1)").kind, "identity")
+        XCTAssertEqual(try AlgebraSolver.solve("x + 1 = x + 2").kind, "no_solution")
+    }
+
+    func testCubicQuarticAndQuinticEquations() throws {
+        XCTAssertTrue(try AlgebraSolver.solve("x^3 = 8").answer.contains("2"))
+        let quartic = try AlgebraSolver.solve("x^4 - 5x^2 + 4 = 0")
+        for root in ["-2", "-1", "1", "2"] { XCTAssertTrue(quartic.answer.contains(root)) }
+        XCTAssertTrue(try AlgebraSolver.solve("x^5 = 1").answer.contains("1"))
+    }
+
+    func testRationalEquationsPreserveDomainRestrictions() throws {
+        let linear = try AlgebraSolver.solve("1/(x - 1) = 2")
+        XCTAssertTrue(linear.answer.contains("1.5"))
+        XCTAssertTrue(linear.steps.contains(where: { $0.contains("ОДЗ") }))
+        let identity = try AlgebraSolver.solve("(x - 1)/(x - 1) = 1")
+        XCTAssertEqual(identity.kind, "identity")
+        XCTAssertTrue(identity.steps.contains(where: { $0.contains("ОДЗ") }))
+    }
+
+    func testNegativePowersAndNestedRationalExpressions() throws {
+        XCTAssertTrue(try AlgebraSolver.solve("x^-1 = 0.5").answer.contains("2"))
+        XCTAssertTrue(try AlgebraSolver.solve("(x + 1)/(x - 2) = 3").answer.contains("3.5"))
+    }
+
+    func testSuperscriptEquationInput() throws {
+        let result = try AlgebraSolver.solve("x³ = 8")
+        XCTAssertTrue(result.answer.contains("2"))
+    }
+
 }
