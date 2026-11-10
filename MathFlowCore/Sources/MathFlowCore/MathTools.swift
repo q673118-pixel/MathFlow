@@ -25,7 +25,7 @@ public enum MathFlowToolError: Error, LocalizedError, Equatable {
 private func toolDecimal(_ source: String) throws -> Decimal {
     let normalized = source.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
     guard !normalized.isEmpty else { throw MathFlowToolError.emptyInput }
-    let numericPattern = #"^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?$"#
+    let numericPattern = #"^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$"#
     guard normalized.range(of: numericPattern, options: .regularExpression) != nil else {
         throw MathFlowToolError.invalidNumber(source)
     }
