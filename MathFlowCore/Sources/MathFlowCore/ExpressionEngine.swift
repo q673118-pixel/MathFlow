@@ -99,10 +99,10 @@ private final class Parser {
         while i < chars.count {
             let c = chars[i]
             if c.isWhitespace { i += 1; continue }
-            if c.isNumber || c == "." || c == "," {
+            if (c.isNumber && !["²", "³", "⁴"].contains(c)) || c == "." || c == "," {
                 let start = i
                 var separators = 0
-                while i < chars.count && (chars[i].isNumber || chars[i] == "." || chars[i] == ",") {
+                while i < chars.count && ((chars[i].isNumber && !["²", "³", "⁴"].contains(chars[i])) || chars[i] == "." || chars[i] == ",") {
                     if chars[i] == "." || chars[i] == "," { separators += 1 }
                     if separators > 1 { throw MathFlowMathError.invalidNumber }
                     i += 1
