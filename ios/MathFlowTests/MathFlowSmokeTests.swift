@@ -8,7 +8,7 @@ final class MathFlowSmokeTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(MathFlowLocalization.keys.count, 141)
         for language in MathFlowLanguage.all {
             for key in MathFlowLocalization.keys {
-                XCTAssertTrue(MathFlowLocalization.hasTranslation(key, language: language.id), "Missing translation for \\(key) in \\(language.id)")
+                XCTAssertTrue(MathFlowLocalization.hasTranslation(key, language: language.id), "Missing translation for \(key) in \(language.id)")
             }
         }
     }
