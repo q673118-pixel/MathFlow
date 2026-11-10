@@ -1,5 +1,7 @@
 import SwiftUI
 import MathFlowCore
+import UniformTypeIdentifiers
+import CoreText
 
 @main
 struct MathFlowApp: App {
@@ -15,12 +17,47 @@ struct MathFlowApp: App {
 }
 
 final class AppSettings: ObservableObject {
-    @Published var themeID: String {
-        didSet { UserDefaults.standard.set(themeID, forKey: "mathflow.theme") }
-    }
+    @Published var themeID: String { didSet { UserDefaults.standard.set(themeID, forKey: "mathflow.theme") } }
+    @Published var languageID: String { didSet { UserDefaults.standard.set(languageID, forKey: "mathflow.language") } }
+    @Published var textScale: Double { didSet { UserDefaults.standard.set(textScale, forKey: "mathflow.textScale") } }
+    @Published var keyStyle: String { didSet { UserDefaults.standard.set(keyStyle, forKey: "mathflow.keyStyle") } }
+    @Published var keyDuration: Double { didSet { UserDefaults.standard.set(keyDuration, forKey: "mathflow.keyDuration") } }
+    @Published var keyOpacity: Double { didSet { UserDefaults.standard.set(keyOpacity, forKey: "mathflow.keyOpacity") } }
+    @Published var keyIntensity: Double { didSet { UserDefaults.standard.set(keyIntensity, forKey: "mathflow.keyIntensity") } }
+    @Published var keyColorEffect: Bool { didSet { UserDefaults.standard.set(keyColorEffect, forKey: "mathflow.keyColorEffect") } }
+    @Published var navEnabled: Bool { didSet { UserDefaults.standard.set(navEnabled, forKey: "mathflow.navEnabled") } }
+    @Published var navStyle: String { didSet { UserDefaults.standard.set(navStyle, forKey: "mathflow.navStyle") } }
+    @Published var navDuration: Double { didSet { UserDefaults.standard.set(navDuration, forKey: "mathflow.navDuration") } }
+    @Published var navIntensity: Double { didSet { UserDefaults.standard.set(navIntensity, forKey: "mathflow.navIntensity") } }
+    @Published var navIconScale: Double { didSet { UserDefaults.standard.set(navIconScale, forKey: "mathflow.navIconScale") } }
+    @Published var navOpacity: Double { didSet { UserDefaults.standard.set(navOpacity, forKey: "mathflow.navOpacity") } }
+    @Published var iconID: String { didSet { UserDefaults.standard.set(iconID, forKey: "mathflow.icon") } }
+    @Published var fontPath: String? { didSet { UserDefaults.standard.set(fontPath, forKey: "mathflow.fontPath") } }
+    @Published var fontPostScriptName: String? { didSet { UserDefaults.standard.set(fontPostScriptName, forKey: "mathflow.fontName") } }
 
-    init() { themeID = UserDefaults.standard.string(forKey: "mathflow.theme") ?? "vanilla" }
+    init() {
+        let d = UserDefaults.standard
+        themeID = d.string(forKey: "mathflow.theme") ?? "vanilla"
+        languageID = d.string(forKey: "mathflow.language") ?? "ru"
+        textScale = d.object(forKey: "mathflow.textScale") as? Double ?? 1
+        keyStyle = d.string(forKey: "mathflow.keyStyle") ?? "spring"
+        keyDuration = d.object(forKey: "mathflow.keyDuration") as? Double ?? 140
+        keyOpacity = d.object(forKey: "mathflow.keyOpacity") as? Double ?? 0.72
+        keyIntensity = d.object(forKey: "mathflow.keyIntensity") as? Double ?? 0.10
+        keyColorEffect = d.object(forKey: "mathflow.keyColorEffect") as? Bool ?? false
+        navEnabled = d.object(forKey: "mathflow.navEnabled") as? Bool ?? true
+        navStyle = d.string(forKey: "mathflow.navStyle") ?? "fluid_pill"
+        navDuration = d.object(forKey: "mathflow.navDuration") as? Double ?? 280
+        navIntensity = d.object(forKey: "mathflow.navIntensity") as? Double ?? 0.65
+        navIconScale = d.object(forKey: "mathflow.navIconScale") as? Double ?? 0.08
+        navOpacity = d.object(forKey: "mathflow.navOpacity") as? Double ?? 0.85
+        iconID = d.string(forKey: "mathflow.icon") ?? "vanilla"
+        fontPath = d.string(forKey: "mathflow.fontPath")
+        fontPostScriptName = d.string(forKey: "mathflow.fontName")
+        if let path = fontPath { _ = CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: path) as CFURL, .process, nil) }
+    }
     var palette: MathFlowPalette { MathFlowPalette.named(themeID) }
+    func text(_ key: String) -> String { MathFlowLocalization.text(key, language: languageID) }
 }
 
 struct RootView: View {
@@ -543,31 +580,167 @@ struct HistoryView: View {
 
 struct SettingsView: View {
     @EnvironmentObject private var settings: AppSettings
+    @State private var theme = "vanilla"
+    @State private var language = "ru"
+    @State private var scale = 1.0
+    @State private var keyStyle = "spring"
+    @State private var keyDuration = 140.0
+    @State private var keyOpacity = 0.72
+    @State private var keyIntensity = 0.10
+    @State private var keyColorEffect = false
+    @State private var navEnabled = true
+    @State private var navStyle = "fluid_pill"
+    @State private var navDuration = 280.0
+    @State private var navIntensity = 0.65
+    @State private var navIconScale = 0.08
+    @State private var navOpacity = 0.85
+    @State private var iconID = "vanilla"
+    @State private var fontPath: String?
+    @State private var fontName: String?
+    @State private var showFontPicker = false
+    @State private var fontMessage: String?
+    @State private var initialized = false
+
     private let themes = ["vanilla", "black", "white", "purple", "ocean", "emerald", "sunset", "rose", "midnight", "graphite"]
+    private let keyStyles = [("spring","Spring"),("press","Press"),("scale","Scale"),("flash","Flash"),("ripple","Ripple"),("bounce","Bounce"),("elastic","Elastic"),("minimal","Minimal")]
+    private let navStyles = [("fluid_pill","Fluid Pill"),("spring_motion","Spring Motion"),("light_trail","Light Trail"),("morph","Morph"),("expand","Expand"),("soft_focus","Soft Focus"),("elastic_slide","Elastic Slide"),("ripple_bloom","Ripple Bloom")]
+
+    private var hasChanges: Bool {
+        theme != settings.themeID || language != settings.languageID || abs(scale-settings.textScale)>0.001 ||
+        keyStyle != settings.keyStyle || keyDuration != settings.keyDuration || keyOpacity != settings.keyOpacity ||
+        keyIntensity != settings.keyIntensity || keyColorEffect != settings.keyColorEffect ||
+        navEnabled != settings.navEnabled || navStyle != settings.navStyle || navDuration != settings.navDuration ||
+        navIntensity != settings.navIntensity || navIconScale != settings.navIconScale || navOpacity != settings.navOpacity ||
+        iconID != settings.iconID || fontPath != settings.fontPath
+    }
+
     var body: some View {
-        let p = settings.palette
+        let p = MathFlowPalette.named(theme)
         NavigationStack {
             List {
-                Section("Темы оформления") {
-                    ForEach(themes, id: \.self) { theme in
-                        Button {
-                            withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) { settings.themeID = theme }
-                        } label: {
-                            HStack {
-                                Text(theme.capitalized).foregroundStyle(p.text)
+                Section(settings.text("themes")) {
+                    ForEach(themes, id: \.self) { id in
+                        Button { theme = id } label: {
+                            HStack(spacing: 12) {
+                                Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 25, height: 25)
+                                Text(id.capitalized).foregroundStyle(p.text)
                                 Spacer()
-                                if settings.themeID == theme { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
+                                if theme == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
+                            }.padding(.vertical, 3)
+                        }.listRowBackground(p.surface)
+                    }
+                    Text(settings.text("theme_hint")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
+                }
+                Section(settings.text("app_language")) {
+                    ForEach(MathFlowLanguage.all) { item in
+                        Button { language = item.id } label: {
+                            HStack { Text(item.nativeName).foregroundStyle(p.text); Spacer(); if language == item.id { Image(systemName:"checkmark").foregroundStyle(p.accent) } }
+                        }.listRowBackground(p.surface)
+                    }
+                }
+                Section(settings.text("text_size")) {
+                    HStack { Text("\(Int(scale * 100))%").foregroundStyle(p.text); Spacer(); Slider(value: $scale, in: 0.8...1.4, step: 0.05).tint(p.accent).frame(maxWidth: 190) }
+                        .listRowBackground(p.surface)
+                }
+                Section("Иконки приложения") {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                        ForEach(themes, id: \.self) { id in
+                            Button { iconID = id } label: {
+                                HStack { Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 18,height:18); Text(id.capitalized).font(.caption); Spacer(); if iconID == id { Image(systemName:"checkmark.circle.fill") } }
+                                    .foregroundStyle(p.text).padding(10).background(p.key, in: RoundedRectangle(cornerRadius: 12))
                             }
                         }
-                        .listRowBackground(p.surface)
+                    }.listRowBackground(p.surface)
+                    Text("Варианты выбраны и сохраняются. Для фактической смены иконки iOS ещё нужны отдельные AppIcon assets и запись CFBundleAlternateIcons.").font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
+                }
+                Section("Шрифт") {
+                    Button { showFontPicker = true } label: {
+                        Label(fontName ?? "Выбрать TTF / OTF", systemImage: "textformat")
+                            .foregroundStyle(p.accent)
+                    }.listRowBackground(p.surface)
+                    if fontPath != nil {
+                        Button("Сбросить пользовательский шрифт", role: .destructive) { fontPath = nil; fontName = nil }
+                            .listRowBackground(p.surface)
                     }
+                    if let fontMessage { Text(fontMessage).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface) }
+                }
+                Section("Анимация клавиш") {
+                    Picker("Стиль", selection: $keyStyle) {
+                        ForEach(keyStyles, id: \.0) { Text($0.1).tag($0.0) }
+                    }.listRowBackground(p.surface)
+                    settingSlider("Длительность", value: $keyDuration, range: 70...400, suffix: " мс", p: p)
+                    settingSlider("Непрозрачность", value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
+                    settingSlider("Интенсивность", value: $keyIntensity, range: 0.02...0.2, suffix: "%", p: p, percent: true)
+                    Toggle("Цветовой эффект при нажатии", isOn: $keyColorEffect).tint(p.accent).listRowBackground(p.surface)
+                }
+                Section("Анимация навигации") {
+                    Toggle("Включить анимацию", isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
+                    Picker("Стиль", selection: $navStyle) {
+                        ForEach(navStyles, id: \.0) { Text($0.1).tag($0.0) }
+                    }.listRowBackground(p.surface)
+                    settingSlider("Длительность", value: $navDuration, range: 100...1000, suffix: " мс", p: p)
+                    settingSlider("Интенсивность", value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
+                    settingSlider("Масштаб иконки", value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
+                    settingSlider("Непрозрачность индикатора", value: $navOpacity, range: 0...1, suffix: "%", p: p, percent: true)
                 }
                 Section("О MathFlow") { Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface) }
             }
             .scrollContentBackground(.hidden)
             .background(p.background)
-            .navigationTitle("Настройки")
+            .navigationTitle(settings.text("settings"))
+            .safeAreaInset(edge: .bottom) {
+                if hasChanges {
+                    Button {
+                        settings.themeID = theme; settings.languageID = language; settings.textScale = scale
+                        settings.keyStyle = keyStyle; settings.keyDuration = min(400,max(70,keyDuration))
+                        settings.keyOpacity = min(1,max(0.2,keyOpacity)); settings.keyIntensity = min(0.2,max(0.02,keyIntensity))
+                        settings.keyColorEffect = keyColorEffect; settings.navEnabled = navEnabled; settings.navStyle = navStyle
+                        settings.navDuration = min(1000,max(100,navDuration)); settings.navIntensity = navIntensity
+                        settings.navIconScale = navIconScale; settings.navOpacity = navOpacity; settings.iconID = iconID
+                        settings.fontPath = fontPath
+                        withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) { }
+                    } label: {
+                        Text("Применить изменения").font(.system(size: 15, weight: .semibold))
+                            .frame(maxWidth: .infinity).padding(.vertical, 14)
+                            .background(p.keyEquals, in: Capsule()).foregroundStyle(p.onKeyEquals)
+                    }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
+                }
+            }
         }
+        .onAppear {
+            guard !initialized else { return }; initialized = true
+            theme=settings.themeID; language=settings.languageID; scale=settings.textScale
+            keyStyle=settings.keyStyle; keyDuration=settings.keyDuration; keyOpacity=settings.keyOpacity
+            keyIntensity=settings.keyIntensity; keyColorEffect=settings.keyColorEffect; navEnabled=settings.navEnabled
+            navStyle=settings.navStyle; navDuration=settings.navDuration; navIntensity=settings.navIntensity
+            navIconScale=settings.navIconScale; navOpacity=settings.navOpacity; iconID=settings.iconID
+            fontPath=settings.fontPath; fontName=settings.fontPostScriptName
+        }
+        .fileImporter(isPresented: $showFontPicker, allowedContentTypes: [.font], allowsMultipleSelection: false) { outcome in
+            do {
+                guard let source = try outcome.get().first else { return }
+                let access = source.startAccessingSecurityScopedResource()
+                defer { if access { source.stopAccessingSecurityScopedResource() } }
+                let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Fonts", isDirectory: true)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let destination = folder.appendingPathComponent(source.lastPathComponent)
+                if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
+                try FileManager.default.copyItem(at: source, to: destination)
+                guard CTFontManagerRegisterFontsForURL(destination as CFURL, .process, nil) else { throw MathFlowMathError.invalidNumber }
+                let descriptors = CTFontManagerCreateFontDescriptorsFromURL(destination as CFURL) as? [CTFontDescriptor]
+                let descriptor = descriptors?.first
+                let postScript = descriptor.flatMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
+                fontPath = destination.path; fontName = postScript ?? source.deletingPathExtension().lastPathComponent
+                fontMessage = "Шрифт добавлен: \(fontName ?? source.lastPathComponent). Нажмите «Применить»."
+            } catch { fontMessage = error.localizedDescription }
+        }
+    }
+
+    private func settingSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String, p: MathFlowPalette, percent: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack { Text(title).foregroundStyle(p.text); Spacer(); Text(percent ? "\(Int(value.wrappedValue * 100))%" : "\(Int(value.wrappedValue))\(suffix)").foregroundStyle(p.accent).monospacedDigit() }
+            Slider(value: value, in: range).tint(p.accent)
+        }.listRowBackground(p.surface)
     }
 }
 
