@@ -39,14 +39,19 @@ private func toolDecimalFromDouble(_ value: Double) -> Decimal {
     Decimal(string: String(value), locale: Locale(identifier: "en_US_POSIX")) ?? .zero
 }
 
-private func toolFormat(_ value: Decimal) -> String {
+private func toolRound(_ value: Decimal) -> Decimal {
+    let magnitude = abs(NSDecimalNumber(decimal: value).doubleValue)
+    guard magnitude.isFinite, magnitude > 0 else { return value }
     var input = value
     var rounded = value
-    let magnitude = abs(NSDecimalNumber(decimal: value).doubleValue)
-    if magnitude.isFinite && magnitude > 0 {
-        let significantScale = 15 - Int(floor(log10(magnitude)))
-        NSDecimalRound(&rounded, &input, significantScale, .plain)
-    }
+    // Android MathContext(16, HALF_UP): 16 significant decimal digits.
+    let significantScale = max(-128, min(127, 15 - Int(floor(log10(magnitude)))))
+    NSDecimalRound(&rounded, &input, significantScale, .plain)
+    return rounded
+}
+
+private func toolFormat(_ value: Decimal) -> String {
+    var rounded = toolRound(value)
     var source = NSDecimalString(&rounded, Locale(identifier: "en_US_POSIX"))
     if source.contains(".") {
         while source.last == "0" { source.removeLast() }
@@ -92,16 +97,18 @@ public enum FractionTools {
 public enum PercentTools {
     public static func percentOf(_ percent: String, _ amount: String) throws -> String {
         let p = try toolDecimal(percent), a = try toolDecimal(amount)
-        return toolFormat(a * p / 100)
+        return toolFormat(toolRound(toolRound(a * p) / 100))
     }
     public static func whatPercent(_ part: String, _ whole: String) throws -> String {
         let p = try toolDecimal(part), w = try toolDecimal(whole)
         guard w != 0 else { throw MathFlowToolError.divisionByZero }
-        return toolFormat(p * 100 / w)
+        return toolFormat(toolRound(toolRound(p * 100) / w))
     }
     public static func change(_ amount: String, percent: String, increase: Bool) throws -> String {
-        let value = try toolDecimal(amount), rate = try toolDecimal(percent) / 100
-        return toolFormat(value * (increase ? 1 + rate : 1 - rate))
+        let value = try toolDecimal(amount)
+        let rate = toolRound(try toolDecimal(percent) / 100)
+        let factor = toolRound(increase ? 1 + rate : 1 - rate)
+        return toolFormat(toolRound(value * factor))
     }
 }
 
@@ -109,13 +116,16 @@ public enum GeometryTools {
     public static func rectangle(_ aText: String, _ bText: String) throws -> (area: String, perimeter: String) {
         let a = try toolDecimal(aText), b = try toolDecimal(bText)
         guard a > 0, b > 0 else { throw MathFlowToolError.invalidGeometry("Стороны должны быть больше нуля") }
-        return (toolFormat(a * b), toolFormat(2 * (a + b)))
+        return (toolFormat(toolRound(a * b)), toolFormat(toolRound(2 * toolRound(a + b))))
     }
     public static func circle(_ radiusText: String) throws -> (area: String, circumference: String) {
         let r = try toolDecimal(radiusText)
         guard r > 0 else { throw MathFlowToolError.invalidGeometry("Радиус должен быть больше нуля") }
-        let pi = Decimal(string: "3.141592653589793", locale: Locale(identifier: "en_US_POSIX"))!
-        return (toolFormat(pi * r * r), toolFormat(2 * pi * r))
+        let radius = NSDecimalNumber(decimal: r).doubleValue
+        let area = Double.pi * radius * radius
+        let circumference = 2 * Double.pi * radius
+        guard area.isFinite, circumference.isFinite else { throw MathFlowToolError.invalidNumber(radiusText) }
+        return (toolFormat(toolDecimalFromDouble(area)), toolFormat(toolDecimalFromDouble(circumference)))
     }
     public static func triangle(_ aText: String, _ bText: String, _ cText: String) throws -> (perimeter: String, semiperimeter: String, area: String) {
         let a = try toolDecimal(aText)
@@ -124,14 +134,16 @@ public enum GeometryTools {
         guard a > 0, b > 0, c > 0, a + b > c, a + c > b, b + c > a else {
             throw MathFlowToolError.invalidGeometry("Такие стороны не образуют треугольник")
         }
-        let perimeter = a + b + c
-        let semiperimeter = perimeter / 2
         let ad = NSDecimalNumber(decimal: a).doubleValue
         let bd = NSDecimalNumber(decimal: b).doubleValue
         let cd = NSDecimalNumber(decimal: c).doubleValue
-        let sd = (ad + bd + cd) / 2
-        let area = sqrt(sd * (sd - ad) * (sd - bd) * (sd - cd))
-        return (toolFormat(perimeter), toolFormat(semiperimeter), toolFormat(toolDecimalFromDouble(area)))
+        let perimeter = ad + bd + cd
+        let semiperimeter = perimeter / 2
+        let area = sqrt(semiperimeter * (semiperimeter - ad) * (semiperimeter - bd) * (semiperimeter - cd))
+        guard perimeter.isFinite, semiperimeter.isFinite, area.isFinite else {
+            throw MathFlowToolError.invalidGeometry("Не удалось вычислить площадь")
+        }
+        return (toolFormat(toolDecimalFromDouble(perimeter)), toolFormat(toolDecimalFromDouble(semiperimeter)), toolFormat(toolDecimalFromDouble(area)))
     }
 }
 
