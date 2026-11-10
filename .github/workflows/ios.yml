@@ -44,7 +44,7 @@ jobs:
 
       - name: Build iOS Simulator app
         run: |
-          xcodebuild build -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
+          xcodebuild build -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO
 
       - name: Run native iOS simulator tests
         run: |
