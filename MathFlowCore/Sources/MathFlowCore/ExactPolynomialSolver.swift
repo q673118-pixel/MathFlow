@@ -90,9 +90,9 @@ private struct ExactEquationParser {
         while i<chars.count {
             let ch=chars[i]
             if ch.isWhitespace { i+=1; continue }
-            if ch.isNumber || ch == "." || ch == "," {
+            if (ch.isNumber && !["²", "³", "⁴"].contains(ch)) || ch == "." || ch == "," {
                 let start=i; var separators=0
-                while i<chars.count && (chars[i].isNumber || chars[i] == "." || chars[i] == ",") {
+                while i<chars.count && ((chars[i].isNumber && !["²", "³", "⁴"].contains(chars[i])) || chars[i] == "." || chars[i] == ",") {
                     if chars[i] == "." || chars[i] == "," { separators+=1 }
                     if separators>1 { throw MathFlowMathError.invalidNumber }
                     i+=1
