@@ -199,4 +199,41 @@ final class MathToolsTests: XCTestCase {
         XCTAssertEqual(try AlgebraSolver.solve("sin(x) = 2").kind, "general_no_roots_in_range")
     }
 
+    func testEveryAndroidConverterCategoryAndUnitIDIsPresent() {
+        let expected: [String: [String]] = [
+            "length": ["mm", "cm", "m", "km", "in", "ft", "yd", "mi"],
+            "mass": ["mg", "g", "kg", "t", "oz", "lb"],
+            "area": ["mm2", "cm2", "m2", "ha", "km2", "acre"],
+            "volume": ["ml", "l", "m3", "tsp", "cup", "gal"],
+            "temperature": ["c", "f", "k"],
+            "speed": ["ms", "kmh", "mph", "kn"],
+            "time": ["ms", "s", "min", "h", "day"],
+            "pressure": ["pa", "kpa", "mpa", "bar", "atm", "mmhg"],
+            "energy": ["j", "kj", "cal", "kcal", "wh", "kwh"],
+            "data": ["b", "kb", "mb", "gb", "tb", "kib", "mib", "gib"]
+        ]
+        XCTAssertEqual(Set(UnitConverter.categories.map(\\.id)), Set(expected.keys))
+        for category in UnitConverter.categories {
+            XCTAssertEqual(category.units.map(\\.id), expected[category.id], "Unit catalog mismatch for \\(category.id)")
+        }
+    }
+
+    func testRepresentativeConversionsAcrossAllCategories() throws {
+        let cases: [(String, String, String, String, String)] = [
+            ("length", "1.25", "km", "m", "1250"),
+            ("mass", "1", "kg", "g", "1000"),
+            ("area", "1", "ha", "m2", "10000"),
+            ("volume", "1", "l", "m3", "0.001"),
+            ("temperature", "32", "f", "c", "0"),
+            ("speed", "36", "kmh", "ms", "10"),
+            ("time", "1", "h", "min", "60"),
+            ("pressure", "1", "bar", "pa", "100000"),
+            ("energy", "1", "kwh", "j", "3600000"),
+            ("data", "1", "gb", "mb", "1000")
+        ]
+        for (category, value, from, to, expected) in cases {
+            XCTAssertEqual(try UnitConverter.convert(value, category: category, from: from, to: to), expected, "Conversion mismatch: \\(category) \\(from) -> \\(to)")
+        }
+    }
+
 }
