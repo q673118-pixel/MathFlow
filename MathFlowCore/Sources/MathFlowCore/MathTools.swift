@@ -167,27 +167,37 @@ public enum UnitConverter {
         "data":["b":"1","kb":"1000","mb":"1000000","gb":"1000000000","tb":"1000000000000","kib":"1024","mib":"1048576","gib":"1073741824"]
     ]
 
-    private static let behavior = NSDecimalNumberHandler(roundingMode: .bankers, scale: 34, raiseOnExactness: false, raiseOnOverflow: true, raiseOnUnderflow: false, raiseOnDivideByZero: true)
+    private static let behavior = NSDecimalNumberHandler(roundingMode: .bankers, scale: 38, raiseOnExactness: false, raiseOnOverflow: true, raiseOnUnderflow: false, raiseOnDivideByZero: true)
+
+    private static func rounded34(_ value: Decimal) -> Decimal {
+        let magnitude = abs(NSDecimalNumber(decimal: value).doubleValue)
+        guard magnitude.isFinite, magnitude > 0 else { return value }
+        let scale = max(-128, min(127, 33 - Int(floor(log10(magnitude)))))
+        var input = value
+        var rounded = value
+        NSDecimalRound(&rounded, &input, scale, .bankers)
+        return rounded
+    }
 
     private static func decimal(_ source: String) throws -> Decimal {
         guard let value = Decimal(string: source, locale: Locale(identifier:"en_US_POSIX")) else { throw MathFlowToolError.unknownUnit }
         return value
     }
     private static func multiply(_ a: Decimal, _ b: Decimal) -> Decimal {
-        NSDecimalNumber(decimal:a).multiplying(by:NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+        rounded34(NSDecimalNumber(decimal:a).multiplying(by:NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue)
     }
     private static func divide(_ a: Decimal, _ b: Decimal) throws -> Decimal {
         guard b != 0 else { throw MathFlowToolError.divisionByZero }
-        return NSDecimalNumber(decimal:a).dividing(by:NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+        return rounded34(NSDecimalNumber(decimal:a).dividing(by:NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue)
     }
     private static func add(_ a: Decimal, _ b: Decimal) -> Decimal {
-        NSDecimalNumber(decimal:a).adding(NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+        rounded34(NSDecimalNumber(decimal:a).adding(NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue)
     }
     private static func subtract(_ a: Decimal, _ b: Decimal) -> Decimal {
-        NSDecimalNumber(decimal:a).subtracting(NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue
+        rounded34(NSDecimalNumber(decimal:a).subtracting(NSDecimalNumber(decimal:b), withBehavior:behavior).decimalValue)
     }
     private static func formatted(_ value: Decimal) -> String {
-        var value = value
+        var value = rounded34(value)
         var text = NSDecimalString(&value, Locale(identifier:"en_US_POSIX"))
         if text.contains(".") {
             while text.last == "0" { text.removeLast() }
