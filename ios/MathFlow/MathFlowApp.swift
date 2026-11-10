@@ -523,7 +523,7 @@ struct ToolsView: View {
         field(percentMode == 1 ? settings.text("whole") : settings.text("number"), text: $second, palette: p)
         if percentMode == 2 {
             Picker("Изменение", selection: $increase) {
-                Text(settings.text("percent_of")).tag(true); Text(settings.text("percent_decrease")).tag(false)
+                Text(settings.text("increase")).tag(true); Text(settings.text("percent_decrease")).tag(false)
             }.pickerStyle(.segmented)
         }
         action(settings.text("calculate"), palette: p) {
@@ -891,7 +891,7 @@ struct SettingsView: View {
                     }.padding(.vertical, 5).listRowBackground(p.surface)
                 }
                 Section(settings.text("nav_animations")) {
-                    Toggle(settings.text("nav_enabled"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
+                    Toggle(settings.text("enable_animation"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
                     Picker(settings.text("animations"), selection: $navStyle) {
                         ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
