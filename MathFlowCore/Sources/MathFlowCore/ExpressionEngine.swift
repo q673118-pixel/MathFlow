@@ -106,12 +106,12 @@ private enum MathDecimal {
         }
         if (bits >> 63) == 1 { numerator = -numerator }
         let exact = try! Rational(numerator, denominator)
-        return rounded(Decimal(string: exact.decimalString(scale: 32), locale: locale) ?? .zero)
+        return Decimal(string: exact.decimalString(scale: 24, rounding: .halfEven), locale: locale) ?? .zero
     }
 
     static func fromRational(_ value: Rational) -> Decimal {
-        let source = value.decimalString(scale: 32)
-        return rounded(Decimal(string: source, locale: locale) ?? .zero)
+        let source = value.decimalString(scale: 24, rounding: .halfEven)
+        return Decimal(string: source, locale: locale) ?? .zero
     }
 
     static func rounded(_ value: Decimal) -> Decimal {
