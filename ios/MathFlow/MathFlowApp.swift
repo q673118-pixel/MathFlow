@@ -538,7 +538,7 @@ struct ToolsView: View {
                 .frame(maxWidth: .infinity).padding(.vertical, 15)
                 .background(p.keyEquals, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .foregroundStyle(p.onKeyEquals)
-        }.buttonStyle(MathFlowPressStyle())
+        }.buttonStyle(MathFlowInteractionPressStyle())
     }
 
     @ViewBuilder private func fractionContent(_ p: MathFlowPalette) -> some View {
@@ -756,7 +756,7 @@ struct SolverView: View {
                     .frame(maxWidth: .infinity).padding(.vertical, 15)
                     .background(p.keyEquals, in: RoundedRectangle(cornerRadius: 15))
                     .foregroundStyle(p.onKeyEquals)
-            }.buttonStyle(MathFlowPressStyle())
+            }.buttonStyle(MathFlowInteractionPressStyle())
             if !answer.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(settings.text("result")).mathFlowFont(size: 12, weight: .semibold).foregroundStyle(p.muted)
