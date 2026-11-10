@@ -90,7 +90,7 @@ final class ExpressionEngineTests: XCTestCase {
     }
 
     func testLargeExactRationalIsConvertedWithoutOverflowDuringFunctionEvaluation() throws {
-        let result = try ExpressionEngine().calculate("sin(1e400/1e399)")
+        let result = try ExpressionEngine().calculate("sin(10^400/10^399)")
         XCTAssertEqual(Double(result.decimalValue)!, sin(Double.pi / 18), accuracy: 1e-12)
     }
 
@@ -100,7 +100,7 @@ final class ExpressionEngineTests: XCTestCase {
     }
 
     func testNegativeLargeRationalIsPreservedDuringFunctionEvaluation() throws {
-        let result = try ExpressionEngine().calculate("sin(-1e400/1e399)")
+        let result = try ExpressionEngine().calculate("sin(-10^400/10^399)")
         XCTAssertEqual(Double(result.decimalValue)!, -sin(Double.pi / 18), accuracy: 1e-12)
     }
 
