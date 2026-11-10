@@ -82,7 +82,7 @@ struct RootView: View {
     @State private var showSplash = true
     @State private var showWelcome = false
     @State private var splashScale: CGFloat = 0
-    @State private var splashAlpha = 0.0
+    @State private var splashAlpha = 1.0
     @State private var dotOffset: CGFloat = -450
     @State private var dotAlpha = 0.0
     @State private var dotScaleX: CGFloat = 1
