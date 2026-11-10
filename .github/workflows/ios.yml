@@ -46,6 +46,11 @@ jobs:
         run: |
           xcodebuild build -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
 
+      - name: Verify all alternate icons are registered in the app bundle
+        run: |
+          INFO_PLIST="build/ios/Build/Products/Debug-iphonesimulator/MathFlow.app/Info.plist"
+          plutil -extract CFBundleIcons.CFBundleAlternateIcons json -o - "$INFO_PLIST"
+
       - name: Upload simulator build
         uses: actions/upload-artifact@v4
         with:
