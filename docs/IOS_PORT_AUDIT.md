@@ -60,28 +60,49 @@ The app also has a first-launch welcome dialog and a branded animated intro spla
 - Preserve copy/paste actions, numeric keyboards, comma/dot parsing, error messages, keyboard dismissal, loading/cancellation behavior and accessibility labels.
 - Adapt system bars, safe areas, status/navigation areas, keyboard insets and back navigation to iOS without changing the MathFlow visual language.
 
-## Current iOS implementation audit (branch redesign-ui-ios, commit a1f1542b8d301733c4affef7565422b7473514dd)
-Implemented in the current branch:
-- SwiftUI app entry point and five-tab shell.
-- Initial calculator screen and basic key handling.
-- Ten palette definitions (must still be compared byte-for-byte/visually with Android palette source).
-- A basic history store capped at 100 records.
-- A basic press-scale button style.
-- Swift package with an initial Rational type and expression parser.
-- Initial unit tests for Rational and ExpressionEngine.
-- macOS GitHub Actions workflow successfully runs Swift package tests and builds an iOS Simulator .app.
+## Current iOS implementation audit (2026-11-10)
 
-Not yet ported / currently incomplete:
-- Tools screen is a placeholder: fraction, percentage, geometry, unit conversion and graph workflows are absent.
-- Equation solver screen is a placeholder and does not call an implementation of AlgebraSolver.
-- Settings currently expose themes only; icon selection, language selection, font import/library, text scaling, key-animation controls, bottom-navigation animation controls, staged selections and shared Apply behavior are absent.
-- Localization is absent from the SwiftUI screens; the interface is hard-coded in Russian.
-- The first-launch welcome dialog and branded animated intro splash are absent.
-- The existing Swift history implementation must be checked for timestamp parity, ordering, persistence compatibility, clear behavior and result-step formatting.
-- Calculator behavior is incomplete until all Android parser edge cases, key editing behavior, continuation, auto-parenthesis closure, cancellation, exact/approximate formatting and all tests are ported.
-- The current Swift package does not yet include the Android algebra solver, fraction/percentage/geometry modules or unit conversion engine.
-- No signed device archive, provisioning profile, distribution certificate or TestFlight upload is configured.
-- The current successful CI artifact is an unsigned iOS Simulator app only. It cannot be installed directly on a physical iPhone.
+Audited against the Android source above. The native port is substantially implemented, but is not yet at full parity.
+
+### Implemented
+- Native Swift and SwiftUI app entry point with five primary destinations; Android source files remain unchanged on the separate `redesign-ui` branch.
+- Calculator parser with exact rational arithmetic, implicit multiplication, scientific functions, angle mode, backspace, clear, continuation, optional worked steps and history integration.
+- Math core: arbitrary-precision Rational, fraction tools, percentage tools, rectangle/circle/triangle calculations and the ten-category offline unit converter.
+- Equation solver: exact linear/quadratic and rational-polynomial solving through degree four, denominator-domain exclusions, plus a numerical fallback. The fallback has been extended to mirror Android's `NumericParser`: absolute-value bars, fractional powers, radians, asin/acos/atan, exp, min and max.
+- Graph screen with x-variable evaluation and coordinate inspection.
+- History persisted locally and capped at 100 records.
+- Ten palettes and 15 language dictionaries; Arabic switches layout direction to RTL.
+- Native TTF/OTF import with security-scoped file access, CoreText registration, persistent copies and a saved-font list.
+- Ten alternate iOS app icon sets. A macOS build script renders the original Android vector paths and launcher backgrounds into iOS icon assets; the app uses `UIApplication.setAlternateIconName`.
+- Eight calculator-key animation styles and eight bottom-navigation styles, with staged settings and an explicit Apply action.
+- Native vector MathFlow mark and a two-impact splash animation based on the Android launcher artwork.
+- GitHub Actions workflow generates icon assets, runs Swift package tests and builds an unsigned iOS Simulator app.
+
+### Confirmed corrections from source comparison
+- Tool selection now stores stable IDs rather than translated labels, preventing the wrong tool screen from opening in non-Russian languages.
+- Calculator rows now match the Android key arrangement, including the AC key and scientific rows.
+- Bottom navigation is icon-only, matching the Compose implementation rather than showing extra labels.
+- Superscript digits are no longer tokenized as ordinary numbers by the Swift equation parser.
+- Polynomial root finding now uses derivative critical points, matching Android's approach for repeated roots.
+- Percentage and geometry output is rounded to Android's 16-significant-digit HALF_UP context.
+- General equation solving now uses the Android finite interval, radian trig behavior and matching numeric root-search strategy.
+
+### Remaining differences / not yet verified
+- The latest code changes still require a successful CI run. The last successful simulator build was an earlier commit; it does not verify the subsequent navigation, calculator typography and expanded equation-solver changes.
+- There is no Android/iPhone screenshot baseline in the repository, so pixel-level visual comparison has not been performed. Source-level comparison is complete, but actual-device appearance is not certified.
+- The iOS Settings screen is a single native List rather than Android's separate animated settings subpages. It includes the controls, but page structure, transition choreography and in-place animation previews are not yet equivalent.
+- Text scaling exposes the same 80–140% range and 5% slider step, but the current SwiftUI implementation maps it to a small number of Dynamic Type categories. It does not yet reproduce every 5% increment exactly.
+- Imported fonts can be stored, registered and selected, but explicit system-font declarations in several SwiftUI subviews still override the inherited custom font. A custom font is therefore not guaranteed to replace every text style.
+- The localization catalog covers all 15 Android languages, but some result descriptions, welcome text and secondary UI labels remain hard-coded. Full visible-string localization is not complete.
+- Key and navigation animation styles are available and behaviorally mapped, but SwiftUI timing/rendering is an approximation of Compose. Exact per-frame parity and Android-style settings previews have not been validated.
+- Approximate calculator operations use Swift Double rather than Android's 24-digit BigDecimal context. Exact rational operations remain arbitrary precision; unit conversion uses Decimal at 34-digit precision; percentage/geometry tools use the Android 16-significant-digit rounding policy.
+- The current CI artifact is an unsigned Simulator app. It is not an installable signed iPhone IPA. Device signing/TestFlight still require an Apple Developer team, certificate and provisioning profile, and a real iPhone test.
+- The iOS UI test target remains a smoke-test placeholder; most automated coverage currently lives in MathFlowCore unit tests.
+
+### Build verification snapshot
+- Last successful run known at audit time: run `42793368439`, commit `0a7c6a0c7c949453e23cb3d89c1d9cffdf47c61b`.
+- That run generated all ten icon PNGs, passed 37 MathFlowCore tests and built the iOS Simulator app.
+- Later changes to the equation solver, tool precision and calculator/navigation UI are newer than that successful run. Do not treat the earlier success as verification of the latest HEAD.
 
 ## Existing Android tests
 - Expression engine: exact decimal/fraction math, precedence, parentheses, powers, percent, divide-by-zero, degree trig, implicit multiplication, exact roots and abs, approximate negative powers.
