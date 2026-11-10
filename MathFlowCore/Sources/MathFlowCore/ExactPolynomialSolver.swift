@@ -200,8 +200,8 @@ enum ExactPolynomialEquationSolver {
             if d < .zero { return EquationSolution(kind:"no_real_roots",answer:"Действительных корней нет",steps:["Дискриминант D = \(d.fractionString) < 0. Действительных корней нет."]+domainLine) }
             if let sd=exactSquareRoot(d) {
                 let denom=Rational(2)*a
-                let x1=try (-b+sd).divided(by:denom), x2=try (-b-sd).divided(by:denom)
-                let roots=Array(Set([x1,x2])).filter { allowed(double($0)) }.sorted()
+                let x1=try (Rational.zero-b+sd).divided(by:denom), x2=try (Rational.zero-b-sd).divided(by:denom)
+                let roots=(x1 == x2 ? [x1] : [x1,x2]).filter { allowed(double($0)) }.sorted()
                 guard !roots.isEmpty else { return EquationSolution(kind:"no_solution",answer:"Решений нет",steps:["Все корни исключены ОДЗ"]+domainLine) }
                 if roots.count==1 { return EquationSolution(kind:"quadratic_double",answer:"x = \(roots[0].mixedString)",steps:["D = \(d.fractionString)","√D = \(sd.fractionString)","x = \(roots[0].fractionString)"]+domainLine) }
                 return EquationSolution(kind:"quadratic",answer:"x₁ = \(roots[1].mixedString), x₂ = \(roots[0].mixedString)",steps:["D = b² − 4ac = \(d.fractionString)","√D = \(sd.fractionString)","x₁ = \(roots[1].fractionString), x₂ = \(roots[0].fractionString)"]+domainLine)
