@@ -70,7 +70,7 @@ struct RootView: View {
     @State private var selection = 0
     @State private var showSplash = true
     @State private var showWelcome = false
-    @State private var splashScale: CGFloat = 0.35
+    @State private var splashScale: CGFloat = 0
     @State private var splashAlpha = 0.0
     @State private var dotOffset: CGFloat = -450
     @State private var dotAlpha = 0.0
@@ -99,7 +99,7 @@ struct RootView: View {
         .overlay {
             if showSplash {
                 ZStack {
-                    Color.black.ignoresSafeArea()
+                    settings.palette.background.ignoresSafeArea()
                     ZStack {
                         MathFlowMark()
                             .fill(settings.palette.accent)
@@ -127,24 +127,31 @@ struct RootView: View {
     private func runIntro() {
         guard showSplash else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            withAnimation(.spring(response: 0.48, dampingFraction: 0.68)) {
-                splashScale = 1.08; splashAlpha = 1
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
-                withAnimation(.spring(response: 0.24, dampingFraction: 0.78)) { splashScale = 1 }
+            withAnimation(.timingCurve(0, 0, 0.2, 1, duration: 0.39)) { splashScale = 1.08 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.39) {
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.48)) { splashScale = 1 }
                 dotAlpha = 1
-                withAnimation(.spring(response: 0.52, dampingFraction: 0.48)) { dotOffset = 0 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.58)) { dotOffset = -13 }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-                        withAnimation(.spring(response: 0.24, dampingFraction: 0.68)) { dotOffset = 0 }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-                            withAnimation(.easeOut(duration: 0.35)) { dotAlpha = 0 }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                                withAnimation(.easeOut(duration: 1.5)) { splashAlpha = 0; splashScale = 0.96 }
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                                    showSplash = false
-                                    if !UserDefaults.standard.bool(forKey: "mathflow.welcomeSeen") { showWelcome = true }
+                withAnimation(.easeIn(duration: 0.42)) { dotOffset = 0 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.42) {
+                    withAnimation(.easeOut(duration: 0.06)) { dotScaleX = 1.18; dotScaleY = 0.78 }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                        withAnimation(.easeOut(duration: 0.19)) { dotOffset = -42; dotScaleX = 0.90; dotScaleY = 1.12 }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.19) {
+                            withAnimation(.easeIn(duration: 0.17)) { dotOffset = 0; dotScaleX = 1.02; dotScaleY = 0.98 }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.215) {
+                                withAnimation(.easeOut(duration: 0.045)) { dotScaleX = 1.12; dotScaleY = 0.88 }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.045) {
+                                    withAnimation(.easeOut(duration: 0.125)) { dotOffset = -14; dotScaleX = 0.96; dotScaleY = 1.04 }
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.125) {
+                                        withAnimation(.easeIn(duration: 0.115)) { dotOffset = 0; dotScaleX = 1; dotScaleY = 1 }
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.235) {
+                                            withAnimation(.easeOut(duration: 1.0)) { splashAlpha = 0; dotAlpha = 0; splashScale = 0.96 }
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                                showSplash = false
+                                                if !UserDefaults.standard.bool(forKey: "mathflow.welcomeSeen") { showWelcome = true }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
