@@ -932,6 +932,22 @@ struct SettingsView: View {
                                 .onTapGesture { keyEffectColorID = colorID }
                         }
                     }.padding(.vertical, 5).listRowBackground(p.surface)
+                    HStack {
+                        Text(settings.text("animation_preview")).foregroundStyle(p.muted)
+                        Spacer()
+                        Button("123") {}
+                            .mathFlowFont(size: 18, weight: .semibold, design: .rounded)
+                            .padding(.horizontal, 22).padding(.vertical, 10)
+                            .background(p.key, in: Capsule())
+                            .buttonStyle(MathFlowPressStyle(
+                                styleOverride: keyStyle,
+                                durationOverride: keyDuration,
+                                opacityOverride: keyOpacity,
+                                intensityOverride: keyIntensity,
+                                colorEffectOverride: keyColorEffect,
+                                colorOverride: effectColor(for: keyEffectColorID, palette: p)
+                            ))
+                    }.listRowBackground(p.surface)
                 }
                 Section(settings.text("nav_animations")) {
                     Toggle(settings.text("enable_animation"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
@@ -1093,10 +1109,20 @@ struct MathFlowInteractionPressStyle: ButtonStyle {
 
 struct MathFlowPressStyle: ButtonStyle {
     @EnvironmentObject private var settings: AppSettings
+    var styleOverride: String? = nil
+    var durationOverride: Double? = nil
+    var opacityOverride: Double? = nil
+    var intensityOverride: Double? = nil
+    var colorEffectOverride: Bool? = nil
+    var colorOverride: Color? = nil
 
     func makeBody(configuration: Configuration) -> some View {
-        let style = settings.keyStyle
-        let amount = CGFloat(settings.keyIntensity)
+        let style = styleOverride ?? settings.keyStyle
+        let amount = CGFloat(intensityOverride ?? settings.keyIntensity)
+        let durationValue = durationOverride ?? settings.keyDuration
+        let opacityValue = opacityOverride ?? settings.keyOpacity
+        let colorEffectEnabled = colorEffectOverride ?? settings.keyColorEffect
+        let effectColor = colorOverride ?? settings.effectColor
         let pressed = configuration.isPressed
         let scales: (CGFloat, CGFloat) = {
             guard pressed else { return (1, 1) }
@@ -1111,17 +1137,17 @@ struct MathFlowPressStyle: ButtonStyle {
             default: return (1 - amount, 1 - amount)
             }
         }()
-        let duration = settings.keyDuration / 1000
+        let duration = durationValue / 1000
         let isSpring = ["spring", "bounce", "elastic"].contains(style)
-        let effectAlpha = style == "flash" ? settings.keyOpacity : style == "ripple" ? settings.keyOpacity * 0.34 : settings.keyOpacity * 0.22
+        let effectAlpha = style == "flash" ? opacityValue : style == "ripple" ? opacityValue * 0.34 : opacityValue * 0.22
 
         return configuration.label
             .scaleEffect(x: scales.0, y: scales.1, anchor: .center)
             .overlay {
-                if pressed && settings.keyColorEffect {
+                if pressed && colorEffectEnabled {
                     if style == "ripple" {
                         Circle()
-                            .fill(settings.effectColor.opacity(effectAlpha))
+                            .fill(effectColor.opacity(effectAlpha))
                             .scaleEffect(1 + amount * 3.3)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
