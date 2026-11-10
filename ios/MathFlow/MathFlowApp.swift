@@ -145,10 +145,12 @@ struct RootView: View {
                 }.transition(.opacity)
             }
         }
-        .alert("Добро пожаловать в MathFlow", isPresented: $showWelcome) {
-            Button("Начать") { UserDefaults.standard.set(true, forKey: "mathflow.welcomeSeen") }
+        .alert(settings.languageID == "kk" ? "MathFlow қолданбасына қош келдіңіз" : "Добро пожаловать в MathFlow", isPresented: $showWelcome) {
+            Button(settings.languageID == "kk" ? "ЖАРАЙДЫ" : "ОК") { UserDefaults.standard.set(true, forKey: "mathflow.welcomeSeen") }
         } message: {
-            Text("Научный калькулятор и математические инструменты всегда под рукой.")
+            Text(settings.languageID == "kk"
+                 ? "MathFlow қолданбасын жүктегеніңізге рақмет. Бұл қолданба математиканы түсінікті әрі ыңғайлы етуге көмектеседі деп сенеміз."
+                 : "Спасибо, что скачали MathFlow. Мы надеемся, что приложение сделает работу с математикой удобнее и понятнее.")
         }
         .onAppear(perform: runIntro)
     }
