@@ -2950,6 +2950,57 @@ public enum MathFlowLocalization {
     "ja": "クールなライトアクセントの落ち着いたグラファイト。",
     "ko": "차가운 밝은 포인트의 차분한 그래파이트 톤.",
     "uz": "Sovuq och urg‘uli sokin grafit ranglar."
+  },
+  "shape": {
+    "ru": "Фигура",
+    "en": "Shape",
+    "kk": "Пішін",
+    "es": "Figura",
+    "fr": "Forme",
+    "de": "Form",
+    "pt": "Forma",
+    "it": "Forma",
+    "tr": "Şekil",
+    "ar": "الشكل",
+    "hi": "आकार",
+    "zh": "图形",
+    "ja": "図形",
+    "ko": "도형",
+    "uz": "Shakl"
+  },
+  "percent_of_result": {
+    "ru": "% от",
+    "en": "% of",
+    "kk": "% мөлшері",
+    "es": "% de",
+    "fr": "% de",
+    "de": "% von",
+    "pt": "% de",
+    "it": "% di",
+    "tr": "% oranı",
+    "ar": "٪ من",
+    "hi": "का %",
+    "zh": "的百分比",
+    "ja": "の割合",
+    "ko": "의 비율",
+    "uz": "% i"
+  },
+  "is_percent_of": {
+    "ru": "составляет",
+    "en": "is",
+    "kk": "құрайды",
+    "es": "representa",
+    "fr": "représente",
+    "de": "entspricht",
+    "pt": "representa",
+    "it": "corrisponde a",
+    "tr": "oranındadır",
+    "ar": "يمثل",
+    "hi": "है",
+    "zh": "占",
+    "ja": "に相当",
+    "ko": "에 해당",
+    "uz": "tashkil etadi"
   }
 }
 """#.utf8)
