@@ -41,6 +41,31 @@ final class MathToolsTests: XCTestCase {
         XCTAssertEqual(try PercentTools.whatPercent("1", "3"), "33.33333333333333")
     }
 
+    func testToolPrecisionMatchesAndroidMathContextAndOperationOrder() throws {
+        XCTAssertEqual(
+            try PercentTools.percentOf("1.234567890123456789", "123456789.123456789"),
+            "1524157.876695626"
+        )
+        XCTAssertEqual(
+            try PercentTools.whatPercent("1.234567890123456789", "3.333333333333333333"),
+            "37.03703670370371"
+        )
+        XCTAssertEqual(
+            try PercentTools.change("123456789.123456789", percent: "12.34567890123456789", increase: true),
+            "138698367.8904131"
+        )
+    }
+
+    func testGeometryUsesAndroidDoublePipeline() throws {
+        let circle = try GeometryTools.circle("2")
+        XCTAssertEqual(circle.area, "12.56637061435917")
+        XCTAssertEqual(circle.circumference, "12.56637061435917")
+        let triangle = try GeometryTools.triangle("13", "14", "15")
+        XCTAssertEqual(triangle.perimeter, "42")
+        XCTAssertEqual(triangle.semiperimeter, "21")
+        XCTAssertEqual(triangle.area, "84")
+    }
+
     func testUnitConversions() throws {
         XCTAssertEqual(try UnitConverter.convert("1.25", category: "length", from: "km", to: "m"), "1250")
         XCTAssertEqual(try UnitConverter.convert("1", category: "mass", from: "lb", to: "kg"), "0.45359237")
