@@ -137,24 +137,59 @@ public struct Rational: Equatable, Comparable, Sendable {
     }
 
     public func decimalString(scale: Int = 10) -> String {
+        let precision = max(1, min(scale, 100))
+        if numerator == 0 { return "0" }
         let negative = numerator < 0
         let absolute = negative ? -numerator : numerator
-        let digits = max(0, min(scale, 100))
-        var factor: BigInt = 1
-        for _ in 0..<digits { factor *= 10 }
-        let scaledNumerator = absolute * factor
-        var scaled = scaledNumerator / denominator
-        let remainder = scaledNumerator % denominator
-        if remainder * 2 >= denominator { scaled += 1 }
-        let whole = scaled / factor
-        let fractionValue = scaled % factor
-        guard digits > 0 else { return (negative && scaled != 0 ? "-" : "") + String(whole) }
-        var fraction = String(fractionValue)
-        if fraction.count < digits {
-            fraction = String(repeating: "0", count: digits - fraction.count) + fraction
+
+        // Match BigDecimal MathContext rounding: scale is significant digits.
+        let numeratorDigits = String(absolute).count
+        let denominatorDigits = String(denominator).count
+        var decimalExponent = numeratorDigits - denominatorDigits
+        if decimalExponent >= 0 {
+            var power: BigInt = 1
+            for _ in 0..<decimalExponent { power *= 10 }
+            if absolute < denominator * power { decimalExponent -= 1 }
+        } else {
+            var power: BigInt = 1
+            for _ in 0..<(-decimalExponent) { power *= 10 }
+            if absolute * power < denominator { decimalExponent -= 1 }
         }
+
+        let decimalPlaces = precision - 1 - decimalExponent
+        let roundedInteger: BigInt
+        let outputPlaces: Int
+        if decimalPlaces >= 0 {
+            var factor: BigInt = 1
+            for _ in 0..<decimalPlaces { factor *= 10 }
+            let scaledNumerator = absolute * factor
+            var quotient = scaledNumerator / denominator
+            let remainder = scaledNumerator % denominator
+            if remainder * 2 >= denominator { quotient += 1 }
+            roundedInteger = quotient
+            outputPlaces = decimalPlaces
+        } else {
+            let integerPlaces = -decimalPlaces
+            var factor: BigInt = 1
+            for _ in 0..<integerPlaces { factor *= 10 }
+            let divisor = denominator * factor
+            var quotient = absolute / divisor
+            let remainder = absolute % divisor
+            if remainder * 2 >= divisor { quotient += 1 }
+            roundedInteger = quotient * factor
+            outputPlaces = 0
+        }
+
+        let sign = negative && roundedInteger != 0 ? "-" : ""
+        guard outputPlaces > 0 else { return sign + String(roundedInteger) }
+        var digits = String(roundedInteger)
+        if digits.count <= outputPlaces {
+            digits = String(repeating: "0", count: outputPlaces + 1 - digits.count) + digits
+        }
+        let split = digits.index(digits.endIndex, offsetBy: -outputPlaces)
+        let whole = String(digits[..<split])
+        var fraction = String(digits[split...])
         while fraction.last == "0" { fraction.removeLast() }
-        let sign = negative && scaled != 0 ? "-" : ""
-        return fraction.isEmpty ? sign + String(whole) : sign + String(whole) + "." + fraction
+        return fraction.isEmpty ? sign + whole : sign + whole + "." + fraction
     }
 }
