@@ -467,6 +467,7 @@ struct ToolsView: View {
     @State private var graphMin = "-5"
     @State private var graphMax = "5"
     @State private var graphPoints: [CGPoint] = []
+    @State private var selectedGraphIndex: Int? = nil
 
     private let options = ["fractions", "percentages", "geometry", "converter", "graph"]
     private var category: UnitCategory { UnitConverter.categories.first(where: { $0.id == categoryID }) ?? UnitConverter.categories[0] }
@@ -528,6 +529,12 @@ struct ToolsView: View {
                 result = ""
             }
         }
+        .onChange(of: graphExpression) { _ in
+            selectedGraphIndex = nil
+            graphPoints = []
+        }
+        .onChange(of: graphMin) { _ in selectedGraphIndex = nil }
+        .onChange(of: graphMax) { _ in selectedGraphIndex = nil }
     }
 
     private func field(_ title: String, text: Binding<String>, palette p: MathFlowPalette, decimal: Bool = true) -> some View {
@@ -664,6 +671,19 @@ struct ToolsView: View {
     @ViewBuilder private func graphContent(_ p: MathFlowPalette) -> some View {
         Text(settings.text("graph")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
         field(settings.text("graph_input"), text: $graphExpression, palette: p, decimal: false)
+        HStack(spacing: 8) {
+            ForEach([5, 10, 20], id: \.self) { range in
+                Button("±\\(range)") {
+                    graphMin = String(-range)
+                    graphMax = String(range)
+                    selectedGraphIndex = nil
+                }
+                .mathFlowFont(size: 12, weight: .semibold)
+                .padding(.horizontal, 13).padding(.vertical, 8)
+                .background(graphMin == String(-range) && graphMax == String(range) ? p.keyEquals : p.key, in: Capsule())
+                .foregroundStyle(graphMin == String(-range) && graphMax == String(range) ? p.onKeyEquals : p.text)
+            }
+        }
         HStack(spacing: 10) {
             field("X от", text: $graphMin, palette: p)
             field("X до", text: $graphMax, palette: p)
@@ -674,27 +694,38 @@ struct ToolsView: View {
                   lower.isFinite, upper.isFinite, lower < upper else {
                 throw MathFlowToolError.invalidNumber("Некорректный диапазон X")
             }
-            let engine = ExpressionEngine()
+            let engine = ExpressionEngine(angleMode: .radians)
             var points: [CGPoint] = []
-            for index in 0...240 {
-                let x = lower + (upper - lower) * Double(index) / 240
+            for index in 0...120 {
+                let x = lower + (upper - lower) * Double(index) / 120
                 if let value = try? engine.calculate(graphExpression, variables: ["x": x], includeSteps: false),
-                   let y = Double(value.decimalValue), y.isFinite, abs(y) < 1.0e9 {
+                   let y = Double(value.decimalValue), y.isFinite, abs(y) < 1.0e7 {
                     points.append(CGPoint(x: x, y: y))
                 } else {
                     points.append(CGPoint(x: x, y: .nan))
                 }
             }
             graphPoints = points
-            return "Построено точек: \(points.filter { $0.y.isFinite }.count) из 241"
+            selectedGraphIndex = nil
+            return "Построено точек: \\(points.filter { $0.y.isFinite }.count) из 121"
         }
         if !graphPoints.isEmpty {
             graphPlot(p)
                 .frame(height: 250)
                 .padding(10)
                 .background(p.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            if let index = selectedGraphIndex, graphPoints.indices.contains(index), graphPoints[index].y.isFinite {
+                let point = graphPoints[index]
+                Text(String(format: "x = %.2f   y = %.2f", locale: Locale(identifier: "en_US_POSIX"), point.x, point.y))
+                    .mathFlowFont(size: 13, weight: .medium)
+                    .foregroundStyle(p.accent)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            } else {
+                Text(settings.text("graph_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted)
+            }
+        } else {
+            Text(settings.text("graph_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted)
         }
-        Text(settings.text("graph_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted)
     }
 
     private func graphPlot(_ p: MathFlowPalette) -> some View {
@@ -702,39 +733,71 @@ struct ToolsView: View {
             let valid = graphPoints.filter { $0.x.isFinite && $0.y.isFinite }
             let minX = graphPoints.first?.x ?? -5
             let maxX = graphPoints.last?.x ?? 5
-            let minY = max(-100.0, valid.map(\.y).min() ?? -1)
-            let maxY = min(100.0, valid.map(\.y).max() ?? 1)
-            let spanY = max(0.000001, maxY - minY)
+            let rawMinY = valid.map(\.y).min() ?? -1
+            let rawMaxY = valid.map(\.y).max() ?? 1
+            let padding = max((rawMaxY - rawMinY) * 0.08, 0.5)
+            let minY = rawMinY - padding
+            let maxY = rawMaxY + padding
+            let spanY = max(1.0, maxY - minY)
+            func plotX(_ x: Double) -> CGFloat {
+                CGFloat((x - minX) / max(0.000001, maxX - minX)) * geometry.size.width
+            }
+            func plotY(_ y: Double) -> CGFloat {
+                CGFloat(1 - (y - minY) / spanY) * geometry.size.height
+            }
             ZStack {
                 Path { path in
                     for step in 0...4 {
+                        let x = geometry.size.width * CGFloat(step) / 4
                         let y = geometry.size.height * CGFloat(step) / 4
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x, y: geometry.size.height))
                         path.move(to: CGPoint(x: 0, y: y))
                         path.addLine(to: CGPoint(x: geometry.size.width, y: y))
                     }
                     if minX <= 0 && maxX >= 0 {
-                        let x = geometry.size.width * CGFloat((0 - minX) / (maxX - minX))
-                        path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: geometry.size.height))
+                        let x = plotX(0)
+                        path.move(to: CGPoint(x: x, y: 0))
+                        path.addLine(to: CGPoint(x: x, y: geometry.size.height))
                     }
                     if minY <= 0 && maxY >= 0 {
-                        let y = geometry.size.height * CGFloat(maxY / spanY)
-                        path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: geometry.size.width, y: y))
+                        let y = plotY(0)
+                        path.move(to: CGPoint(x: 0, y: y))
+                        path.addLine(to: CGPoint(x: geometry.size.width, y: y))
                     }
                 }.stroke(p.muted.opacity(0.25), lineWidth: 1)
+
                 Path { path in
                     var active = false
                     for point in graphPoints {
                         guard point.y.isFinite else { active = false; continue }
-                        let x = CGFloat((point.x - minX) / max(0.000001, maxX - minX)) * geometry.size.width
-                        let clippedY = min(max(point.y, minY), maxY)
-                        let y = CGFloat((maxY - clippedY) / spanY) * geometry.size.height
-                        if active { path.addLine(to: CGPoint(x: x, y: y)) }
-                        else { path.move(to: CGPoint(x: x, y: y)); active = true }
+                        let plotted = CGPoint(x: plotX(point.x), y: plotY(point.y))
+                        if active { path.addLine(to: plotted) }
+                        else { path.move(to: plotted); active = true }
                     }
                 }.stroke(p.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+
+                if let index = selectedGraphIndex, graphPoints.indices.contains(index) {
+                    let point = graphPoints[index]
+                    if point.y.isFinite {
+                        let center = CGPoint(x: plotX(point.x), y: plotY(point.y))
+                        Circle().fill(p.keyEquals).frame(width: 14, height: 14).position(center)
+                        Circle().fill(p.onKeyEquals).frame(width: 6, height: 6).position(center)
+                    }
+                }
             }
+            .contentShape(Rectangle())
+            .gesture(SpatialTapGesture().onEnded { value in
+                guard geometry.size.width > 0 else { return }
+                let fraction = min(1, max(0, Double(value.location.x / geometry.size.width)))
+                let targetX = minX + fraction * (maxX - minX)
+                selectedGraphIndex = graphPoints.indices
+                    .filter { graphPoints[$0].y.isFinite }
+                    .min { abs(graphPoints[$0].x - targetX) < abs(graphPoints[$1].x - targetX) }
+            })
         }
     }
+
 }
 
 struct SolverView: View {
