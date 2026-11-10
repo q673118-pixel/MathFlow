@@ -88,7 +88,7 @@ Audited against the Android source above. The native port is substantially imple
 - General equation solving now uses the Android finite interval, radian trig behavior and matching numeric root-search strategy.
 
 ### Remaining differences / not yet verified
-- The latest code changes still require a successful CI run. The last successful simulator build was an earlier commit; it does not verify the subsequent navigation, calculator typography and expanded equation-solver changes.
+- Commit `ca9aac9faf3cc8ea36670c153d74c729f2b37563` passed CI: 47 MathFlowCore tests, 2 iOS target tests, simulator build, and alternate-icon plist validation. Newer animation timing adjustments are on commit `ad4bfc54a03bcf6e100fccacf0f982bd63c2466c`; its CI run is still in progress at the time of this audit update.
 - There is no Android/iPhone screenshot baseline in the repository, so pixel-level visual comparison has not been performed. Source-level comparison is complete, but actual-device appearance is not certified.
 - The iOS Settings screen is a single native List rather than Android's separate animated settings subpages. Theme and icon descriptions/previews are present, but the full-page structure and transition choreography are not equivalent.
 - Text scaling now uses the full 80–140% range in exact 5% increments. The custom multiplier is combined with SwiftUI `ScaledMetric`, so the iOS accessibility text-size setting is still respected.
