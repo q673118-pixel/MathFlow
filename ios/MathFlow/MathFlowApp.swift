@@ -193,13 +193,29 @@ struct RootView: View {
     }
 }
 
+struct NavPreviewSettings {
+    let enabled: Bool
+    let style: String
+    let duration: Double
+    let intensity: Double
+    let iconScale: Double
+    let opacity: Double
+}
+
 private struct BottomNavigation: View {
     @EnvironmentObject private var settings: AppSettings
     @Binding var selection: Int
+    var previewSettings: NavPreviewSettings? = nil
     private let items: [(String,String)] = [("function","home"),("square.grid.2x2","tools"),("equal","solver"),("clock.arrow.circlepath","history"),("slider.horizontal.3","settings")]
 
     var body: some View {
         let p = settings.palette
+        let enabled = previewSettings?.enabled ?? enabled
+        let style = previewSettings?.style ?? style
+        let durationValue = previewSettings?.duration ?? durationValue
+        let intensity = previewSettings?.intensity ?? intensity
+        let iconScale = previewSettings?.iconScale ?? iconScale
+        let opacity = previewSettings?.opacity ?? opacity
         HStack(spacing: 3) {
             ForEach(items.indices, id: \.self) { index in
                 let selected = selection == index
@@ -209,34 +225,34 @@ private struct BottomNavigation: View {
                     Image(systemName: items[index].0)
                         .font(.system(size: 26, weight: .regular))
                         .scaleEffect(
-                            x: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 + settings.navIconScale * 0.45 : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1),
-                            y: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 - settings.navIconScale * (0.35 + settings.navIntensity * 0.45) : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1)
+                            x: enabled && selected && style == "morph" ? 1 + iconScale * 0.45 : (enabled && selected ? 1 + iconScale : 1),
+                            y: enabled && selected && style == "morph" ? 1 - iconScale * (0.35 + intensity * 0.45) : (enabled && selected ? 1 + iconScale : 1)
                         )
                         .foregroundStyle(selected ? p.accent : p.muted)
                         .frame(maxWidth: .infinity).frame(height: 48)
                     .background {
-                        if selected && settings.navEnabled && !["soft_focus", "light_trail"].contains(settings.navStyle) {
-                            RoundedRectangle(cornerRadius: settings.navStyle == "morph" ? 15 : 22, style: .continuous)
-                                .fill(p.navActive.opacity(settings.navOpacity))
+                        if selected && enabled && !["soft_focus", "light_trail"].contains(style) {
+                            RoundedRectangle(cornerRadius: style == "morph" ? 15 : 22, style: .continuous)
+                                .fill(p.navActive.opacity(opacity))
                                 .matchedGeometryEffect(id: "mathflow.nav.indicator", in: namespace)
-                                .scaleEffect(x: settings.navStyle == "expand" ? 1 + settings.navIntensity * 0.12 : settings.navStyle == "elastic_slide" ? 1 + settings.navIntensity * 0.08 : settings.navStyle == "ripple_bloom" ? 0.72 + settings.navIntensity * 0.28 : 1, y: 1)
+                                .scaleEffect(x: style == "expand" ? 1 + intensity * 0.12 : style == "elastic_slide" ? 1 + intensity * 0.08 : style == "ripple_bloom" ? 0.72 + intensity * 0.28 : 1, y: 1)
                         }
-                        if selected && settings.navEnabled && settings.navStyle == "soft_focus" {
+                        if selected && enabled && style == "soft_focus" {
                             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .fill(p.navActive.opacity(settings.navOpacity * 0.62))
+                                .fill(p.navActive.opacity(opacity * 0.62))
                         }
                     }
-                    .opacity(settings.navEnabled && settings.navStyle == "soft_focus" && !selected ? 0.58 : 1)
-                    .scaleEffect(settings.navEnabled && selected && settings.navStyle == "expand" ? 1 + settings.navIntensity * 0.12 : 1)
+                    .opacity(enabled && style == "soft_focus" && !selected ? 0.58 : 1)
+                    .scaleEffect(enabled && selected && style == "expand" ? 1 + intensity * 0.12 : 1)
                     .overlay(alignment: .bottom) {
-                        if selected && settings.navStyle == "light_trail" {
+                        if selected && style == "light_trail" {
                             Capsule().fill(p.accent)
-                                .frame(width: 38 + 24 * settings.navIntensity, height: 3)
+                                .frame(width: 38 + 24 * intensity, height: 3)
                                 .padding(.bottom, 2)
                         }
                     }
                 }
-                .buttonStyle(MathFlowPressStyle())
+                .buttonStyle(MathFlowInteractionPressStyle())
                 .accessibilityLabel(settings.text(items[index].1))
             }
         }
@@ -247,9 +263,12 @@ private struct BottomNavigation: View {
 
     @Namespace private var namespace
     private var animation: Animation {
-        guard settings.navEnabled else { return .linear(duration: 0) }
-        let duration = settings.navDuration / 1000
-        switch settings.navStyle {
+        let enabled = previewSettings?.enabled ?? settings.navEnabled
+        let style = previewSettings?.style ?? settings.navStyle
+        let durationValue = previewSettings?.duration ?? settings.navDuration
+        guard enabled else { return .linear(duration: 0) }
+        let duration = durationValue / 1000
+        switch style {
         case "spring_motion": return .spring(response: duration, dampingFraction: 0.72)
         case "elastic_slide": return .spring(response: duration, dampingFraction: 0.48)
         case "ripple_bloom": return .spring(response: duration, dampingFraction: 0.68)
@@ -817,6 +836,7 @@ struct SettingsView: View {
     @State private var fontMessage: String?
     @State private var languageSearch = ""
     @State private var savedFonts: [SavedFont] = []
+    @State private var previewNavSelection = 0
     @State private var initialized = false
 
     private let themes = ["vanilla", "black", "white", "purple", "ocean", "emerald", "sunset", "rose", "midnight", "graphite"]
@@ -968,6 +988,12 @@ struct SettingsView: View {
                         ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
                     Text(settings.text(navStyleDescriptionKey)).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
+                    BottomNavigation(
+                        selection: $previewNavSelection,
+                        previewSettings: NavPreviewSettings(enabled: navEnabled, style: navStyle, duration: navDuration, intensity: navIntensity, iconScale: navIconScale, opacity: navOpacity)
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(p.surface)
                     settingSlider(settings.text("nav_duration"), value: $navDuration, range: 100...1000, suffix: " мс", p: p)
                     settingSlider(settings.text("animation_intensity"), value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
                     settingSlider(settings.text("nav_icon_scale"), value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
