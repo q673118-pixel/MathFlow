@@ -836,10 +836,39 @@ struct SettingsView: View {
 }
 
 struct MathFlowPressStyle: ButtonStyle {
+    @EnvironmentObject private var settings: AppSettings
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.965 : 1)
-            .animation(.spring(response: 0.22, dampingFraction: 0.8), value: configuration.isPressed)
+        let style = settings.keyStyle
+        let amount = settings.keyIntensity
+        let scale: CGFloat = {
+            guard configuration.isPressed else { return 1 }
+            switch style {
+            case "scale": return 1 + amount
+            case "elastic": return 1 + amount
+            case "minimal": return 1 - amount * 0.25
+            case "press": return 1 - amount * 0.45
+            case "bounce": return 1 - amount * 0.60
+            case "flash": return 1 - amount * 0.12
+            case "ripple": return 1
+            default: return 1 - amount
+            }
+        }()
+        let duration = settings.keyDuration / 1000
+        return configuration.label
+            .scaleEffect(scale)
+            .overlay {
+                if configuration.isPressed && settings.keyColorEffect {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(settings.palette.accent.opacity(settings.keyStyle == "flash" ? settings.keyOpacity : settings.keyOpacity * 0.22))
+                        .allowsHitTesting(false)
+                }
+            }
+            .animation(
+                ["spring","bounce","elastic"].contains(style)
+                    ? .spring(response: duration, dampingFraction: style == "elastic" ? 0.48 : 0.72)
+                    : .easeOut(duration: duration),
+                value: configuration.isPressed
+            )
     }
 }
 
