@@ -248,8 +248,14 @@ enum ExactPolynomialEquationSolver {
         return lo
     }
     private static func realRoots(_ poly:ExactPolynomial)->[Double] {
-        let coefficients = (0...poly.degree).map {
-            poly[$0].doubleValue
+        let magnitudes = poly.c.map { coefficient in
+            (try? Rational(coefficient.numerator < 0 ? -coefficient.numerator : coefficient.numerator,
+                           coefficient.denominator)) ?? .zero
+        }
+        guard let scale = magnitudes.max(), scale != .zero else { return [] }
+        let coefficients: [Double] = poly.c.map { coefficient in
+            guard let normalized = try? coefficient.divided(by: scale) else { return .nan }
+            return normalized.doubleValue
         }
         return realRoots(coefficients)
     }
