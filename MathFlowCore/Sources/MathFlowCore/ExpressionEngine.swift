@@ -125,6 +125,13 @@ private enum MathDecimal {
         return result
     }
 
+    static func power(_ base: Decimal, exponent: Int) throws -> Decimal {
+        let rational = try Rational.parseDecimal(string(base))
+        let magnitude = try rational.power(abs(exponent))
+        let powered = Decimal(string: magnitude.decimalString(scale: 24, rounding: .halfEven), locale: locale) ?? .zero
+        return exponent >= 0 ? powered : try calculate(1, powered, operation: .divide)
+    }
+
     static func calculate(_ lhs: Decimal, _ rhs: Decimal, operation: TokenKind) throws -> Decimal {
         let a = NSDecimalNumber(decimal: lhs)
         let b = NSDecimalNumber(decimal: rhs)
@@ -317,9 +324,7 @@ private final class Parser {
             switch base {
             case .exact(let value): result = .exact(try value.power(n))
             case .approximate(let value):
-                let answer = pow(NSDecimalNumber(decimal: value).doubleValue, Double(n))
-                guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
-                result = .approximate(MathDecimal.fromDouble(answer))
+                result = .approximate(try MathDecimal.power(value, exponent: n))
             }
             if includeSteps { steps.append("\(base.description)^\(n) = \(result.description)") }
             return result
