@@ -457,17 +457,57 @@ struct ToolsView: View {
 struct SolverView: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var equation = ""
-    @State private var answer = "Введите уравнение"
+    @State private var answer = ""
+    @State private var steps: [String] = []
+    @State private var error: String?
+
     var body: some View {
         let p = settings.palette
         VStack(alignment: .leading, spacing: 16) {
             Text("Уравнения").font(.largeTitle.bold()).foregroundStyle(p.text)
+            Text("Введите уравнение с одной переменной x").font(.subheadline).foregroundStyle(p.muted)
             TextField("Например: 2x + 3 = 11", text: $equation)
-                .textFieldStyle(.roundedBorder)
-            Text(answer).foregroundStyle(p.text)
-            Spacer()
+                .textFieldStyle(.plain)
+                .font(.system(size: 18, weight: .medium, design: .rounded))
+                .padding(15).background(p.key, in: RoundedRectangle(cornerRadius: 15))
+                .foregroundStyle(p.text)
+                .keyboardType(.numbersAndPunctuation)
+            Button {
+                do {
+                    let solution = try AlgebraSolver.solve(equation)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        answer = solution.answer; steps = solution.steps; error = nil
+                    }
+                } catch {
+                    answer = ""; steps = []; self.error = error.localizedDescription
+                }
+            } label: {
+                Text("Решить уравнение").font(.system(size: 16, weight: .semibold))
+                    .frame(maxWidth: .infinity).padding(.vertical, 15)
+                    .background(p.keyEquals, in: RoundedRectangle(cornerRadius: 15))
+                    .foregroundStyle(p.onKeyEquals)
+            }.buttonStyle(MathFlowPressStyle())
+            if !answer.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Ответ").font(.caption.weight(.semibold)).foregroundStyle(p.muted)
+                    Text(answer).font(.system(size: 23, weight: .semibold, design: .rounded)).foregroundStyle(p.text)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
+                    .background(p.surface, in: RoundedRectangle(cornerRadius: 18))
+                VStack(alignment: .leading, spacing: 9) {
+                    Text("Решение").font(.headline).foregroundStyle(p.text)
+                    ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                        HStack(alignment: .top, spacing: 9) {
+                            Text("\(index + 1).").foregroundStyle(p.accent).fontWeight(.semibold)
+                            Text(step).foregroundStyle(p.muted)
+                        }.font(.subheadline)
+                    }
+                }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(p.surface, in: RoundedRectangle(cornerRadius: 18))
+            }
+            if let error { Text(error).font(.caption).foregroundStyle(p.error) }
+            Spacer(minLength: 0)
         }
-        .padding()
+        .padding(16)
         .background(p.background)
     }
 }
