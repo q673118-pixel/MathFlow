@@ -12,13 +12,17 @@ public struct CalculationResult: Sendable {
 
 public struct ExpressionEngine {
     private let angleMode: AngleMode
-    public init(angleMode: AngleMode = .degrees) { self.angleMode = angleMode }
+    private let allowsFractionalPowers: Bool
+    public init(angleMode: AngleMode = .degrees, allowsFractionalPowers: Bool = false) {
+        self.angleMode = angleMode
+        self.allowsFractionalPowers = allowsFractionalPowers
+    }
 
     public func calculate(_ source: String, variables: [String: Double] = [:], includeSteps: Bool = true) throws -> CalculationResult {
         guard !source.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw MathFlowMathError.malformedExpression
         }
-        let parser = try Parser(source: source, angleMode: angleMode, variables: variables, includeSteps: includeSteps)
+        let parser = try Parser(source: source, angleMode: angleMode, variables: variables, includeSteps: includeSteps, allowsFractionalPowers: allowsFractionalPowers)
         let value = try parser.parse()
         switch value {
         case .exact(let rational):
@@ -77,12 +81,14 @@ private final class Parser {
     private let angleMode: AngleMode
     private let includeSteps: Bool
     private let variables: [String: Double]
+    private let allowsFractionalPowers: Bool
     fileprivate var steps: [String] = []
 
-    init(source: String, angleMode: AngleMode, variables: [String: Double], includeSteps: Bool) throws {
+    init(source: String, angleMode: AngleMode, variables: [String: Double], includeSteps: Bool, allowsFractionalPowers: Bool) throws {
         self.angleMode = angleMode
         self.variables = variables
         self.includeSteps = includeSteps
+        self.allowsFractionalPowers = allowsFractionalPowers
         self.tokens = try Self.tokenize(source)
     }
 
@@ -193,19 +199,26 @@ private final class Parser {
         guard peek.kind == .power else { return base }
         _ = take()
         let exponentValue = try parseUnary()
-        guard case .exact(let exponent) = exponentValue, exponent.isInteger,
-              let n = Int(String(exponent.numerator)), (-1000...1000).contains(n) else {
+        if case .exact(let exponent) = exponentValue, exponent.isInteger,
+           let n = Int(String(exponent.numerator)), (-1000...1000).contains(n) {
+            let result: MathValue
+            switch base {
+            case .exact(let value): result = .exact(try value.power(n))
+            case .approximate(let value):
+                let answer = pow(value, Double(n))
+                guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
+                result = .approximate(answer)
+            }
+            if includeSteps { steps.append("\(base.description)^\(n) = \(result.description)") }
+            return result
+        }
+        guard allowsFractionalPowers else {
             throw MathFlowMathError.unsupportedExpression("Пока поддерживаются только целые показатели степени")
         }
-        let result: MathValue
-        switch base {
-        case .exact(let value): result = .exact(try value.power(n))
-        case .approximate(let value):
-            let answer = pow(value, Double(n))
-            guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
-            result = .approximate(answer)
-        }
-        if includeSteps { steps.append("\(base.description)^\(n) = \(result.description)") }
+        let answer = pow(base.doubleValue, exponentValue.doubleValue)
+        guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
+        let result = MathValue.approximate(answer)
+        if includeSteps { steps.append("\(base.description)^\(exponentValue.description) ≈ \(result.description)") }
         return result
     }
 
