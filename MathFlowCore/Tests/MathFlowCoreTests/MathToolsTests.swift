@@ -31,6 +31,13 @@ final class MathToolsTests: XCTestCase {
         let triangle = try GeometryTools.triangle("3", "4", "5")
         XCTAssertEqual(triangle.area, "6")
         XCTAssertThrowsError(try GeometryTools.triangle("1", "2", "8"))
+        let circle = try GeometryTools.circle("1")
+        XCTAssertEqual(circle.area, "3.141592653589793")
+        XCTAssertEqual(circle.circumference, "6.283185307179586")
+    }
+
+    func testPercentageUsesAndroidSixteenDigitPrecision() throws {
+        XCTAssertEqual(try PercentTools.whatPercent("1", "3"), "33.33333333333333")
     }
 
     func testUnitConversions() throws {
