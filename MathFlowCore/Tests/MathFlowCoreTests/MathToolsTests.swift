@@ -244,13 +244,13 @@ final class MathToolsTests: XCTestCase {
         ]
         for category in UnitConverter.categories {
             guard let base = bases[category.id] else {
-                XCTFail("Missing base unit for \\(category.id)")
+                XCTFail("Missing base unit for \(category.id)")
                 continue
             }
             for unit in category.units {
                 let baseValue = try UnitConverter.convert("1", category: category.id, from: unit.id, to: base)
                 let roundTrip = try UnitConverter.convert(baseValue, category: category.id, from: base, to: unit.id)
-                XCTAssertEqual(Double(roundTrip) ?? .nan, 1.0, accuracy: 1e-12, "Round-trip failed for \\(category.id): \\(unit.id)")
+                XCTAssertEqual(Double(roundTrip) ?? .nan, 1.0, accuracy: 1e-12, "Round-trip failed for \(category.id): \(unit.id)")
             }
         }
     }
