@@ -1167,33 +1167,11 @@ struct SettingsView: View {
     }
 
     private func themeDescription(_ id: String) -> String {
-        switch id {
-        case "vanilla": return "Фирменная фиолетовая палитра MathFlow."
-        case "black": return "Почти чёрный интерфейс с нейтральными поверхностями."
-        case "white": return "Светлая тема с чистыми белыми поверхностями."
-        case "purple": return "Глубокий фиолетовый с насыщенными акцентами."
-        case "ocean": return "Холодные синие оттенки и яркий голубой акцент."
-        case "emerald": return "Тёмно-зелёная палитра с мятными акцентами."
-        case "sunset": return "Тёплые оттенки заката: коралл, оранжевый и розовый."
-        case "rose": return "Мягкая розовая тема с ярким малиновым акцентом."
-        case "midnight": return "Ночная фиолетовая палитра с мягкими лавандовыми акцентами."
-        default: return "Спокойные графитовые оттенки с холодным светлым акцентом."
-        }
+        settings.text("style_desc_\(id)")
     }
 
     private func iconDescription(_ id: String) -> String {
-        switch id {
-        case "vanilla": return "Оригинальная фиолетовая иконка MathFlow."
-        case "black": return "Чёрный фон и белый фирменный знак."
-        case "white": return "Белый фон с фиолетовым знаком."
-        case "purple": return "Тёмный фон с насыщенным фиолетовым знаком."
-        case "ocean": return "Глубокий синий фон и яркий голубой знак."
-        case "emerald": return "Тёмно-зелёный фон и мятный знак."
-        case "sunset": return "Градиент заката с белым фирменным знаком."
-        case "rose": return "Нежно-розовый фон и малиновый знак."
-        case "midnight": return "Глубокий ночной фон и лавандовый знак."
-        default: return "Графитовый фон и светлый холодный знак."
-        }
+        settings.text("style_desc_\(id)")
     }
 
     private func loadSavedFonts() {
