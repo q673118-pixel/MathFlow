@@ -269,10 +269,14 @@ private struct BottomNavigation: View {
         guard enabled else { return .linear(duration: 0) }
         let duration = durationValue / 1000
         switch style {
-        case "spring_motion": return .spring(response: duration, dampingFraction: 0.72)
-        case "elastic_slide": return .spring(response: duration, dampingFraction: 0.48)
-        case "ripple_bloom": return .spring(response: duration, dampingFraction: 0.68)
-        default: return .easeInOut(duration: duration)
+        case "fluid_pill":
+            return .spring(response: 2 * Double.pi / sqrt(440.0), dampingFraction: 0.78)
+        case "spring_motion":
+            return .spring(response: 2 * Double.pi / sqrt(360.0), dampingFraction: 0.78)
+        case "elastic_slide":
+            return .spring(response: 2 * Double.pi / sqrt(520.0), dampingFraction: 0.48)
+        default:
+            return .timingCurve(0.4, 0, 0.2, 1, duration: duration)
         }
     }
 }
