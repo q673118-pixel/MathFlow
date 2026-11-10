@@ -122,8 +122,6 @@ struct RootView: View {
         }
         .background(settings.palette.background.ignoresSafeArea())
         .environment(\.layoutDirection, settings.languageID == "ar" ? .rightToLeft : .leftToRight)
-        .environment(\.dynamicTypeSize, settings.textScale < 0.95 ? .small : settings.textScale > 1.3 ? .xxxLarge : settings.textScale > 1.15 ? .xxLarge : settings.textScale > 1.05 ? .xLarge : .large)
-        .font(settings.fontPostScriptName.map { .custom($0, size: 17) } ?? .system(size: 17))
         .animation(.easeInOut(duration: 0.2), value: selection)
         .overlay {
             if showSplash {
@@ -286,18 +284,18 @@ struct CalculatorView: View {
             VStack(alignment: .trailing, spacing: 10) {
                 HStack(spacing: 8) {
                     Button("f(x)") { withAnimation(.easeInOut(duration: 0.18)) { scientific.toggle() } }
-                        .font(.system(size: 13, weight: .medium))
+                        .mathFlowFont(size: 13, weight: .medium)
                         .foregroundStyle(scientific ? p.accent : p.muted)
                         .padding(.horizontal, 12).padding(.vertical, 7)
                         .background(scientific ? p.navActive : p.key, in: Capsule())
                     if scientific {
                         Button(degrees ? "DEG" : "RAD") { degrees.toggle() }
-                            .font(.system(size: 13, weight: .medium)).foregroundStyle(p.accent)
+                            .mathFlowFont(size: 13, weight: .medium).foregroundStyle(p.accent)
                             .padding(.horizontal, 12).padding(.vertical, 7).background(p.navActive, in: Capsule())
                     }
                     if !steps.isEmpty {
                         Button(settings.text("steps")) { withAnimation(.easeInOut(duration: 0.2)) { showSteps.toggle() } }
-                            .font(.system(size: 13, weight: .medium))
+                            .mathFlowFont(size: 13, weight: .medium)
                             .foregroundStyle(showSteps ? p.accent : p.muted)
                             .padding(.horizontal, 12).padding(.vertical, 7)
                             .background(showSteps ? p.navActive : p.key, in: Capsule())
@@ -309,17 +307,17 @@ struct CalculatorView: View {
                     }
                 }
                 Text(expression.isEmpty ? " " : expression.replacingOccurrences(of: "sqrt", with: "√").replacingOccurrences(of: "pi", with: "π"))
-                    .font(.system(size: 23, weight: .regular, design: .rounded))
+                    .mathFlowFont(size: 23, weight: .regular, design: .rounded)
                     .foregroundStyle(p.muted)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 Text(result)
-                    .font(.system(size: result.count > 16 ? 24 : result.count > 11 ? 32 : result.count > 8 ? 40 : 52, weight: .medium, design: .rounded))
+                    .mathFlowFont(size: result.count > 16 ? 24 : result.count > 11 ? 32 : result.count > 8 ? 40 : 52, weight: .medium, design: .rounded)
                     .foregroundStyle(error == nil ? p.text : p.error)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                     .contentTransition(.numericText())
-                if let error { Text(error).font(.caption).foregroundStyle(p.error) }
+                if let error { Text(error).mathFlowFont(size: 12).foregroundStyle(p.error) }
             }
             .padding(18)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
@@ -329,7 +327,7 @@ struct CalculatorView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                            Text("\(index + 1). \(step)").font(.caption).foregroundStyle(p.muted)
+                            Text("\(index + 1). \(step)").mathFlowFont(size: 12).foregroundStyle(p.muted)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -442,7 +440,7 @@ struct ToolsView: View {
     var body: some View {
         let p = settings.palette
         VStack(alignment: .leading, spacing: 14) {
-            Text(settings.text("tools")).font(.largeTitle.bold()).foregroundStyle(p.text)
+            Text(settings.text("tools")).mathFlowFont(size: 34, weight: .bold).foregroundStyle(p.text)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(options, id: \.self) { optionID in
@@ -451,7 +449,7 @@ struct ToolsView: View {
                                 selected = optionID; result = ""; error = nil
                             }
                         }
-                        .font(.subheadline.weight(.medium))
+                        .mathFlowFont(size: 15, weight: .medium)
                         .padding(.horizontal, 13).padding(.vertical, 9)
                         .background(selected == optionID ? p.keyEquals : p.key, in: Capsule())
                         .foregroundStyle(selected == optionID ? p.onKeyEquals : p.text)
@@ -469,8 +467,8 @@ struct ToolsView: View {
                     }
                     if !result.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text(settings.text("result")).font(.headline).foregroundStyle(p.text)
-                            Text(result).font(.system(.body, design: .rounded).weight(.medium)).foregroundStyle(p.text).textSelection(.enabled)
+                            Text(settings.text("result")).mathFlowFont(size: 17, weight: .semibold).foregroundStyle(p.text)
+                            Text(result).mathFlowFont(size: 17, weight: .medium, design: .rounded).foregroundStyle(p.text).textSelection(.enabled)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(16)
@@ -478,7 +476,7 @@ struct ToolsView: View {
                         .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     if let error {
-                        Text(error).font(.caption).foregroundStyle(p.error).padding(.horizontal, 4)
+                        Text(error).mathFlowFont(size: 12).foregroundStyle(p.error).padding(.horizontal, 4)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -498,10 +496,10 @@ struct ToolsView: View {
 
     private func field(_ title: String, text: Binding<String>, palette p: MathFlowPalette, decimal: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title).font(.caption.weight(.medium)).foregroundStyle(p.muted)
+            Text(title).mathFlowFont(size: 12, weight: .medium).foregroundStyle(p.muted)
             TextField("0", text: text)
                 .keyboardType(decimal ? .decimalPad : .numbersAndPunctuation)
-                .font(.system(size: 19, weight: .medium, design: .rounded))
+                .mathFlowFont(size: 19, weight: .medium, design: .rounded)
                 .padding(14)
                 .background(p.key, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .foregroundStyle(p.text)
@@ -513,7 +511,7 @@ struct ToolsView: View {
             do { let value = try run(); withAnimation(.easeInOut(duration: 0.2)) { result = value; error = nil } }
             catch { result = ""; self.error = error.localizedDescription }
         } label: {
-            Text(title).font(.system(size: 16, weight: .semibold))
+            Text(title).mathFlowFont(size: 16, weight: .semibold)
                 .frame(maxWidth: .infinity).padding(.vertical, 15)
                 .background(p.keyEquals, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                 .foregroundStyle(p.onKeyEquals)
@@ -521,12 +519,12 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func fractionContent(_ p: MathFlowPalette) -> some View {
-        Text(settings.text("fractions")).font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("fractions")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
         field(settings.text("fraction_one"), text: $first, palette: p)
         HStack(spacing: 8) {
             ForEach(FractionOperation.allCases, id: \.self) { item in
                 Button(item.rawValue) { operation = item }
-                    .font(.title2.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 11)
+                    .mathFlowFont(size: 22, weight: .semibold).frame(maxWidth: .infinity).padding(.vertical, 11)
                     .background(operation == item ? p.keyEquals : p.key, in: RoundedRectangle(cornerRadius: 12))
                     .foregroundStyle(operation == item ? p.onKeyEquals : p.text)
             }
@@ -539,7 +537,7 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func percentContent(_ p: MathFlowPalette) -> some View {
-        Text(settings.text("percentages")).font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("percentages")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
         Picker("Операция", selection: $percentMode) {
             Text(settings.text("percent_of")).tag(0); Text(settings.text("what_percent")).tag(1); Text(settings.text("change_percent")).tag(2)
         }.pickerStyle(.segmented)
@@ -560,7 +558,7 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func geometryContent(_ p: MathFlowPalette) -> some View {
-        Text(settings.text("geometry")).font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("geometry")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
         Picker("Фигура", selection: $geometryMode) {
             Text(settings.text("rectangle")).tag(0); Text(settings.text("circle")).tag(1); Text(settings.text("triangle")).tag(2)
         }.pickerStyle(.segmented)
@@ -586,12 +584,12 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func converterContent(_ p: MathFlowPalette) -> some View {
-        Text(settings.text("converter_title")).font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("converter_title")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(UnitConverter.categories) { item in
                     Button(settings.text(item.id)) { categoryID = item.id }
-                        .font(.caption.weight(.semibold)).padding(.horizontal, 12).padding(.vertical, 9)
+                        .mathFlowFont(size: 12, weight: .semibold).padding(.horizontal, 12).padding(.vertical, 9)
                         .background(categoryID == item.id ? p.keyEquals : p.key, in: Capsule())
                         .foregroundStyle(categoryID == item.id ? p.onKeyEquals : p.text)
                 }
@@ -614,21 +612,21 @@ struct ToolsView: View {
 
     private func unitPicker(_ title: String, selection: Binding<String>, p: MathFlowPalette) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.caption).foregroundStyle(p.muted)
+            Text(title).mathFlowFont(size: 12).foregroundStyle(p.muted)
             Menu {
                 ForEach(category.units) { unit in
                     Button(unit.label) { selection.wrappedValue = unit.id }
                 }
             } label: {
                 HStack { Text(category.units.first(where: { $0.id == selection.wrappedValue })?.label ?? "—"); Spacer(); Image(systemName: "chevron.down") }
-                    .font(.subheadline.weight(.medium)).foregroundStyle(p.text).padding(13)
+                    .mathFlowFont(size: 15, weight: .medium).foregroundStyle(p.text).padding(13)
                     .background(p.key, in: RoundedRectangle(cornerRadius: 13))
             }
         }.frame(maxWidth: .infinity)
     }
 
     @ViewBuilder private func graphContent(_ p: MathFlowPalette) -> some View {
-        Text(settings.text("graph")).font(.title2.bold()).foregroundStyle(p.text)
+        Text(settings.text("graph")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
         field(settings.text("graph_input"), text: $graphExpression, palette: p, decimal: false)
         HStack(spacing: 10) {
             field("X от", text: $graphMin, palette: p)
@@ -660,7 +658,7 @@ struct ToolsView: View {
                 .padding(10)
                 .background(p.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
-        Text("Поддерживаются выражения калькулятора и переменная x.").font(.caption).foregroundStyle(p.muted)
+        Text("Поддерживаются выражения калькулятора и переменная x.").mathFlowFont(size: 12).foregroundStyle(p.muted)
     }
 
     private func graphPlot(_ p: MathFlowPalette) -> some View {
@@ -713,11 +711,11 @@ struct SolverView: View {
     var body: some View {
         let p = settings.palette
         VStack(alignment: .leading, spacing: 16) {
-            Text(settings.text("solver")).font(.largeTitle.bold()).foregroundStyle(p.text)
-            Text(settings.text("equation_help")).font(.subheadline).foregroundStyle(p.muted)
+            Text(settings.text("solver")).mathFlowFont(size: 34, weight: .bold).foregroundStyle(p.text)
+            Text(settings.text("equation_help")).mathFlowFont(size: 15).foregroundStyle(p.muted)
             TextField(settings.text("example_equation"), text: $equation)
                 .textFieldStyle(.plain)
-                .font(.system(size: 18, weight: .medium, design: .rounded))
+                .mathFlowFont(size: 18, weight: .medium, design: .rounded)
                 .padding(15).background(p.key, in: RoundedRectangle(cornerRadius: 15))
                 .foregroundStyle(p.text)
                 .keyboardType(.numbersAndPunctuation)
@@ -731,29 +729,29 @@ struct SolverView: View {
                     answer = ""; steps = []; self.error = error.localizedDescription
                 }
             } label: {
-                Text(settings.text("solve")).font(.system(size: 16, weight: .semibold))
+                Text(settings.text("solve")).mathFlowFont(size: 16, weight: .semibold)
                     .frame(maxWidth: .infinity).padding(.vertical, 15)
                     .background(p.keyEquals, in: RoundedRectangle(cornerRadius: 15))
                     .foregroundStyle(p.onKeyEquals)
             }.buttonStyle(MathFlowPressStyle())
             if !answer.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(settings.text("result")).font(.caption.weight(.semibold)).foregroundStyle(p.muted)
-                    Text(answer).font(.system(size: 23, weight: .semibold, design: .rounded)).foregroundStyle(p.text)
+                    Text(settings.text("result")).mathFlowFont(size: 12, weight: .semibold).foregroundStyle(p.muted)
+                    Text(answer).mathFlowFont(size: 23, weight: .semibold, design: .rounded).foregroundStyle(p.text)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
                     .background(p.surface, in: RoundedRectangle(cornerRadius: 18))
                 VStack(alignment: .leading, spacing: 9) {
-                    Text(settings.text("steps")).font(.headline).foregroundStyle(p.text)
+                    Text(settings.text("steps")).mathFlowFont(size: 17, weight: .semibold).foregroundStyle(p.text)
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         HStack(alignment: .top, spacing: 9) {
                             Text("\(index + 1).").foregroundStyle(p.accent).fontWeight(.semibold)
                             Text(step).foregroundStyle(p.muted)
-                        }.font(.subheadline)
+                        }.mathFlowFont(size: 15)
                     }
                 }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
                     .background(p.surface, in: RoundedRectangle(cornerRadius: 18))
             }
-            if let error { Text(error).font(.caption).foregroundStyle(p.error) }
+            if let error { Text(error).mathFlowFont(size: 12).foregroundStyle(p.error) }
             Spacer(minLength: 0)
         }
         .padding(16)
@@ -774,10 +772,10 @@ struct HistoryView: View {
                 ForEach(history.entries) { entry in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(entry.expression).foregroundStyle(p.muted)
-                        Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(p.muted)
-                        Text(entry.result).font(.title2.weight(.semibold)).foregroundStyle(p.text)
+                        Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened)).mathFlowFont(size: 11).foregroundStyle(p.muted)
+                        Text(entry.result).mathFlowFont(size: 22, weight: .semibold).foregroundStyle(p.text)
                         ForEach(Array(entry.steps.enumerated()), id: \.offset) { _, step in
-                            Text(step).font(.caption).foregroundStyle(p.muted)
+                            Text(step).mathFlowFont(size: 12).foregroundStyle(p.muted)
                         }
                     }
                     .listRowBackground(p.surface)
@@ -845,7 +843,7 @@ struct SettingsView: View {
                             }.padding(.vertical, 3)
                         }.listRowBackground(p.surface)
                     }
-                    Text(settings.text("theme_hint")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
+                    Text(settings.text("theme_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
                 }
                 Section(settings.text("app_language")) {
                     ForEach(MathFlowLanguage.all.filter {
@@ -864,12 +862,12 @@ struct SettingsView: View {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(themes, id: \.self) { id in
                             Button { iconID = id } label: {
-                                HStack { Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 18,height:18); Text(id.capitalized).font(.caption); Spacer(); if iconID == id { Image(systemName:"checkmark.circle.fill") } }
+                                HStack { Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 18,height:18); Text(id.capitalized).mathFlowFont(size: 12); Spacer(); if iconID == id { Image(systemName:"checkmark.circle.fill") } }
                                     .foregroundStyle(p.text).padding(10).background(p.key, in: RoundedRectangle(cornerRadius: 12))
                             }
                         }
                     }.listRowBackground(p.surface)
-                    Text(settings.text("icon_hint")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
+                    Text(settings.text("icon_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
                 }
                 Section(settings.text("font")) {
                     Button { showFontPicker = true } label: {
@@ -890,13 +888,13 @@ struct SettingsView: View {
                         }.listRowBackground(p.surface)
                     }
                     if savedFonts.isEmpty {
-                        Text(settings.text("no_saved_fonts")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
+                        Text(settings.text("no_saved_fonts")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
                     }
                     if fontPath != nil {
                         Button(settings.text("reset"), role: .destructive) { fontPath = nil; fontName = nil }
                             .listRowBackground(p.surface)
                     }
-                    if let fontMessage { Text(fontMessage).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface) }
+                    if let fontMessage { Text(fontMessage).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface) }
                 }
                 Section(settings.text("animations")) {
                     Picker(settings.text("animation_spring"), selection: $keyStyle) {
@@ -942,7 +940,7 @@ struct SettingsView: View {
                         settings.fontPath = fontPath; settings.fontPostScriptName = fontName
                         withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) { }
                     } label: {
-                        Text(settings.text("apply")).font(.system(size: 15, weight: .semibold))
+                        Text(settings.text("apply")).mathFlowFont(size: 15, weight: .semibold)
                             .frame(maxWidth: .infinity).padding(.vertical, 14)
                             .background(p.keyEquals, in: Capsule()).foregroundStyle(p.onKeyEquals)
                     }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
@@ -1003,6 +1001,34 @@ struct SettingsView: View {
             HStack { Text(title).foregroundStyle(p.text); Spacer(); Text(percent ? "\(Int(value.wrappedValue * 100))%" : "\(Int(value.wrappedValue))\(suffix)").foregroundStyle(p.accent).monospacedDigit() }
             Slider(value: value, in: range).tint(p.accent)
         }.listRowBackground(p.surface)
+    }
+}
+
+struct MathFlowFontModifier: ViewModifier {
+    @EnvironmentObject private var settings: AppSettings
+    @ScaledMetric private var dynamicSize: CGFloat
+    let weight: Font.Weight
+    let design: Font.Design
+
+    init(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) {
+        self.weight = weight
+        self.design = design
+        _dynamicSize = ScaledMetric(wrappedValue: size, relativeTo: .body)
+    }
+
+    func body(content: Content) -> some View {
+        let size = dynamicSize * CGFloat(settings.textScale)
+        if let postScriptName = settings.fontPostScriptName {
+            content.font(.custom(postScriptName, size: size))
+        } else {
+            content.font(.system(size: size, weight: weight, design: design))
+        }
+    }
+}
+
+extension View {
+    func mathFlowFont(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> some View {
+        modifier(MathFlowFontModifier(size: size, weight: weight, design: design))
     }
 }
 
