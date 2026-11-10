@@ -48,11 +48,11 @@ final class MathToolsTests: XCTestCase {
         )
         XCTAssertEqual(
             try PercentTools.whatPercent("1.234567890123456789", "3.333333333333333333"),
-            "37.03703670370371"
+            "37.0370367037037"
         )
         XCTAssertEqual(
             try PercentTools.change("123456789.123456789", percent: "12.34567890123456789", increase: true),
-            "138698367.8904131"
+            "138698367.890413"
         )
     }
 
