@@ -278,7 +278,7 @@ struct CalculatorView: View {
                         Button(degrees ? "DEG" : "RAD") { degrees.toggle() }.foregroundStyle(p.accent)
                     }
                     if !steps.isEmpty {
-                        Button("Решение") { withAnimation(.easeInOut(duration: 0.2)) { showSteps.toggle() } }
+                        Button(settings.text(showSteps ? "hide_solution" : "show_solution")) { withAnimation(.easeInOut(duration: 0.2)) { showSteps.toggle() } }
                             .foregroundStyle(showSteps ? p.accent : p.muted)
                     }
                     Spacer()
@@ -365,7 +365,7 @@ struct CalculatorView: View {
                 didEvaluate = true
                 HistoryStore.shared.add(expression: normalized, result: result, steps: steps)
             } catch {
-                result = "Ошибка"
+                result = settings.text("error")
                 self.error = error.localizedDescription
                 steps = []
                 didEvaluate = false
@@ -519,11 +519,11 @@ struct ToolsView: View {
         Picker("Операция", selection: $percentMode) {
             Text(settings.text("percent_of")).tag(0); Text(settings.text("what_percent")).tag(1); Text(settings.text("change_percent")).tag(2)
         }.pickerStyle(.segmented)
-        field(percentMode == 1 ? "Часть" : "Процент", text: $first, palette: p)
-        field(percentMode == 1 ? "Целое" : "Число", text: $second, palette: p)
+        field(percentMode == 1 ? settings.text("part") : settings.text("percent"), text: $first, palette: p)
+        field(percentMode == 1 ? settings.text("whole") : settings.text("number"), text: $second, palette: p)
         if percentMode == 2 {
             Picker("Изменение", selection: $increase) {
-                Text("Увеличить").tag(true); Text("Уменьшить").tag(false)
+                Text(settings.text("percent_of")).tag(true); Text(settings.text("percent_decrease")).tag(false)
             }.pickerStyle(.segmented)
         }
         action(settings.text("calculate"), palette: p) {
@@ -541,11 +541,11 @@ struct ToolsView: View {
             Text(settings.text("rectangle")).tag(0); Text(settings.text("circle")).tag(1); Text(settings.text("triangle")).tag(2)
         }.pickerStyle(.segmented)
         if geometryMode == 0 {
-            field("Сторона A", text: $first, palette: p); field("Сторона B", text: $second, palette: p)
+            field(settings.text("side_a"), text: $first, palette: p); field(settings.text("side_b"), text: $second, palette: p)
         } else if geometryMode == 1 {
-            field("Радиус", text: $first, palette: p)
+            field(settings.text("radius"), text: $first, palette: p)
         } else {
-            field("Сторона A", text: $first, palette: p); field("Сторона B", text: $second, palette: p); field("Сторона C", text: $third, palette: p)
+            field("Сторона A", text: $first, palette: p); field("Сторона B", text: $second, palette: p); field(settings.text("side_c"), text: $third, palette: p)
         }
         action("Вычислить", palette: p) {
             if geometryMode == 0 {
@@ -575,12 +575,12 @@ struct ToolsView: View {
         }
         field(settings.text("value"), text: $converterValue, palette: p)
         HStack(spacing: 8) {
-            unitPicker("Из", selection: $fromID, p: p)
+            unitPicker(settings.text("from"), selection: $fromID, p: p)
             Button { swap(&fromID, &toID) } label: {
                 Image(systemName: "arrow.left.arrow.right").font(.title3).foregroundStyle(p.accent)
                     .frame(width: 42, height: 48).background(p.key, in: Circle())
             }
-            unitPicker("В", selection: $toID, p: p)
+            unitPicker(settings.text("to"), selection: $toID, p: p)
         }
         action("Конвертировать", palette: p) {
             let value = try UnitConverter.convert(converterValue, category: categoryID, from: fromID, to: toID)
@@ -832,7 +832,7 @@ struct SettingsView: View {
                     HStack { Text("\(Int(scale * 100))%").foregroundStyle(p.text); Spacer(); Slider(value: $scale, in: 0.8...1.4, step: 0.05).tint(p.accent).frame(maxWidth: 190) }
                         .listRowBackground(p.surface)
                 }
-                Section("Иконки приложения") {
+                Section(settings.text("app_icons")) {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(themes, id: \.self) { id in
                             Button { iconID = id } label: {
@@ -843,24 +843,24 @@ struct SettingsView: View {
                     }.listRowBackground(p.surface)
                     Text(settings.text("icon_hint")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
                 }
-                Section("Шрифт") {
+                Section(settings.text("font")) {
                     Button { showFontPicker = true } label: {
-                        Label(fontName ?? "Выбрать TTF / OTF", systemImage: "textformat")
+                        Label(fontName ?? settings.text("choose_font"), systemImage: "textformat")
                             .foregroundStyle(p.accent)
                     }.listRowBackground(p.surface)
                     if fontPath != nil {
-                        Button("Сбросить пользовательский шрифт", role: .destructive) { fontPath = nil; fontName = nil }
+                        Button(settings.text("reset"), role: .destructive) { fontPath = nil; fontName = nil }
                             .listRowBackground(p.surface)
                     }
                     if let fontMessage { Text(fontMessage).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface) }
                 }
-                Section("Анимация клавиш") {
-                    Picker("Стиль", selection: $keyStyle) {
+                Section(settings.text("animations")) {
+                    Picker(settings.text("animation_spring"), selection: $keyStyle) {
                         ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
-                    settingSlider("Длительность", value: $keyDuration, range: 70...400, suffix: " мс", p: p)
-                    settingSlider("Непрозрачность", value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
-                    settingSlider("Интенсивность", value: $keyIntensity, range: 0.02...0.2, suffix: "%", p: p, percent: true)
+                    settingSlider(settings.text("animation_duration"), value: $keyDuration, range: 70...400, suffix: " мс", p: p)
+                    settingSlider(settings.text("animation_opacity"), value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
+                    settingSlider(settings.text("animation_intensity"), value: $keyIntensity, range: 0.02...0.2, suffix: "%", p: p, percent: true)
                     Toggle(settings.text("button_color_effect"), isOn: $keyColorEffect).tint(p.accent).listRowBackground(p.surface)
                     HStack(spacing: 13) {
                         ForEach(["accent","purple","cyan","green","pink","orange"], id: \.self) { colorID in
@@ -870,17 +870,17 @@ struct SettingsView: View {
                         }
                     }.padding(.vertical, 5).listRowBackground(p.surface)
                 }
-                Section("Анимация навигации") {
-                    Toggle("Включить анимацию", isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
+                Section(settings.text("nav_animations")) {
+                    Toggle(settings.text("nav_enabled"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
                     Picker("Стиль", selection: $navStyle) {
                         ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
                     settingSlider("Длительность", value: $navDuration, range: 100...1000, suffix: " мс", p: p)
                     settingSlider("Интенсивность", value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
-                    settingSlider("Масштаб иконки", value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
-                    settingSlider("Непрозрачность индикатора", value: $navOpacity, range: 0...1, suffix: "%", p: p, percent: true)
+                    settingSlider(settings.text("nav_icon_scale"), value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
+                    settingSlider(settings.text("nav_indicator_opacity"), value: $navOpacity, range: 0...1, suffix: "%", p: p, percent: true)
                 }
-                Section("О MathFlow") { Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface) }
+                Section(settings.text("about_description")) { Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface) }
             }
             .scrollContentBackground(.hidden)
             .background(p.background)
