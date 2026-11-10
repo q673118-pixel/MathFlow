@@ -841,7 +841,10 @@ struct SettingsView: View {
                         Button { theme = id } label: {
                             HStack(spacing: 12) {
                                 Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 25, height: 25)
-                                Text(id.capitalized).foregroundStyle(p.text)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(id.capitalized).mathFlowFont(size: 14, weight: .medium).foregroundStyle(p.text)
+                                    Text(themeDescription(id)).mathFlowFont(size: 11).foregroundStyle(p.muted)
+                                }
                                 Spacer()
                                 if theme == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
                             }.padding(.vertical, 3)
@@ -865,9 +868,23 @@ struct SettingsView: View {
                 Section(settings.text("app_icons")) {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(themes, id: \.self) { id in
+                            let iconPalette = MathFlowPalette.named(id)
                             Button { iconID = id } label: {
-                                HStack { Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 18,height:18); Text(id.capitalized).mathFlowFont(size: 12); Spacer(); if iconID == id { Image(systemName:"checkmark.circle.fill") } }
-                                    .foregroundStyle(p.text).padding(10).background(p.key, in: RoundedRectangle(cornerRadius: 12))
+                                HStack(spacing: 8) {
+                                    ZStack {
+                                        iconPalette.background
+                                        MathFlowMark().fill(iconPalette.text).padding(5)
+                                    }
+                                    .frame(width: 30, height: 30)
+                                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(id.capitalized).mathFlowFont(size: 12, weight: .medium)
+                                        Text(iconDescription(id)).mathFlowFont(size: 9).foregroundStyle(p.muted).lineLimit(2)
+                                    }
+                                    Spacer(minLength: 0)
+                                    if iconID == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
+                                }
+                                .foregroundStyle(p.text).padding(9).background(p.key, in: RoundedRectangle(cornerRadius: 12))
                             }
                         }
                     }.listRowBackground(p.surface)
@@ -979,6 +996,36 @@ struct SettingsView: View {
                 loadSavedFonts()
                 fontMessage = "Шрифт добавлен: \(fontName ?? source.lastPathComponent). Нажмите «Применить»."
             } catch { fontMessage = error.localizedDescription }
+        }
+    }
+
+    private func themeDescription(_ id: String) -> String {
+        switch id {
+        case "vanilla": return "Фирменная фиолетовая палитра MathFlow."
+        case "black": return "Почти чёрный интерфейс с нейтральными поверхностями."
+        case "white": return "Светлая тема с чистыми белыми поверхностями."
+        case "purple": return "Глубокий фиолетовый с насыщенными акцентами."
+        case "ocean": return "Холодные синие оттенки и яркий голубой акцент."
+        case "emerald": return "Тёмно-зелёная палитра с мятными акцентами."
+        case "sunset": return "Тёплые оттенки заката: коралл, оранжевый и розовый."
+        case "rose": return "Мягкая розовая тема с ярким малиновым акцентом."
+        case "midnight": return "Ночная фиолетовая палитра с мягкими лавандовыми акцентами."
+        default: return "Спокойные графитовые оттенки с холодным светлым акцентом."
+        }
+    }
+
+    private func iconDescription(_ id: String) -> String {
+        switch id {
+        case "vanilla": return "Оригинальная фиолетовая иконка MathFlow."
+        case "black": return "Чёрный фон и белый фирменный знак."
+        case "white": return "Белый фон с фиолетовым знаком."
+        case "purple": return "Тёмный фон с насыщенным фиолетовым знаком."
+        case "ocean": return "Глубокий синий фон и яркий голубой знак."
+        case "emerald": return "Тёмно-зелёный фон и мятный знак."
+        case "sunset": return "Градиент заката с белым фирменным знаком."
+        case "rose": return "Нежно-розовый фон и малиновый знак."
+        case "midnight": return "Глубокий ночной фон и лавандовый знак."
+        default: return "Графитовый фон и светлый холодный знак."
         }
     }
 
