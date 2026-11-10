@@ -274,4 +274,11 @@ final class MathToolsTests: XCTestCase {
         XCTAssertTrue(result.answer.contains("1"))
     }
 
+    func testToolNumbersRejectInvalidDecimalTokensLikeAndroid() {
+        XCTAssertThrowsError(try PercentTools.percentOf(".", "10"))
+        XCTAssertThrowsError(try PercentTools.whatPercent("1", "."))
+        XCTAssertThrowsError(try UnitConverter.convert(".", category: "length", from: "m", to: "cm"))
+        XCTAssertThrowsError(try GeometryTools.circle("1.2.3"))
+    }
+
 }
