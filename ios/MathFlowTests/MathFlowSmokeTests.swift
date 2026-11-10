@@ -9,8 +9,8 @@ final class MathFlowSmokeTests: XCTestCase {
         for language in MathFlowLanguage.all {
             for key in MathFlowLocalization.keys {
                 let value = MathFlowLocalization.text(key, language: language.id)
-                XCTAssertFalse(value.isEmpty, "Empty translation for \\(key) in \\(language.id)")
-                XCTAssertNotEqual(value, key, "Missing translation for \\(key) in \\(language.id)")
+                XCTAssertFalse(value.isEmpty, "Empty translation for \(key) in \(language.id)")
+                XCTAssertNotEqual(value, key, "Missing translation for \(key) in \(language.id)")
             }
         }
     }
