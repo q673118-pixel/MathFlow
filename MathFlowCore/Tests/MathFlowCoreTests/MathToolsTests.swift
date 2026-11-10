@@ -268,7 +268,8 @@ final class MathToolsTests: XCTestCase {
     }
 
     func testPolynomialRootsRemainFindableWithHugeExactCoefficients() throws {
-        let result = try AlgebraSolver.solve("1e400*x^3 - 1e400 = 0")
+        let huge = "1" + String(repeating: "0", count: 200)
+        let result = try AlgebraSolver.solve("\\(huge)*x^3 - \\(huge) = 0")
         XCTAssertEqual(result.kind, "polynomial_numeric")
         XCTAssertTrue(result.answer.contains("1"))
     }
