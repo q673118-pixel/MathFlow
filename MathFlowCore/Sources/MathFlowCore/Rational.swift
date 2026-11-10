@@ -8,6 +8,8 @@ public enum MathFlowMathError: Error, Equatable {
     case unsupportedExpression(String)
 }
 
+public enum RationalRoundingMode: Sendable { case halfUp, halfEven }
+
 public struct Rational: Equatable, Comparable, Sendable {
     public let numerator: BigInt
     public let denominator: BigInt
@@ -156,7 +158,7 @@ public struct Rational: Equatable, Comparable, Sendable {
         return "\(whole) \(absoluteRemainder)/\(denominator)"
     }
 
-    public func decimalString(scale: Int = 10) -> String {
+    public func decimalString(scale: Int = 10, rounding: RationalRoundingMode = .halfUp) -> String {
         let precision = max(1, min(scale, 100))
         if numerator == 0 { return "0" }
         let negative = numerator < 0
@@ -185,7 +187,7 @@ public struct Rational: Equatable, Comparable, Sendable {
             let scaledNumerator = absolute * factor
             var quotient = scaledNumerator / denominator
             let remainder = scaledNumerator % denominator
-            if remainder * 2 >= denominator { quotient += 1 }
+            if remainder * 2 > denominator || (remainder * 2 == denominator && (rounding == .halfUp || quotient % 2 != 0)) { quotient += 1 }
             roundedInteger = quotient
             outputPlaces = decimalPlaces
         } else {
@@ -195,7 +197,7 @@ public struct Rational: Equatable, Comparable, Sendable {
             let divisor = denominator * factor
             var quotient = absolute / divisor
             let remainder = absolute % divisor
-            if remainder * 2 >= divisor { quotient += 1 }
+            if remainder * 2 > divisor || (remainder * 2 == divisor && (rounding == .halfUp || quotient % 2 != 0)) { quotient += 1 }
             roundedInteger = quotient * factor
             outputPlaces = 0
         }
