@@ -819,7 +819,7 @@ struct SettingsView: View {
                 }
                 Section("Анимация клавиш") {
                     Picker("Стиль", selection: $keyStyle) {
-                        ForEach(Array(keyStyles.enumerated()), id: \.offset) { _, item in Text(item.1).tag(item.0) }
+                        ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
                     settingSlider("Длительность", value: $keyDuration, range: 70...400, suffix: " мс", p: p)
                     settingSlider("Непрозрачность", value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
@@ -829,7 +829,7 @@ struct SettingsView: View {
                 Section("Анимация навигации") {
                     Toggle("Включить анимацию", isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
                     Picker("Стиль", selection: $navStyle) {
-                        ForEach(Array(navStyles.enumerated()), id: \.offset) { _, item in Text(item.1).tag(item.0) }
+                        ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
                     settingSlider("Длительность", value: $navDuration, range: 100...1000, suffix: " мс", p: p)
                     settingSlider("Интенсивность", value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
