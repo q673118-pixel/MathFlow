@@ -759,10 +759,10 @@ struct ToolsView: View {
     private func graphPlot(_ p: MathFlowPalette) -> some View {
         GeometryReader { geometry in
             let valid = graphPoints.filter { $0.x.isFinite && $0.y.isFinite }
-            let minX = graphPoints.first?.x ?? -5
-            let maxX = graphPoints.last?.x ?? 5
-            let rawMinY = valid.map(\.y).min() ?? -1
-            let rawMaxY = valid.map(\.y).max() ?? 1
+            let minX = Double(graphPoints.first?.x ?? -5)
+            let maxX = Double(graphPoints.last?.x ?? 5)
+            let rawMinY = Double(valid.map(\.y).min() ?? -1)
+            let rawMaxY = Double(valid.map(\.y).max() ?? 1)
             let padding = max((rawMaxY - rawMinY) * 0.08, 0.5)
             let minY = rawMinY - padding
             let maxY = rawMaxY + padding
@@ -799,7 +799,7 @@ struct ToolsView: View {
                     var active = false
                     for point in graphPoints {
                         guard point.y.isFinite else { active = false; continue }
-                        let plotted = CGPoint(x: plotX(point.x), y: plotY(point.y))
+                        let plotted = CGPoint(x: plotX(Double(point.x)), y: plotY(Double(point.y)))
                         if active { path.addLine(to: plotted) }
                         else { path.move(to: plotted); active = true }
                     }
@@ -808,7 +808,7 @@ struct ToolsView: View {
                 if let index = selectedGraphIndex, graphPoints.indices.contains(index) {
                     let point = graphPoints[index]
                     if point.y.isFinite {
-                        let center = CGPoint(x: plotX(point.x), y: plotY(point.y))
+                        let center = CGPoint(x: plotX(Double(point.x)), y: plotY(Double(point.y)))
                         Circle().fill(p.keyEquals).frame(width: 14, height: 14).position(center)
                         Circle().fill(p.onKeyEquals).frame(width: 6, height: 6).position(center)
                     }
