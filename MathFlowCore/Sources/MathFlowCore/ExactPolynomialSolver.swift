@@ -106,7 +106,7 @@ private struct ExactEquationParser {
             case "-", "−": kind = .minus
             case "*", "×": kind = .multiply
             case "/", "÷": kind = .divide
-            case "^", "²": kind = .power
+            case "^", "²", "³", "⁴": kind = .power
             case "(": kind = .left
             case ")": kind = .right
             default: throw MathFlowMathError.unsupportedExpression("Символ не поддерживается символьным решателем: \(ch)")
@@ -146,7 +146,10 @@ private struct ExactEquationParser {
     private mutating func power() throws -> ExactRationalExpression {
         let base=try primary()
         guard peek.kind == .power else { return base }
-        _=take()
+        let powerToken=take()
+        if powerToken.text == "²" { return try base.power(2) }
+        if powerToken.text == "³" { return try base.power(3) }
+        if powerToken.text == "⁴" { return try base.power(4) }
         var sign=1
         if peek.kind == .minus { _=take(); sign = -1 } else if peek.kind == .plus { _=take() }
         guard peek.kind == .number, let n=Int(take().text), n<=4 else { throw MathFlowMathError.unsupportedExpression("Поддерживаются целые показатели от −4 до 4") }
