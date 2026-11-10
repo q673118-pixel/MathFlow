@@ -379,7 +379,7 @@ struct ToolsView: View {
     @State private var graphMax = "5"
     @State private var graphPoints: [CGPoint] = []
 
-    private var options: [String] { ["fractions", "percentages", "geometry", "converter", "graph"].map { settings.text($0) } }
+    private let options = ["fractions", "percentages", "geometry", "converter", "graph"]
     private var category: UnitCategory { UnitConverter.categories.first(where: { $0.id == categoryID }) ?? UnitConverter.categories[0] }
     private var fromUnit: UnitDefinition { category.units.first(where: { $0.id == fromID }) ?? category.units[0] }
     private var toUnit: UnitDefinition { category.units.first(where: { $0.id == toID }) ?? category.units[min(1, category.units.count - 1)] }
@@ -390,16 +390,16 @@ struct ToolsView: View {
             Text(settings.text("tools")).font(.largeTitle.bold()).foregroundStyle(p.text)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(options, id: \.self) { option in
-                        Button(settings.text(option)) {
+                    ForEach(options, id: \.self) { optionID in
+                        Button(settings.text(optionID)) {
                             withAnimation(.easeInOut(duration: 0.2)) {
-                                selected = option; result = ""; error = nil
+                                selected = optionID; result = ""; error = nil
                             }
                         }
                         .font(.subheadline.weight(.medium))
                         .padding(.horizontal, 13).padding(.vertical, 9)
-                        .background(selected == option ? p.keyEquals : p.key, in: Capsule())
-                        .foregroundStyle(selected == option ? p.onKeyEquals : p.text)
+                        .background(selected == optionID ? p.keyEquals : p.key, in: Capsule())
+                        .foregroundStyle(selected == optionID ? p.onKeyEquals : p.text)
                     }
                 }
             }
@@ -916,34 +916,48 @@ struct SettingsView: View {
 
 struct MathFlowPressStyle: ButtonStyle {
     @EnvironmentObject private var settings: AppSettings
+
     func makeBody(configuration: Configuration) -> some View {
         let style = settings.keyStyle
-        let amount = settings.keyIntensity
-        let scale: CGFloat = {
-            guard configuration.isPressed else { return 1 }
+        let amount = CGFloat(settings.keyIntensity)
+        let pressed = configuration.isPressed
+        let scales: (CGFloat, CGFloat) = {
+            guard pressed else { return (1, 1) }
             switch style {
-            case "scale": return 1 + amount
-            case "elastic": return 1 + amount
-            case "minimal": return 1 - amount * 0.25
-            case "press": return 1 - amount * 0.45
-            case "bounce": return 1 - amount * 0.60
-            case "flash": return 1 - amount * 0.12
-            case "ripple": return 1
-            default: return 1 - amount
+            case "scale": return (1 + amount, 1 + amount)
+            case "elastic": return (1 + amount, 1 - amount * 1.25)
+            case "minimal": return (1 - amount * 0.25, 1 - amount * 0.25)
+            case "press": return (1 - amount * 0.45, 1 - amount)
+            case "bounce": return (1 - amount * 0.60, 1 - amount * 0.60)
+            case "flash": return (1 - amount * 0.12, 1 - amount * 0.12)
+            case "ripple": return (1, 1)
+            default: return (1 - amount, 1 - amount)
             }
         }()
         let duration = settings.keyDuration / 1000
+        let isSpring = ["spring", "bounce", "elastic"].contains(style)
+        let effectAlpha = style == "flash" ? settings.keyOpacity : style == "ripple" ? settings.keyOpacity * 0.34 : settings.keyOpacity * 0.22
+
         return configuration.label
-            .scaleEffect(scale)
+            .scaleEffect(x: scales.0, y: scales.1, anchor: .center)
             .overlay {
-                if configuration.isPressed && settings.keyColorEffect {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(settings.effectColor.opacity(settings.keyStyle == "flash" ? settings.keyOpacity : settings.keyOpacity * 0.22))
-                        .allowsHitTesting(false)
+                if pressed && settings.keyColorEffect {
+                    if style == "ripple" {
+                        Circle()
+                            .fill(settings.effectColor.opacity(effectAlpha))
+                            .scaleEffect(1 + amount * 3.3)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .allowsHitTesting(false)
+                    } else {
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(settings.effectColor.opacity(effectAlpha))
+                            .allowsHitTesting(false)
+                    }
                 }
             }
             .animation(
-                ["spring","bounce","elastic"].contains(style)
+                isSpring
                     ? .spring(response: duration, dampingFraction: style == "elastic" ? 0.48 : 0.72)
                     : .easeOut(duration: duration),
                 value: configuration.isPressed
