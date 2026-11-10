@@ -83,7 +83,7 @@ public enum AlgebraSolver {
         if roots.count == 1 {
             return EquationSolution(kind: "general_numeric", answer: "x ≈ \(formatted[0])", steps: steps + ["x ≈ \(formatted[0])"])
         }
-        let labels = roots.enumerated().map { "x\(subscript($0.offset + 1)) ≈ \(format($0.element))" }
+        let labels = roots.enumerated().map { "x\(subscriptDigits($0.offset + 1)) ≈ \(format($0.element))" }
         return EquationSolution(kind: "general_numeric", answer: labels.joined(separator: ", "), steps: steps + labels)
     }
 
@@ -91,7 +91,7 @@ public enum AlgebraSolver {
         if abs(value) < 1e-10 { return "0" }
         return String(format: "%.12g", value)
     }
-    private static func subscript(_ value: Int) -> String {
+    private static func subscriptDigits(_ value: Int) -> String {
         let digits = ["₀","₁","₂","₃","₄","₅","₆","₇","₈","₉"]
         return String(value).map { Int(String($0)).map { digits[$0] } ?? String($0) }.joined()
     }
