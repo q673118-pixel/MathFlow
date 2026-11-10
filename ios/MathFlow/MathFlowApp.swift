@@ -982,6 +982,14 @@ struct SettingsView: View {
     }
 }
 
+struct MathFlowInteractionPressStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.965 : 1)
+            .animation(.spring(response: 0.18, dampingFraction: 1.0, blendDuration: 0), value: configuration.isPressed)
+    }
+}
+
 struct MathFlowPressStyle: ButtonStyle {
     @EnvironmentObject private var settings: AppSettings
 
