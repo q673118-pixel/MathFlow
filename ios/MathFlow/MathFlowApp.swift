@@ -1105,7 +1105,7 @@ struct SettingsView: View {
                     )
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(p.surface)
-                    settingSlider(settings.text("nav_duration"), value: $navDuration, range: 100...1000, suffix: " мс", p: p)
+                    settingSlider(settings.text("nav_duration"), value: $navDuration, range: 100...1000, suffix: " ms", p: p)
                     settingSlider(settings.text("animation_intensity"), value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
                     settingSlider(settings.text("nav_icon_scale"), value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
                     settingSlider(settings.text("nav_indicator_opacity"), value: $navOpacity, range: 0...1, suffix: "%", p: p, percent: true)
@@ -1279,17 +1279,19 @@ struct MathFlowPressStyle: ButtonStyle {
         return configuration.label
             .scaleEffect(x: scales.0, y: scales.1, anchor: .center)
             .overlay {
-                if pressed && colorEffectEnabled {
+                if colorEffectEnabled {
                     if style == "ripple" {
                         Circle()
                             .fill(effectColor.opacity(effectAlpha))
-                            .scaleEffect(pressed ? 1 + amount * 3.3 : 0.45)
+                            .scaleEffect(pressed ? 0.45 + amount * 3.3 : 0.45)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipShape(Capsule())
+                            .opacity(pressed ? 1 : 0)
                             .allowsHitTesting(false)
                     } else {
                         Capsule()
                             .fill(effectColor.opacity(effectAlpha))
+                            .opacity(pressed ? 1 : 0)
                             .allowsHitTesting(false)
                     }
                 }
