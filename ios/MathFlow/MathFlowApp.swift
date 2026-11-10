@@ -25,6 +25,7 @@ final class AppSettings: ObservableObject {
     @Published var keyOpacity: Double { didSet { UserDefaults.standard.set(keyOpacity, forKey: "mathflow.keyOpacity") } }
     @Published var keyIntensity: Double { didSet { UserDefaults.standard.set(keyIntensity, forKey: "mathflow.keyIntensity") } }
     @Published var keyColorEffect: Bool { didSet { UserDefaults.standard.set(keyColorEffect, forKey: "mathflow.keyColorEffect") } }
+    @Published var keyEffectColorID: String { didSet { UserDefaults.standard.set(keyEffectColorID, forKey: "mathflow.keyEffectColor") } }
     @Published var navEnabled: Bool { didSet { UserDefaults.standard.set(navEnabled, forKey: "mathflow.navEnabled") } }
     @Published var navStyle: String { didSet { UserDefaults.standard.set(navStyle, forKey: "mathflow.navStyle") } }
     @Published var navDuration: Double { didSet { UserDefaults.standard.set(navDuration, forKey: "mathflow.navDuration") } }
@@ -45,6 +46,7 @@ final class AppSettings: ObservableObject {
         keyOpacity = d.object(forKey: "mathflow.keyOpacity") as? Double ?? 0.72
         keyIntensity = d.object(forKey: "mathflow.keyIntensity") as? Double ?? 0.10
         keyColorEffect = d.object(forKey: "mathflow.keyColorEffect") as? Bool ?? false
+        keyEffectColorID = d.string(forKey: "mathflow.keyEffectColor") ?? "accent"
         navEnabled = d.object(forKey: "mathflow.navEnabled") as? Bool ?? true
         navStyle = d.string(forKey: "mathflow.navStyle") ?? "fluid_pill"
         navDuration = d.object(forKey: "mathflow.navDuration") as? Double ?? 280
@@ -57,6 +59,9 @@ final class AppSettings: ObservableObject {
         if let path = fontPath { _ = CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: path) as CFURL, .process, nil) }
     }
     var palette: MathFlowPalette { MathFlowPalette.named(themeID) }
+    var effectColor: Color {
+        switch keyEffectColorID { case "purple": return .purple; case "cyan": return .cyan; case "green": return .green; case "pink": return .pink; case "orange": return .orange; default: return palette.accent }
+    }
     func text(_ key: String) -> String { MathFlowLocalization.text(key, language: languageID) }
 }
 
@@ -741,6 +746,7 @@ struct SettingsView: View {
     @State private var keyOpacity = 0.72
     @State private var keyIntensity = 0.10
     @State private var keyColorEffect = false
+    @State private var keyEffectColorID = "accent"
     @State private var navEnabled = true
     @State private var navStyle = "fluid_pill"
     @State private var navDuration = 280.0
@@ -761,7 +767,7 @@ struct SettingsView: View {
     private var hasChanges: Bool {
         theme != settings.themeID || language != settings.languageID || abs(scale-settings.textScale)>0.001 ||
         keyStyle != settings.keyStyle || keyDuration != settings.keyDuration || keyOpacity != settings.keyOpacity ||
-        keyIntensity != settings.keyIntensity || keyColorEffect != settings.keyColorEffect ||
+        keyIntensity != settings.keyIntensity || keyColorEffect != settings.keyColorEffect || keyEffectColorID != settings.keyEffectColorID ||
         navEnabled != settings.navEnabled || navStyle != settings.navStyle || navDuration != settings.navDuration ||
         navIntensity != settings.navIntensity || navIconScale != settings.navIconScale || navOpacity != settings.navOpacity ||
         iconID != settings.iconID || fontPath != settings.fontPath
@@ -824,7 +830,14 @@ struct SettingsView: View {
                     settingSlider("Длительность", value: $keyDuration, range: 70...400, suffix: " мс", p: p)
                     settingSlider("Непрозрачность", value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
                     settingSlider("Интенсивность", value: $keyIntensity, range: 0.02...0.2, suffix: "%", p: p, percent: true)
-                    Toggle("Цветовой эффект при нажатии", isOn: $keyColorEffect).tint(p.accent).listRowBackground(p.surface)
+                    Toggle(settings.text("button_color_effect"), isOn: $keyColorEffect).tint(p.accent).listRowBackground(p.surface)
+                    HStack(spacing: 13) {
+                        ForEach(["accent","purple","cyan","green","pink","orange"], id: \.self) { colorID in
+                            Circle().fill(effectColor(for: colorID, palette: p)).frame(width: 27, height: 27)
+                                .overlay(Circle().stroke(keyEffectColorID == colorID ? p.text : .clear, lineWidth: 2).padding(-3))
+                                .onTapGesture { keyEffectColorID = colorID }
+                        }
+                    }.padding(.vertical, 5).listRowBackground(p.surface)
                 }
                 Section("Анимация навигации") {
                     Toggle("Включить анимацию", isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
@@ -847,7 +860,7 @@ struct SettingsView: View {
                         settings.themeID = theme; settings.languageID = language; settings.textScale = scale
                         settings.keyStyle = keyStyle; settings.keyDuration = min(400,max(70,keyDuration))
                         settings.keyOpacity = min(1,max(0.2,keyOpacity)); settings.keyIntensity = min(0.2,max(0.02,keyIntensity))
-                        settings.keyColorEffect = keyColorEffect; settings.navEnabled = navEnabled; settings.navStyle = navStyle
+                        settings.keyColorEffect = keyColorEffect; settings.keyEffectColorID = keyEffectColorID; settings.navEnabled = navEnabled; settings.navStyle = navStyle
                         settings.navDuration = min(1000,max(100,navDuration)); settings.navIntensity = navIntensity
                         settings.navIconScale = navIconScale; settings.navOpacity = navOpacity; settings.iconID = iconID
                         settings.fontPath = fontPath; settings.fontPostScriptName = fontName
@@ -864,7 +877,7 @@ struct SettingsView: View {
             guard !initialized else { return }; initialized = true
             theme=settings.themeID; language=settings.languageID; scale=settings.textScale
             keyStyle=settings.keyStyle; keyDuration=settings.keyDuration; keyOpacity=settings.keyOpacity
-            keyIntensity=settings.keyIntensity; keyColorEffect=settings.keyColorEffect; navEnabled=settings.navEnabled
+            keyIntensity=settings.keyIntensity; keyColorEffect=settings.keyColorEffect; keyEffectColorID=settings.keyEffectColorID; navEnabled=settings.navEnabled
             navStyle=settings.navStyle; navDuration=settings.navDuration; navIntensity=settings.navIntensity
             navIconScale=settings.navIconScale; navOpacity=settings.navOpacity; iconID=settings.iconID
             fontPath=settings.fontPath; fontName=settings.fontPostScriptName
@@ -887,6 +900,10 @@ struct SettingsView: View {
                 fontMessage = "Шрифт добавлен: \(fontName ?? source.lastPathComponent). Нажмите «Применить»."
             } catch { fontMessage = error.localizedDescription }
         }
+    }
+
+    private func effectColor(for id: String, palette: MathFlowPalette) -> Color {
+        switch id { case "purple": return .purple; case "cyan": return .cyan; case "green": return .green; case "pink": return .pink; case "orange": return .orange; default: return palette.accent }
     }
 
     private func settingSlider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String, p: MathFlowPalette, percent: Bool = false) -> some View {
@@ -921,7 +938,7 @@ struct MathFlowPressStyle: ButtonStyle {
             .overlay {
                 if configuration.isPressed && settings.keyColorEffect {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(settings.palette.accent.opacity(settings.keyStyle == "flash" ? settings.keyOpacity : settings.keyOpacity * 0.22))
+                        .fill(settings.effectColor.opacity(settings.keyStyle == "flash" ? settings.keyOpacity : settings.keyOpacity * 0.22))
                         .allowsHitTesting(false)
                 }
             }
