@@ -59,8 +59,10 @@ public struct Rational: Equatable, Comparable, Sendable {
         }
         let pieces = mantissa.split(separator: ".", omittingEmptySubsequences: false)
         guard pieces.count <= 2 else { throw MathFlowMathError.invalidNumber }
-        let whole = String(pieces[0]).isEmpty ? "0" : String(pieces[0])
+        let rawWhole = String(pieces[0])
         let fraction = pieces.count == 2 ? String(pieces[1]) : ""
+        guard !(rawWhole.isEmpty && fraction.isEmpty) else { throw MathFlowMathError.invalidNumber }
+        let whole = rawWhole.isEmpty ? "0" : rawWhole
         guard whole.allSatisfy({ $0.isNumber || $0 == "-" || $0 == "+" }),
               fraction.allSatisfy({ $0.isNumber }) else { throw MathFlowMathError.invalidNumber }
         guard let integer = BigInt(whole + fraction) else { throw MathFlowMathError.invalidNumber }
