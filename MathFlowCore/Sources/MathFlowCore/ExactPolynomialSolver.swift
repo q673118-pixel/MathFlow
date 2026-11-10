@@ -221,7 +221,12 @@ enum ExactPolynomialEquationSolver {
     }
     private static func double(_ r:Rational)->Double { (Double(String(r.numerator)) ?? 0)/(Double(String(r.denominator)) ?? 1) }
     private static func fraction(_ r:Rational)->String { r.fractionString }
-    private static func format(_ x:Double)->String { abs(x)<1e-10 ? "0" : String(format:"%.12g",x) }
+    private static func format(_ x:Double)->String {
+        if abs(x) < 1.0e-10 { return "0" }
+        return String(format: "%.10f", locale: Locale(identifier: "en_US_POSIX"), x)
+            .replacingOccurrences(of: #"0+$"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"[.]$"#, with: "", options: .regularExpression)
+    }
     private static func exactSquareRoot(_ value:Rational)->Rational? {
         guard value >= .zero else { return nil }
         let n=sqrtBig(value.numerator), d=sqrtBig(value.denominator)
