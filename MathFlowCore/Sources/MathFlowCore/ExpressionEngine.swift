@@ -401,8 +401,9 @@ private final class Parser {
         default: throw MathFlowMathError.unsupportedExpression("Неизвестная функция: \(name)")
         }
         guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
-        if includeSteps { steps.append("\(name)(\(argument.description)) ≈ \(String(format: "%.15g", answer))") }
-        return .approximate(MathDecimal.fromDouble(answer))
+        let approximate = MathDecimal.fromDouble(answer)
+        if includeSteps { steps.append("\(name)(\(argument.description)) ≈ \(MathDecimal.string(approximate))") }
+        return .approximate(approximate)
     }
 
     private func binary(_ lhs: MathValue, _ rhs: MathValue, _ op: TokenKind) throws -> MathValue {
