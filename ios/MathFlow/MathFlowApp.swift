@@ -268,16 +268,27 @@ struct CalculatorView: View {
             VStack(alignment: .trailing, spacing: 10) {
                 HStack(spacing: 8) {
                     Button("f(x)") { withAnimation(.easeInOut(duration: 0.18)) { scientific.toggle() } }
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(scientific ? p.accent : p.muted)
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(scientific ? p.navActive : p.key, in: Capsule())
                     if scientific {
-                        Button(degrees ? "DEG" : "RAD") { degrees.toggle() }.foregroundStyle(p.accent)
+                        Button(degrees ? "DEG" : "RAD") { degrees.toggle() }
+                            .font(.system(size: 13, weight: .medium)).foregroundStyle(p.accent)
+                            .padding(.horizontal, 12).padding(.vertical, 7).background(p.navActive, in: Capsule())
                     }
                     if !steps.isEmpty {
-                        Button(settings.text(showSteps ? "hide_solution" : "show_solution")) { withAnimation(.easeInOut(duration: 0.2)) { showSteps.toggle() } }
+                        Button(settings.text("steps")) { withAnimation(.easeInOut(duration: 0.2)) { showSteps.toggle() } }
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(showSteps ? p.accent : p.muted)
+                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .background(showSteps ? p.navActive : p.key, in: Capsule())
                     }
                     Spacer()
-                    Button("⌫") { expression = String(expression.dropLast()) }.foregroundStyle(p.muted)
+                    Button { expression = String(expression.dropLast()) } label: {
+                        Image(systemName: "delete.left").font(.system(size: 18)).foregroundStyle(p.muted)
+                            .frame(width: 40, height: 40).background(p.key, in: Circle())
+                    }
                 }
                 Text(expression.isEmpty ? " " : expression.replacingOccurrences(of: "sqrt", with: "√").replacingOccurrences(of: "pi", with: "π"))
                     .font(.system(size: 23, weight: .regular, design: .rounded))
@@ -318,9 +329,9 @@ struct CalculatorView: View {
                             Button { press(key) } label: {
                                 Text(key)
                                     .font(.system(size: 18, weight: .medium, design: .rounded))
-                                    .frame(maxWidth: .infinity, minHeight: 45)
-                                    .background(key == "=" ? p.keyEquals : (key == "AC" || ["÷", "×", "−", "+"].contains(key)) ? p.keyAccent : p.key,
-                                                in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                                    .frame(maxWidth: .infinity, minHeight: 50)
+                                     .background(key == "=" ? p.keyEquals : (key == "AC" || ["÷", "×", "−", "+"].contains(key)) ? p.keyAccent : p.key,
+                                                in: Capsule())
                                     .foregroundStyle(key == "=" ? p.onKeyEquals : p.text)
                             }
                             .buttonStyle(MathFlowPressStyle())
