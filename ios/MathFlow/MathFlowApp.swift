@@ -38,7 +38,7 @@ final class AppSettings: ObservableObject {
 
     func applyIcon(_ id: String) {
         guard UIApplication.shared.supportsAlternateIcons else { return }
-        let alternateName: String? = id == "vanilla" ? nil : "AppIcon" + id.prefix(1).uppercased() + id.dropFirst()
+        let alternateName: String? = id == "vanilla" ? nil : "AppIcon" + id.prefix(1).uppercased() + String(id.dropFirst())
         UIApplication.shared.setAlternateIconName(alternateName) { [weak self] error in
             guard error == nil else { return }
             Task { @MainActor in self?.iconID = id }
@@ -445,7 +445,7 @@ struct ToolsView: View {
                     }
                     if !result.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Результат").font(.headline).foregroundStyle(p.text)
+                            Text(settings.text("result")).font(.headline).foregroundStyle(p.text)
                             Text(result).font(.system(.body, design: .rounded).weight(.medium)).foregroundStyle(p.text).textSelection(.enabled)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -508,7 +508,7 @@ struct ToolsView: View {
             }
         }
         field(settings.text("fraction_two"), text: $second, palette: p)
-        action("Вычислить", palette: p) {
+        action(settings.text("calculate"), palette: p) {
             let value = try FractionTools.calculate(first, second, operation: operation)
             return "Точный ответ: \(value.mixed)\nДесятичный вид: \(value.decimal)\nСокращённая дробь: \(value.exact)"
         }
@@ -526,7 +526,7 @@ struct ToolsView: View {
                 Text("Увеличить").tag(true); Text("Уменьшить").tag(false)
             }.pickerStyle(.segmented)
         }
-        action("Рассчитать", palette: p) {
+        action(settings.text("calculate"), palette: p) {
             switch percentMode {
             case 0: return "\(first)% от \(second) = \(try PercentTools.percentOf(first, second))"
             case 1: return "\(first) составляет \(try PercentTools.whatPercent(first, second))% от \(second)"
@@ -573,7 +573,7 @@ struct ToolsView: View {
                 }
             }
         }
-        field("Значение", text: $converterValue, palette: p)
+        field(settings.text("value"), text: $converterValue, palette: p)
         HStack(spacing: 8) {
             unitPicker("Из", selection: $fromID, p: p)
             Button { swap(&fromID, &toID) } label: {
@@ -604,8 +604,8 @@ struct ToolsView: View {
     }
 
     @ViewBuilder private func graphContent(_ p: MathFlowPalette) -> some View {
-        Text("График функции").font(.title2.bold()).foregroundStyle(p.text)
-        field("Функция y =", text: $graphExpression, palette: p, decimal: false)
+        Text(settings.text("graph")).font(.title2.bold()).foregroundStyle(p.text)
+        field(settings.text("graph_input"), text: $graphExpression, palette: p, decimal: false)
         HStack(spacing: 10) {
             field("X от", text: $graphMin, palette: p)
             field("X до", text: $graphMax, palette: p)
@@ -714,7 +714,7 @@ struct SolverView: View {
             }.buttonStyle(MathFlowPressStyle())
             if !answer.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Ответ").font(.caption.weight(.semibold)).foregroundStyle(p.muted)
+                    Text(settings.text("result")).font(.caption.weight(.semibold)).foregroundStyle(p.muted)
                     Text(answer).font(.system(size: 23, weight: .semibold, design: .rounded)).foregroundStyle(p.text)
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
                     .background(p.surface, in: RoundedRectangle(cornerRadius: 18))
