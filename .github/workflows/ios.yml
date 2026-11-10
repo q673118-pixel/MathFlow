@@ -1,0 +1,51 @@
+name: MathFlow iOS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "redesign-ui-ios" ]
+    paths:
+      - "ios/**"
+      - "MathFlowCore/**"
+      - ".github/workflows/ios.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n 1)"
+          if [ -n "$XCODE_PATH" ]; then sudo xcode-select -s "$XCODE_PATH/Contents/Developer"; fi
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project ios/MathFlow.xcodeproj -scheme MathFlow
+
+      - name: Run math-core tests
+        run: swift test --package-path MathFlowCore
+
+      - name: Build iOS Simulator app
+        run: |
+          xcodebuild build -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload simulator build
+        uses: actions/upload-artifact@v4
+        with:
+          name: MathFlow-iOS-Simulator-${{ github.run_number }}
+          path: build/ios/Build/Products/Debug-iphonesimulator/MathFlow.app
+          if-no-files-found: error
+          retention-days: 7
