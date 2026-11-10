@@ -2,6 +2,7 @@ import SwiftUI
 import MathFlowCore
 import UniformTypeIdentifiers
 import CoreText
+import UIKit
 
 @main
 struct MathFlowApp: App {
@@ -16,6 +17,7 @@ struct MathFlowApp: App {
     }
 }
 
+@MainActor
 final class AppSettings: ObservableObject {
     @Published var themeID: String { didSet { UserDefaults.standard.set(themeID, forKey: "mathflow.theme") } }
     @Published var languageID: String { didSet { UserDefaults.standard.set(languageID, forKey: "mathflow.language") } }
@@ -33,6 +35,15 @@ final class AppSettings: ObservableObject {
     @Published var navIconScale: Double { didSet { UserDefaults.standard.set(navIconScale, forKey: "mathflow.navIconScale") } }
     @Published var navOpacity: Double { didSet { UserDefaults.standard.set(navOpacity, forKey: "mathflow.navOpacity") } }
     @Published var iconID: String { didSet { UserDefaults.standard.set(iconID, forKey: "mathflow.icon") } }
+
+    func applyIcon(_ id: String) {
+        guard UIApplication.shared.supportsAlternateIcons else { return }
+        let alternateName: String? = id == "vanilla" ? nil : "AppIcon" + id.prefix(1).uppercased() + id.dropFirst()
+        UIApplication.shared.setAlternateIconName(alternateName) { [weak self] error in
+            guard error == nil else { return }
+            Task { @MainActor in self?.iconID = id }
+        }
+    }
     @Published var fontPath: String? { didSet { UserDefaults.standard.set(fontPath, forKey: "mathflow.fontPath") } }
     @Published var fontPostScriptName: String? { didSet { UserDefaults.standard.set(fontPostScriptName, forKey: "mathflow.fontName") } }
 
@@ -830,7 +841,7 @@ struct SettingsView: View {
                             }
                         }
                     }.listRowBackground(p.surface)
-                    Text("Варианты выбраны и сохраняются. Для фактической смены иконки iOS ещё нужны отдельные AppIcon assets и запись CFBundleAlternateIcons.").font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
+                    Text(settings.text("icon_hint")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
                 }
                 Section("Шрифт") {
                     Button { showFontPicker = true } label: {
@@ -882,7 +893,7 @@ struct SettingsView: View {
                         settings.keyOpacity = min(1,max(0.2,keyOpacity)); settings.keyIntensity = min(0.2,max(0.02,keyIntensity))
                         settings.keyColorEffect = keyColorEffect; settings.keyEffectColorID = keyEffectColorID; settings.navEnabled = navEnabled; settings.navStyle = navStyle
                         settings.navDuration = min(1000,max(100,navDuration)); settings.navIntensity = navIntensity
-                        settings.navIconScale = navIconScale; settings.navOpacity = navOpacity; settings.iconID = iconID
+                        settings.navIconScale = navIconScale; settings.navOpacity = navOpacity; settings.applyIcon(iconID)
                         settings.fontPath = fontPath; settings.fontPostScriptName = fontName
                         withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) { }
                     } label: {
