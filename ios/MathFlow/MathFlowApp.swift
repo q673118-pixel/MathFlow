@@ -344,7 +344,7 @@ struct CalculatorView: View {
                         ForEach(row, id: \.self) { key in
                             Button { press(key) } label: {
                                 Text(key)
-                                    .font(.system(size: key.count > 1 && key != "AC" ? (scientific ? 18 : 20) : (scientific ? 22 : 28), weight: .regular, design: .rounded))
+                                    .mathFlowFont(size: key.count > 1 && key != "AC" ? (scientific ? 18 : 20) : (scientific ? 22 : 28), weight: .regular, design: .rounded)
                                     .frame(maxWidth: .infinity, minHeight: 50)
                                      .background(key == "=" ? p.keyEquals : (key == "AC" || ["÷", "×", "−", "+"].contains(key)) ? p.keyAccent : p.key,
                                                 in: Capsule())
