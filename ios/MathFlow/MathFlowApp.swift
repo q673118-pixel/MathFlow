@@ -607,8 +607,8 @@ struct ToolsView: View {
         }
         action(settings.text("calculate"), palette: p) {
             switch percentMode {
-            case 0: return "\(first)% от \(second) = \(try PercentTools.percentOf(first, second))"
-            case 1: return "\(first) составляет \(try PercentTools.whatPercent(first, second))% от \(second)"
+            case 0: return "\(first)% \(settings.text("percent_of_result")) \(second) = \(try PercentTools.percentOf(first, second))"
+            case 1: return "\(first) \(settings.text("is_percent_of")) \(try PercentTools.whatPercent(first, second))% \(settings.text("percent_of_result")) \(second)"
             default: return (increase ? settings.text("after_increase") : settings.text("after_decrease")) + ": " + (try PercentTools.change(second, percent: first, increase: increase))
             }
         }
@@ -616,7 +616,7 @@ struct ToolsView: View {
 
     @ViewBuilder private func geometryContent(_ p: MathFlowPalette) -> some View {
         Text(settings.text("geometry")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
-        Picker("Фигура", selection: $geometryMode) {
+        Picker(settings.text("shape"), selection: $geometryMode) {
             Text(settings.text("rectangle")).tag(0); Text(settings.text("circle")).tag(1); Text(settings.text("triangle")).tag(2)
         }.pickerStyle(.segmented)
         if geometryMode == 0 {
@@ -1064,7 +1064,7 @@ struct SettingsView: View {
                     Picker(settings.text("animation_spring"), selection: $keyStyle) {
                         ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(settings.text("animation_" + entry.element.0)).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
-                    settingSlider(settings.text("animation_duration"), value: $keyDuration, range: 70...400, suffix: " мс", p: p)
+                    settingSlider(settings.text("animation_duration"), value: $keyDuration, range: 70...400, suffix: " ms", p: p)
                     settingSlider(settings.text("animation_opacity"), value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
                     settingSlider(settings.text("animation_intensity"), value: $keyIntensity, range: 0.02...0.2, suffix: "%", p: p, percent: true)
                     Toggle(settings.text("button_color_effect"), isOn: $keyColorEffect).tint(p.accent).listRowBackground(p.surface)
