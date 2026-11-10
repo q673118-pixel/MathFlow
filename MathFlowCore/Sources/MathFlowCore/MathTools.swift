@@ -32,7 +32,13 @@ private func toolDecimal(_ source: String) throws -> Decimal {
 }
 
 private func toolFormat(_ value: Decimal) -> String {
+    var input = value
     var rounded = value
+    let magnitude = abs(NSDecimalNumber(decimal: value).doubleValue)
+    if magnitude.isFinite && magnitude > 0 {
+        let significantScale = 15 - Int(floor(log10(magnitude)))
+        NSDecimalRound(&rounded, &input, significantScale, .plain)
+    }
     var source = NSDecimalString(&rounded, Locale(identifier: "en_US_POSIX"))
     if source.contains(".") {
         while source.last == "0" { source.removeLast() }
