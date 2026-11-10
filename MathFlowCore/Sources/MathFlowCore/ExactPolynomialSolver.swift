@@ -34,7 +34,7 @@ private struct ExactPolynomial {
         return value
     }
     func value(_ x: Double) -> Double {
-        c.reversed().reduce(0.0) { $0 * x + (Double(String($1.numerator)) ?? 0) / (Double(String($1.denominator)) ?? 1) }
+        c.reversed().reduce(0.0) { $0 * x + $1.doubleValue }
     }
 }
 
@@ -219,7 +219,7 @@ enum ExactPolynomialEquationSolver {
         let labels=roots.enumerated().map { "x\($0.offset+1) ≈ \(format($0.element))" }
         return EquationSolution(kind:"polynomial_numeric",answer:labels.joined(separator:", "),steps:["Это многочлен степени \(degree). Корни найдены численно."]+domainLine+labels)
     }
-    private static func double(_ r:Rational)->Double { (Double(String(r.numerator)) ?? 0)/(Double(String(r.denominator)) ?? 1) }
+    private static func double(_ r:Rational)->Double { r.doubleValue }
     private static func fraction(_ r:Rational)->String { r.fractionString }
     private static func format(_ x:Double)->String {
         if abs(x) < 1.0e-10 { return "0" }
@@ -241,7 +241,7 @@ enum ExactPolynomialEquationSolver {
     }
     private static func realRoots(_ poly:ExactPolynomial)->[Double] {
         let coefficients = (0...poly.degree).map {
-            (Double(String(poly[$0].numerator)) ?? 0) / (Double(String(poly[$0].denominator)) ?? 1)
+            poly[$0].doubleValue
         }
         return realRoots(coefficients)
     }
