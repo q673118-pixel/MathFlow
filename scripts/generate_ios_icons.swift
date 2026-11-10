@@ -90,7 +90,7 @@ func render(_ variant: Variant) throws {
     image.lockFocus()
     let rect = NSRect(x: 0, y: 0, width: 1024, height: 1024)
 
-    if let start = capture("startColor=\"#([0-9A-Fa-f]{8})\"", launcherXML),
+    if let start = capture("startColor=\"#([0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?)\"", launcherXML),
        let middle = capture("centerColor=\"#([0-9A-Fa-f]{8})\"", launcherXML),
        let end = capture("endColor=\"#([0-9A-Fa-f]{8})\"", launcherXML) {
         NSGradient(colors: [color("#" + start), color("#" + middle), color("#" + end)])?
