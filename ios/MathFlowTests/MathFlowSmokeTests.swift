@@ -5,9 +5,13 @@ import MathFlowCore
 final class MathFlowSmokeTests: XCTestCase {
     func testAllAndroidLocalesAreAvailableInNativeApp() {
         XCTAssertEqual(MathFlowLanguage.all.count, 15)
+        XCTAssertGreaterThanOrEqual(MathFlowLocalization.keys.count, 141)
         for language in MathFlowLanguage.all {
-            XCTAssertFalse(MathFlowLocalization.text("settings", language: language.id).isEmpty)
-            XCTAssertFalse(MathFlowLocalization.text("calculate", language: language.id).isEmpty)
+            for key in MathFlowLocalization.keys {
+                let value = MathFlowLocalization.text(key, language: language.id)
+                XCTAssertFalse(value.isEmpty, "Empty translation for \\(key) in \\(language.id)")
+                XCTAssertNotEqual(value, key, "Missing translation for \\(key) in \\(language.id)")
+            }
         }
     }
 
