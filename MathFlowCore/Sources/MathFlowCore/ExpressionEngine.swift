@@ -34,16 +34,40 @@ public struct ExpressionEngine {
         }
     }
 
+    fileprivate static func plainDecimalString(_ value: Double) -> String {
+        // Swift's Double description is the shortest round-trip representation.
+        // Expand scientific notation because Android's BigDecimal.stripTrailingZeros()
+        // returns a plain decimal string for the same Double result.
+        let raw = String(value).lowercased()
+        guard let exponentMarker = raw.firstIndex(of: "e") else { return raw }
+        let mantissa = String(raw[..<exponentMarker])
+        let exponentText = String(raw[raw.index(after: exponentMarker)...])
+        guard let exponent = Int(exponentText) else { return raw }
+        let negative = mantissa.hasPrefix("-")
+        let unsigned = negative ? String(mantissa.dropFirst()) : mantissa
+        let decimalPosition = (unsigned.firstIndex(of: ".").map { unsigned.distance(from: unsigned.startIndex, to: $0) } ?? unsigned.count) + exponent
+        let digits = unsigned.filter(\.isNumber)
+        let body: String
+        if decimalPosition <= 0 {
+            body = "0." + String(repeating: "0", count: -decimalPosition) + digits
+        } else if decimalPosition >= digits.count {
+            body = digits + String(repeating: "0", count: decimalPosition - digits.count)
+        } else {
+            let split = digits.index(digits.startIndex, offsetBy: decimalPosition)
+            body = String(digits[..<split]) + "." + String(digits[split...])
+        }
+        var normalized = body
+        if normalized.contains(".") {
+            while normalized.last == "0" { normalized.removeLast() }
+            if normalized.last == "." { normalized.removeLast() }
+        }
+        return (negative ? "-" : "") + normalized
+    }
+
     private static func format(_ value: Double) -> String {
         guard value.isFinite else { return "Ошибка" }
         if value == 0 { return "0" }
-        var text = String(format: "%.15g", value)
-        if text.contains("e") || text.contains("E") { return text }
-        if text.contains(".") {
-            while text.last == "0" { text.removeLast() }
-            if text.last == "." { text.removeLast() }
-        }
-        return text
+        return plainDecimalString(value)
     }
 }
 
@@ -62,7 +86,7 @@ private enum MathValue {
     var description: String {
         switch self {
         case .exact(let value): return value.fractionString
-        case .approximate(let value): return String(format: "%.15g", value)
+        case .approximate(let value): return ExpressionEngine.plainDecimalString(value)
         }
     }
 }
