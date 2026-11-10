@@ -89,6 +89,26 @@ private enum MathDecimal {
         return decimal
     }
 
+    static func fromBinaryDouble(_ value: Double) -> Decimal {
+        guard value.isFinite, value != 0 else { return .zero }
+        let bits = value.bitPattern
+        let exponentBits = Int((bits >> 52) & 0x7ff)
+        let fractionMask = (UInt64(1) << 52) - 1
+        let fraction = bits & fractionMask
+        let significand = exponentBits == 0 ? fraction : fraction | (UInt64(1) << 52)
+        let binaryExponent = exponentBits == 0 ? -1074 : exponentBits - 1023 - 52
+        var numerator = BigInt(String(significand)) ?? 0
+        var denominator: BigInt = 1
+        if binaryExponent >= 0 {
+            for _ in 0..<binaryExponent { numerator *= 2 }
+        } else {
+            for _ in 0..<(-binaryExponent) { denominator *= 2 }
+        }
+        if (bits >> 63) == 1 { numerator = -numerator }
+        let exact = try! Rational(numerator, denominator)
+        return rounded(Decimal(string: exact.decimalString(scale: 32), locale: locale) ?? .zero)
+    }
+
     static func fromRational(_ value: Rational) -> Decimal {
         let source = value.decimalString(scale: 32)
         return rounded(Decimal(string: source, locale: locale) ?? .zero)
@@ -339,8 +359,8 @@ private final class Parser {
 
     private func parseIdentifier(_ name: String) throws -> MathValue {
         if let variable = variables[name] { return .approximate(MathDecimal.fromDouble(variable)) }
-        if name == "pi" { return .approximate(MathDecimal.fromDouble(Double.pi)) }
-        if name == "e" { return .approximate(MathDecimal.fromDouble(M_E)) }
+        if name == "pi" { return .approximate(MathDecimal.fromBinaryDouble(Double.pi)) }
+        if name == "e" { return .approximate(MathDecimal.fromBinaryDouble(M_E)) }
         try expect(.left)
         let argument = try parseExpression()
         try expect(.right)
