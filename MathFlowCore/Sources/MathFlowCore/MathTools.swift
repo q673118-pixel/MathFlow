@@ -131,12 +131,12 @@ public enum GeometryTools {
         let a = try toolDecimal(aText)
         let b = try toolDecimal(bText)
         let c = try toolDecimal(cText)
-        guard a > 0, b > 0, c > 0, a + b > c, a + c > b, b + c > a else {
-            throw MathFlowToolError.invalidGeometry("Такие стороны не образуют треугольник")
-        }
         let ad = NSDecimalNumber(decimal: a).doubleValue
         let bd = NSDecimalNumber(decimal: b).doubleValue
         let cd = NSDecimalNumber(decimal: c).doubleValue
+        guard ad > 0, bd > 0, cd > 0, ad + bd > cd, ad + cd > bd, bd + cd > ad else {
+            throw MathFlowToolError.invalidGeometry("Такие стороны не образуют треугольник")
+        }
         let perimeter = ad + bd + cd
         let semiperimeter = perimeter / 2
         let area = sqrt(semiperimeter * (semiperimeter - ad) * (semiperimeter - bd) * (semiperimeter - cd))
