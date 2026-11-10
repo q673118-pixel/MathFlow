@@ -108,4 +108,18 @@ final class MathToolsTests: XCTestCase {
         XCTAssertTrue(result.answer.contains("2"))
     }
 
+    func testGeneralSolverSupportsAbsoluteValueAndFunctions() throws {
+        let absolute = try AlgebraSolver.solve("|x| = 2")
+        XCTAssertTrue(absolute.answer.contains("-2"))
+        XCTAssertTrue(absolute.answer.contains("2"))
+        XCTAssertTrue(try AlgebraSolver.solve("sqrt(x) = 2").answer.contains("4"))
+        XCTAssertTrue(try AlgebraSolver.solve("ln(x) = 0").answer.contains("1"))
+        XCTAssertTrue(try AlgebraSolver.solve("sin(x) = 0").answer.contains("0"))
+    }
+
+    func testGeneralSolverSupportsFractionalPowers() throws {
+        let result = try AlgebraSolver.solve("x^0.5 = 3")
+        XCTAssertTrue(result.answer.contains("9"))
+    }
+
 }
