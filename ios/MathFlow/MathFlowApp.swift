@@ -210,12 +210,12 @@ private struct BottomNavigation: View {
 
     var body: some View {
         let p = settings.palette
-        let enabled = previewSettings?.enabled ?? enabled
-        let style = previewSettings?.style ?? style
-        let durationValue = previewSettings?.duration ?? durationValue
-        let intensity = previewSettings?.intensity ?? intensity
-        let iconScale = previewSettings?.iconScale ?? iconScale
-        let opacity = previewSettings?.opacity ?? opacity
+        let enabled = previewSettings?.enabled ?? settings.navEnabled
+        let style = previewSettings?.style ?? settings.navStyle
+        let durationValue = previewSettings?.duration ?? settings.navDuration
+        let intensity = previewSettings?.intensity ?? settings.navIntensity
+        let iconScale = previewSettings?.iconScale ?? settings.navIconScale
+        let opacity = previewSettings?.opacity ?? settings.navOpacity
         HStack(spacing: 3) {
             ForEach(items.indices, id: \.self) { index in
                 let selected = selection == index
