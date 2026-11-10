@@ -220,6 +220,12 @@ private struct BottomNavigation: View {
             ForEach(items.indices, id: \.self) { index in
                 let selected = selection == index
                 Button {
+                    if enabled && ["expand", "ripple_bloom"].contains(style) {
+                        bloomScale = CGFloat(style == "ripple_bloom" ? 0.08 + intensity * 0.34 : 0.38 + intensity * 0.36)
+                        withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: (previewSettings?.duration ?? settings.navDuration) / 1000)) {
+                            bloomScale = 1
+                        }
+                    }
                     withAnimation(animation) { selection = index }
                 } label: {
                     Image(systemName: items[index].0)
@@ -237,7 +243,7 @@ private struct BottomNavigation: View {
                             RoundedRectangle(cornerRadius: style == "morph" ? 15 : 22, style: .continuous)
                                 .fill(p.navActive.opacity(opacity))
                                 .matchedGeometryEffect(id: "mathflow.nav.indicator", in: namespace)
-                                .scaleEffect(x: style == "expand" ? 1 + intensity * 0.12 : style == "elastic_slide" ? 1 + intensity * 0.08 : style == "ripple_bloom" ? 0.72 + intensity * 0.28 : 1, y: 1)
+                                .scaleEffect(x: style == "expand" || style == "ripple_bloom" ? bloomScale : style == "elastic_slide" ? 1 + intensity * 0.20 : 1, y: 1)
                         }
                         if selected && enabled && style == "soft_focus" {
                             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -264,6 +270,7 @@ private struct BottomNavigation: View {
     }
 
     @Namespace private var namespace
+    @State private var bloomScale: CGFloat = 1
     private var animation: Animation {
         let enabled = previewSettings?.enabled ?? settings.navEnabled
         let style = previewSettings?.style ?? settings.navStyle
