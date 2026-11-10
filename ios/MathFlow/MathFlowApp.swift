@@ -1180,6 +1180,12 @@ struct MathFlowPressStyle: ButtonStyle {
         }()
         let duration = durationValue / 1000
         let isSpring = ["spring", "bounce", "elastic"].contains(style)
+        let durationFraction = min(1, max(0, (durationValue - 70) / 330))
+        let stiffness = 1200 - durationFraction * 1080
+        let springResponse = 2 * Double.pi / sqrt(stiffness)
+        let pressAnimation: Animation = isSpring
+            ? .spring(response: springResponse, dampingFraction: 0.5)
+            : .timingCurve(0.4, 0, 0.2, 1, duration: duration)
         let effectAlpha = style == "flash" ? opacityValue : style == "ripple" ? opacityValue * 0.34 : opacityValue * 0.22
 
         return configuration.label
@@ -1200,12 +1206,7 @@ struct MathFlowPressStyle: ButtonStyle {
                     }
                 }
             }
-            .animation(
-                isSpring
-                    ? .spring(response: duration, dampingFraction: style == "elastic" ? 0.48 : 0.72)
-                    : .easeOut(duration: duration),
-                value: configuration.isPressed
-            )
+            .animation(pressAnimation, value: configuration.isPressed)
     }
 }
 
