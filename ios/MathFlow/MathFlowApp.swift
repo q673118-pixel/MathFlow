@@ -389,7 +389,7 @@ struct ToolsView: View {
 
     private func action(_ title: String, palette p: MathFlowPalette, run: @escaping () throws -> String) -> some View {
         Button {
-            do { withAnimation(.easeInOut(duration: 0.2)) { result = try run(); error = nil } }
+            do { let value = try run(); withAnimation(.easeInOut(duration: 0.2)) { result = value; error = nil } }
             catch { result = ""; self.error = error.localizedDescription }
         } label: {
             Text(title).font(.system(size: 16, weight: .semibold))
