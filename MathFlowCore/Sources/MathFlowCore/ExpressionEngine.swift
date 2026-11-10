@@ -174,7 +174,7 @@ private enum MathValue {
 
     var doubleValue: Double {
         switch self {
-        case .exact(let value): return value.doubleValue
+        case .exact(let value): return NSDecimalNumber(decimal: MathDecimal.fromRational(value)).doubleValue
         case .approximate(let value): return NSDecimalNumber(decimal: value).doubleValue
         }
     }
