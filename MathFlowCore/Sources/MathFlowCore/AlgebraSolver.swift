@@ -235,7 +235,7 @@ private final class GeneralEquationParser {
         guard peek == "^" else { return base }
         _ = take()
         let exponent = try unary()
-        return { x in Foundation.pow(base(x), exponent(x)) }
+        return { x in pow(base(x), exponent(x)) }
     }
 
     private func primary() throws -> (Double) -> Double {
@@ -255,7 +255,7 @@ private final class GeneralEquationParser {
         }
         if token.lowercased() == "x" { return { x in x } }
         if token.lowercased() == "pi" { return { _ in Double.pi } }
-        if token.lowercased() == "e" { return { _ in M_E } }
+        if token.lowercased() == "e" { return { _ in exp(1.0) } }
         if token.first?.isNumber == true {
             guard let number = Double(token.replacingOccurrences(of: ",", with: ".")) else {
                 throw MathFlowMathError.invalidNumber
