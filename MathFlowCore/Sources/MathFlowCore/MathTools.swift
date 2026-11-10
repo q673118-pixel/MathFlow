@@ -31,6 +31,10 @@ private func toolDecimal(_ source: String) throws -> Decimal {
     return value
 }
 
+private func toolDecimalFromDouble(_ value: Double) -> Decimal {
+    Decimal(string: String(value), locale: Locale(identifier: "en_US_POSIX")) ?? .zero
+}
+
 private func toolFormat(_ value: Decimal) -> String {
     var input = value
     var rounded = value
@@ -106,18 +110,24 @@ public enum GeometryTools {
     public static func circle(_ radiusText: String) throws -> (area: String, circumference: String) {
         let r = try toolDecimal(radiusText)
         guard r > 0 else { throw MathFlowToolError.invalidGeometry("Радиус должен быть больше нуля") }
-        let d = NSDecimalNumber(decimal: r).doubleValue
-        return (toolFormat(Decimal(Double.pi * d * d)), toolFormat(Decimal(2 * Double.pi * d)))
+        let pi = Decimal(string: "3.141592653589793", locale: Locale(identifier: "en_US_POSIX"))!
+        return (toolFormat(pi * r * r), toolFormat(2 * pi * r))
     }
     public static func triangle(_ aText: String, _ bText: String, _ cText: String) throws -> (perimeter: String, semiperimeter: String, area: String) {
-        let a = NSDecimalNumber(decimal: try toolDecimal(aText)).doubleValue
-        let b = NSDecimalNumber(decimal: try toolDecimal(bText)).doubleValue
-        let c = NSDecimalNumber(decimal: try toolDecimal(cText)).doubleValue
+        let a = try toolDecimal(aText)
+        let b = try toolDecimal(bText)
+        let c = try toolDecimal(cText)
         guard a > 0, b > 0, c > 0, a + b > c, a + c > b, b + c > a else {
             throw MathFlowToolError.invalidGeometry("Такие стороны не образуют треугольник")
         }
-        let p = a + b + c, s = p / 2
-        return (toolFormat(Decimal(p)), toolFormat(Decimal(s)), toolFormat(Decimal(sqrt(s * (s-a) * (s-b) * (s-c)))))
+        let perimeter = a + b + c
+        let semiperimeter = perimeter / 2
+        let ad = NSDecimalNumber(decimal: a).doubleValue
+        let bd = NSDecimalNumber(decimal: b).doubleValue
+        let cd = NSDecimalNumber(decimal: c).doubleValue
+        let sd = (ad + bd + cd) / 2
+        let area = sqrt(sd * (sd - ad) * (sd - bd) * (sd - cd))
+        return (toolFormat(perimeter), toolFormat(semiperimeter), toolFormat(toolDecimalFromDouble(area)))
     }
 }
 
