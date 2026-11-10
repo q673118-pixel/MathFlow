@@ -72,8 +72,10 @@ struct RootView: View {
     @State private var showWelcome = false
     @State private var splashScale: CGFloat = 0.35
     @State private var splashAlpha = 0.0
-    @State private var dotOffset: CGFloat = -100
+    @State private var dotOffset: CGFloat = -450
     @State private var dotAlpha = 0.0
+    @State private var dotScaleX: CGFloat = 1
+    @State private var dotScaleY: CGFloat = 1
 
     var body: some View {
         VStack(spacing: 0) {
@@ -99,15 +101,16 @@ struct RootView: View {
                 ZStack {
                     Color.black.ignoresSafeArea()
                     ZStack {
-                        Text("M")
-                            .font(.system(size: 112, weight: .medium, design: .rounded))
-                            .foregroundStyle(settings.palette.accent)
+                        MathFlowMark()
+                            .fill(settings.palette.accent)
+                            .frame(width: 108, height: 108)
                             .scaleEffect(splashScale)
                             .opacity(splashAlpha)
-                        Circle()
-                            .fill(settings.palette.accent)
-                            .frame(width: 13, height: 13)
-                            .offset(x: 35, y: dotOffset)
+                        MathFlowDot()
+                            .fill(settings.palette.keyEquals)
+                            .frame(width: 108, height: 108)
+                            .scaleEffect(x: dotScaleX, y: dotScaleY, anchor: UnitPoint(x: 0.5, y: 0.308))
+                            .offset(y: dotOffset)
                             .opacity(dotAlpha)
                     }
                 }.transition(.opacity)
