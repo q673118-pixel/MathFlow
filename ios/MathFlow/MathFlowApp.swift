@@ -988,6 +988,7 @@ struct SettingsView: View {
                         ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
                     Text(settings.text(navStyleDescriptionKey)).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
+                    Text(settings.text("animation_preview")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
                     BottomNavigation(
                         selection: $previewNavSelection,
                         previewSettings: NavPreviewSettings(enabled: navEnabled, style: navStyle, duration: navDuration, intensity: navIntensity, iconScale: navIconScale, opacity: navOpacity)
