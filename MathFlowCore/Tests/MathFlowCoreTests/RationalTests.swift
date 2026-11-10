@@ -26,6 +26,12 @@ final class RationalTests: XCTestCase {
         XCTAssertEqual(try Rational(19999999999, 10000000000).decimalString(scale: 3), "2")
     }
 
+    func testHalfEvenRoundingMatchesAndroidMathContext() throws {
+        XCTAssertEqual(try Rational(1, 8).decimalString(scale: 2, rounding: .halfEven), "0.12")
+        XCTAssertEqual(try Rational(3, 8).decimalString(scale: 2, rounding: .halfEven), "0.38")
+        XCTAssertEqual(try Rational(1, 8).decimalString(scale: 2), "0.13")
+    }
+
     func testReducedFractionArithmetic() throws {
         let a = try Rational(3, 4)
         let b = try Rational(2, 5)
