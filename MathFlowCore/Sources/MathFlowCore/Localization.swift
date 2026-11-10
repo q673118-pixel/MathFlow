@@ -2463,6 +2463,7 @@ public enum MathFlowLocalization {
         return (try? JSONDecoder().decode([String: [String: String]].self, from: json)) ?? [:]
     }()
     public static var keys: [String] { strings.keys.sorted() }
+    public static func hasTranslation(_ key: String, language: String) -> Bool { strings[key]?[language] != nil }
 
     public static func text(_ key: String, language: String) -> String {
         strings[key]?[language] ?? strings[key]?["en"] ?? key
