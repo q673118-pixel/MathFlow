@@ -142,4 +142,11 @@ final class MathToolsTests: XCTestCase {
         XCTAssertTrue(result.answer.contains("1"))
     }
 
+    func testGeneralSolverSupportsAndroidNumericParserFunctions() throws {
+        XCTAssertTrue(try AlgebraSolver.solve("min(x, 1) = 0.5").answer.contains("0.5"))
+        XCTAssertTrue(try AlgebraSolver.solve("max(x, 1) = 2").answer.contains("2"))
+        XCTAssertTrue(try AlgebraSolver.solve("exp(x) = e").answer.contains("1"))
+        XCTAssertTrue(try AlgebraSolver.solve("asin(x) = 0").answer.contains("0"))
+    }
+
 }
