@@ -236,4 +236,23 @@ final class MathToolsTests: XCTestCase {
         }
     }
 
+    func testEveryConverterUnitRoundTripsThroughItsCategoryBase() throws {
+        let bases = [
+            "length": "m", "mass": "kg", "area": "m2", "volume": "l",
+            "temperature": "c", "speed": "ms", "time": "s", "pressure": "pa",
+            "energy": "j", "data": "b"
+        ]
+        for category in UnitConverter.categories {
+            guard let base = bases[category.id] else {
+                XCTFail("Missing base unit for \\(category.id)")
+                continue
+            }
+            for unit in category.units {
+                let baseValue = try UnitConverter.convert("1", category: category.id, from: unit.id, to: base)
+                let roundTrip = try UnitConverter.convert(baseValue, category: category.id, from: base, to: unit.id)
+                XCTAssertEqual(Double(roundTrip) ?? .nan, 1.0, accuracy: 1e-12, "Round-trip failed for \\(category.id): \\(unit.id)")
+            }
+        }
+    }
+
 }
