@@ -65,16 +65,83 @@ struct RootView: View {
     @State private var selection = 0
 
     var body: some View {
-        ZStack {
-            settings.palette.background.ignoresSafeArea()
-            TabView(selection: $selection) {
-                CalculatorView().tabItem { Label("Главная", systemImage: "function") }.tag(0)
-                ToolsView().tabItem { Label("Инструменты", systemImage: "square.grid.2x2") }.tag(1)
-                SolverView().tabItem { Label("Уравнения", systemImage: "equal") }.tag(2)
-                HistoryView().tabItem { Label("История", systemImage: "clock.arrow.circlepath") }.tag(3)
-                SettingsView().tabItem { Label("Настройки", systemImage: "slider.horizontal.3") }.tag(4)
+        VStack(spacing: 0) {
+            Group {
+                switch selection {
+                case 0: CalculatorView()
+                case 1: ToolsView()
+                case 2: SolverView()
+                case 3: HistoryView()
+                default: SettingsView()
+                }
             }
-            .tint(settings.palette.accent)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            BottomNavigation(selection: $selection)
+        }
+        .background(settings.palette.background.ignoresSafeArea())
+        .environment(\.layoutDirection, settings.languageID == "ar" ? .rightToLeft : .leftToRight)
+        .environment(\.dynamicTypeSize, settings.textScale < 0.95 ? .small : settings.textScale > 1.3 ? .xxxLarge : settings.textScale > 1.15 ? .xxLarge : settings.textScale > 1.05 ? .xLarge : .large)
+        .font(settings.fontPostScriptName.map { .custom($0, size: 17) } ?? .system(size: 17))
+        .animation(.easeInOut(duration: 0.2), value: selection)
+    }
+}
+
+private struct BottomNavigation: View {
+    @EnvironmentObject private var settings: AppSettings
+    @Binding var selection: Int
+    private let items: [(String,String)] = [("function","home"),("square.grid.2x2","tools"),("equal","solver"),("clock.arrow.circlepath","history"),("slider.horizontal.3","settings")]
+
+    var body: some View {
+        let p = settings.palette
+        HStack(spacing: 3) {
+            ForEach(items.indices, id: \.self) { index in
+                let selected = selection == index
+                Button {
+                    withAnimation(animation) { selection = index }
+                } label: {
+                    VStack(spacing: 5) {
+                        Image(systemName: items[index].0)
+                            .font(.system(size: selected ? 20 : 18, weight: selected ? .semibold : .regular))
+                            .scaleEffect(settings.navEnabled && selected ? 1 + settings.navIconScale : 1)
+                        Text(settings.text(items[index].1))
+                            .font(.system(size: 10, weight: selected ? .semibold : .medium))
+                            .lineLimit(1).minimumScaleFactor(0.75)
+                    }
+                    .foregroundStyle(selected ? p.accent : p.muted)
+                    .frame(maxWidth: .infinity).frame(height: 58)
+                    .background {
+                        if selected && settings.navEnabled && ["fluid_pill","morph","ripple_bloom","expand"].contains(settings.navStyle) {
+                            RoundedRectangle(cornerRadius: settings.navStyle == "morph" ? 15 : 22, style: .continuous)
+                                .fill(p.navActive.opacity(settings.navOpacity))
+                                .matchedGeometryEffect(id: "mathflow.nav.indicator", in: namespace)
+                        }
+                    }
+                    .opacity(settings.navEnabled && settings.navStyle == "soft_focus" && !selected ? 0.58 : 1)
+                    .scaleEffect(settings.navEnabled && selected && settings.navStyle == "expand" ? 1.04 : 1)
+                    .overlay(alignment: .bottom) {
+                        if selected && settings.navStyle == "light_trail" {
+                            Capsule().fill(p.accent).frame(width: 24, height: 3).padding(.bottom, 2)
+                        }
+                    }
+                }
+                .buttonStyle(MathFlowPressStyle())
+                .accessibilityLabel(settings.text(items[index].1))
+            }
+        }
+        .padding(.horizontal, 8).padding(.top, 5).padding(.bottom, 2)
+        .background(p.surface)
+        .overlay(alignment: .top) { Rectangle().fill(p.muted.opacity(0.12)).frame(height: 0.5) }
+    }
+
+    @Namespace private var namespace
+    private var animation: Animation {
+        guard settings.navEnabled else { return .linear(duration: 0) }
+        let duration = settings.navDuration / 1000
+        switch settings.navStyle {
+        case "spring_motion": return .spring(response: duration, dampingFraction: 0.72)
+        case "elastic_slide": return .spring(response: duration, dampingFraction: 0.48)
+        case "ripple_bloom": return .spring(response: duration, dampingFraction: 0.68)
+        default: return .easeInOut(duration: duration)
         }
     }
 }
