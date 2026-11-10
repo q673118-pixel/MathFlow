@@ -91,11 +91,11 @@ func render(_ variant: Variant) throws {
     let rect = NSRect(x: 0, y: 0, width: 1024, height: 1024)
 
     if let start = capture("startColor=\"#([0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?)\"", launcherXML),
-       let middle = capture("centerColor=\"#([0-9A-Fa-f]{8})\"", launcherXML),
-       let end = capture("endColor=\"#([0-9A-Fa-f]{8})\"", launcherXML) {
+       let middle = capture("centerColor=\"#([0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?)\"", launcherXML),
+       let end = capture("endColor=\"#([0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?)\"", launcherXML) {
         NSGradient(colors: [color("#" + start), color("#" + middle), color("#" + end)])?
             .draw(in: rect, angle: 45)
-    } else if let solid = capture("solid android:color=\"#([0-9A-Fa-f]{8})\"", launcherXML) {
+    } else if let solid = capture("solid android:color=\"#([0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?)\"", launcherXML) {
         color("#" + solid).setFill()
         rect.fill()
     } else {
@@ -110,7 +110,7 @@ func render(_ variant: Variant) throws {
         let tags = matches("<path[^>]*>", markXML)
         for tag in tags {
             guard let data = capture("pathData=\"([^\"]+)\"", tag),
-                  let fill = capture("fillColor=\"#([0-9A-Fa-f]{8})\"", tag),
+                  let fill = capture("fillColor=\"#([0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?)\"", tag),
                   let path = makePath(data) else { continue }
             context.addPath(path)
             context.setFillColor(color("#" + fill).cgColor)
