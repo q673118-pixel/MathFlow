@@ -823,6 +823,19 @@ struct SettingsView: View {
     private let keyStyles = [("spring","Spring"),("press","Press"),("scale","Scale"),("flash","Flash"),("ripple","Ripple"),("bounce","Bounce"),("elastic","Elastic"),("minimal","Minimal")]
     private let navStyles = [("fluid_pill","Fluid Pill"),("spring_motion","Spring Motion"),("light_trail","Light Trail"),("morph","Morph"),("expand","Expand"),("soft_focus","Soft Focus"),("elastic_slide","Elastic Slide"),("ripple_bloom","Ripple Bloom")]
 
+    private var navStyleDescriptionKey: String {
+        switch navStyle {
+        case "fluid_pill": return "nav_style_fluid_desc"
+        case "spring_motion": return "nav_style_spring_desc"
+        case "light_trail": return "nav_style_trail_desc"
+        case "morph": return "nav_style_morph_desc"
+        case "expand": return "nav_style_expand_desc"
+        case "soft_focus": return "nav_style_focus_desc"
+        case "elastic_slide": return "nav_style_elastic_desc"
+        default: return "nav_style_ripple_desc"
+        }
+    }
+
     private var hasChanges: Bool {
         theme != settings.themeID || language != settings.languageID || abs(scale-settings.textScale)>0.001 ||
         keyStyle != settings.keyStyle || keyDuration != settings.keyDuration || keyOpacity != settings.keyOpacity ||
@@ -954,6 +967,7 @@ struct SettingsView: View {
                     Picker(settings.text("animations"), selection: $navStyle) {
                         ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
+                    Text(settings.text(navStyleDescriptionKey)).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
                     settingSlider(settings.text("nav_duration"), value: $navDuration, range: 100...1000, suffix: " мс", p: p)
                     settingSlider(settings.text("animation_intensity"), value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
                     settingSlider(settings.text("nav_icon_scale"), value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
