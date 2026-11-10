@@ -1019,7 +1019,7 @@ struct MathFlowFontModifier: ViewModifier {
     func body(content: Content) -> some View {
         let size = dynamicSize * CGFloat(settings.textScale)
         if let postScriptName = settings.fontPostScriptName {
-            content.font(.custom(postScriptName, size: size))
+            content.font(.custom(postScriptName, size: size)).fontWeight(weight)
         } else {
             content.font(.system(size: size, weight: weight, design: design))
         }
