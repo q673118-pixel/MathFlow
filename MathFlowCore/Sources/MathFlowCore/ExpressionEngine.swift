@@ -32,7 +32,7 @@ public struct ExpressionEngine {
             return CalculationResult(exactValue: rational, displayValue: rational.mixedString,
                                      decimalValue: rational.decimalString(), steps: parser.steps)
         case .approximate(let number):
-            let text = Self.format(number)
+            let text = MathDecimal.string(number)
             return CalculationResult(exactValue: nil, displayValue: text, decimalValue: text, steps: parser.steps)
         }
     }
@@ -74,29 +74,87 @@ public struct ExpressionEngine {
         return (negative ? "-" : "") + normalized
     }
 
-    private static func format(_ value: Double) -> String {
-        guard value.isFinite else { return "Ошибка" }
-        if value == 0 { return "0" }
-        return plainDecimalString(value)
+}
+
+private enum MathDecimal {
+    private static let locale = Locale(identifier: "en_US_POSIX")
+    private static let behavior = NSDecimalNumberHandler(
+        roundingMode: .bankers, scale: 38,
+        raiseOnExactness: false, raiseOnOverflow: true,
+        raiseOnUnderflow: false, raiseOnDivideByZero: true
+    )
+
+    static func fromDouble(_ value: Double) -> Decimal {
+        guard value.isFinite, let decimal = Decimal(string: String(value), locale: locale) else { return .zero }
+        return decimal
+    }
+
+    static func fromRational(_ value: Rational) -> Decimal {
+        let source = value.decimalString(scale: 32)
+        return rounded(Decimal(string: source, locale: locale) ?? .zero)
+    }
+
+    static func rounded(_ value: Decimal) -> Decimal {
+        let magnitude = abs(NSDecimalNumber(decimal: value).doubleValue)
+        guard magnitude.isFinite, magnitude > 0 else { return value }
+        var input = value
+        var result = value
+        // Kotlin ExpressionEngine uses MathContext(24, HALF_EVEN).
+        let scale = max(-128, min(127, 23 - Int(floor(log10(magnitude)))))
+        NSDecimalRound(&result, &input, scale, .bankers)
+        return result
+    }
+
+    static func calculate(_ lhs: Decimal, _ rhs: Decimal, operation: TokenKind) throws -> Decimal {
+        let a = NSDecimalNumber(decimal: lhs)
+        let b = NSDecimalNumber(decimal: rhs)
+        let result: NSDecimalNumber
+        switch operation {
+        case .plus: result = a.adding(b, withBehavior: behavior)
+        case .minus: result = a.subtracting(b, withBehavior: behavior)
+        case .multiply: result = a.multiplying(by: b, withBehavior: behavior)
+        case .divide:
+            guard rhs != 0 else { throw MathFlowMathError.divisionByZero }
+            result = a.dividing(by: b, withBehavior: behavior)
+        default: throw MathFlowMathError.malformedExpression
+        }
+        guard !result.decimalValue.isNaN else { throw MathFlowMathError.invalidNumber }
+        return rounded(result.decimalValue)
+    }
+
+    static func string(_ value: Decimal) -> String {
+        var value = value
+        var result = NSDecimalString(&value, locale)
+        if result.contains(".") {
+            while result.last == "0" { result.removeLast() }
+            if result.last == "." { result.removeLast() }
+        }
+        return result == "-0" ? "0" : result
     }
 }
 
 private enum MathValue {
     case exact(Rational)
-    case approximate(Double)
+    case approximate(Decimal)
+
+    var decimalValue: Decimal {
+        switch self {
+        case .exact(let value): return MathDecimal.fromRational(value)
+        case .approximate(let value): return value
+        }
+    }
 
     var doubleValue: Double {
         switch self {
-        case .exact(let value):
-            return value.doubleValue
-        case .approximate(let value): return value
+        case .exact(let value): return value.doubleValue
+        case .approximate(let value): return NSDecimalNumber(decimal: value).doubleValue
         }
     }
 
     var description: String {
         switch self {
         case .exact(let value): return value.fractionString
-        case .approximate(let value): return ExpressionEngine.plainDecimalString(value)
+        case .approximate(let value): return MathDecimal.string(value)
         }
     }
 }
@@ -239,9 +297,9 @@ private final class Parser {
             switch base {
             case .exact(let value): result = .exact(try value.power(n))
             case .approximate(let value):
-                let answer = pow(value, Double(n))
+                let answer = pow(NSDecimalNumber(decimal: value).doubleValue, Double(n))
                 guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
-                result = .approximate(answer)
+                result = .approximate(MathDecimal.fromDouble(answer))
             }
             if includeSteps { steps.append("\(base.description)^\(n) = \(result.description)") }
             return result
@@ -251,7 +309,7 @@ private final class Parser {
         }
         let answer = pow(base.doubleValue, exponentValue.doubleValue)
         guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
-        let result = MathValue.approximate(answer)
+        let result = MathValue.approximate(MathDecimal.fromDouble(answer))
         if includeSteps { steps.append("\(base.description)^\(exponentValue.description) ≈ \(result.description)") }
         return result
     }
@@ -280,9 +338,9 @@ private final class Parser {
     }
 
     private func parseIdentifier(_ name: String) throws -> MathValue {
-        if let variable = variables[name] { return .approximate(variable) }
-        if name == "pi" { return .approximate(Double.pi) }
-        if name == "e" { return .approximate(M_E) }
+        if let variable = variables[name] { return .approximate(MathDecimal.fromDouble(variable)) }
+        if name == "pi" { return .approximate(MathDecimal.fromDouble(Double.pi)) }
+        if name == "e" { return .approximate(MathDecimal.fromDouble(M_E)) }
         try expect(.left)
         let argument = try parseExpression()
         try expect(.right)
@@ -324,7 +382,7 @@ private final class Parser {
         }
         guard answer.isFinite else { throw MathFlowMathError.invalidNumber }
         if includeSteps { steps.append("\(name)(\(argument.description)) ≈ \(String(format: "%.15g", answer))") }
-        return .approximate(answer)
+        return .approximate(MathDecimal.fromDouble(answer))
     }
 
     private func binary(_ lhs: MathValue, _ rhs: MathValue, _ op: TokenKind) throws -> MathValue {
@@ -337,19 +395,7 @@ private final class Parser {
             default: throw MathFlowMathError.malformedExpression
             }
         }
-        let a = lhs.doubleValue, b = rhs.doubleValue
-        let value: Double
-        switch op {
-        case .plus: value = a + b
-        case .minus: value = a - b
-        case .multiply: value = a * b
-        case .divide:
-            guard b != 0 else { throw MathFlowMathError.divisionByZero }
-            value = a / b
-        default: throw MathFlowMathError.malformedExpression
-        }
-        guard value.isFinite else { throw MathFlowMathError.invalidNumber }
-        return .approximate(value)
+        return .approximate(try MathDecimal.calculate(lhs.decimalValue, rhs.decimalValue, operation: op))
     }
 
     private func integerSquareRoot(_ value: BigInt) -> BigInt {
