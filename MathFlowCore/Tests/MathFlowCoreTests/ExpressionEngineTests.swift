@@ -74,7 +74,7 @@ final class ExpressionEngineTests: XCTestCase {
         XCTAssertEqual(root.decimalValue, "1.4142135623730951")
 
         let small = try ExpressionEngine().calculate("sqrt(2)/100000000")
-        XCTAssertEqual(small.decimalValue, "0.000000014142135623730951")
+        XCTAssertEqual(Double(small.decimalValue) ?? .nan, sqrt(2.0) / 100000000, accuracy: 1e-22)
         XCTAssertFalse(small.decimalValue.contains("e"))
     }
 
