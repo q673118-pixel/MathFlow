@@ -97,17 +97,17 @@ public enum FractionTools {
 public enum PercentTools {
     public static func percentOf(_ percent: String, _ amount: String) throws -> String {
         let p = try toolDecimal(percent), a = try toolDecimal(amount)
-        return toolFormat(toolRound(toolRound(a * p) / 100))
+        return toolFormat(toolRound(a * p / 100))
     }
     public static func whatPercent(_ part: String, _ whole: String) throws -> String {
         let p = try toolDecimal(part), w = try toolDecimal(whole)
         guard w != 0 else { throw MathFlowToolError.divisionByZero }
-        return toolFormat(toolRound(toolRound(p * 100) / w))
+        return toolFormat(toolRound(p * 100 / w))
     }
     public static func change(_ amount: String, percent: String, increase: Bool) throws -> String {
         let value = try toolDecimal(amount)
         let rate = toolRound(try toolDecimal(percent) / 100)
-        let factor = toolRound(increase ? 1 + rate : 1 - rate)
+        let factor = increase ? 1 + rate : 1 - rate
         return toolFormat(toolRound(value * factor))
     }
 }
@@ -116,7 +116,7 @@ public enum GeometryTools {
     public static func rectangle(_ aText: String, _ bText: String) throws -> (area: String, perimeter: String) {
         let a = try toolDecimal(aText), b = try toolDecimal(bText)
         guard a > 0, b > 0 else { throw MathFlowToolError.invalidGeometry("Стороны должны быть больше нуля") }
-        return (toolFormat(toolRound(a * b)), toolFormat(toolRound(2 * toolRound(a + b))))
+        return (toolFormat(toolRound(a * b)), toolFormat(toolRound(2 * (a + b))))
     }
     public static func circle(_ radiusText: String) throws -> (area: String, circumference: String) {
         let r = try toolDecimal(radiusText)
