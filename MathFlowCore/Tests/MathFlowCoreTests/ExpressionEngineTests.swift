@@ -30,7 +30,7 @@ final class ExpressionEngineTests: XCTestCase {
 
     func testDegreeTrigonometry() throws {
         let result = try ExpressionEngine().calculate("sin(30)")
-        XCTAssertEqual(result.decimalValue, "0.5")
+        XCTAssertEqual(Double(result.decimalValue) ?? .nan, 0.5, accuracy: 1e-12)
     }
 
     func testDivisionByZeroThrows() {
@@ -69,4 +69,24 @@ final class ExpressionEngineTests: XCTestCase {
     func testCommaDecimalInput() throws {
         XCTAssertEqual(try ExpressionEngine().calculate("1,5 + 2,5").displayValue, "4")
     }
+    func testApproximateResultsKeepRoundTripPrecisionAndPlainDecimalFormatting() throws {
+        let root = try ExpressionEngine().calculate("sqrt(2)")
+        XCTAssertEqual(root.decimalValue, "1.4142135623730951")
+
+        let small = try ExpressionEngine().calculate("sqrt(2)/100000000")
+        XCTAssertEqual(small.decimalValue, "0.000000014142135623730951")
+        XCTAssertFalse(small.decimalValue.contains("e"))
+    }
+
+    func testRadianModeMatchesAndroidEngineOption() throws {
+        let result = try ExpressionEngine(angleMode: .radians).calculate("sin(pi/2)")
+        XCTAssertEqual(Double(result.decimalValue) ?? .nan, 1.0, accuracy: 1e-12)
+    }
+
+    func testFractionalPowersRemainDisabledByDefaultButCanBeEnabledForGraphing() throws {
+        XCTAssertThrowsError(try ExpressionEngine().calculate("9^0.5"))
+        let result = try ExpressionEngine(allowsFractionalPowers: true).calculate("9^0.5")
+        XCTAssertEqual(Double(result.decimalValue) ?? .nan, 3.0, accuracy: 1e-12)
+    }
+
 }
