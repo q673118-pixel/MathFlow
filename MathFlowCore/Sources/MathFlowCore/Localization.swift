@@ -2423,6 +2423,40 @@ public enum MathFlowLocalization {
     "ja": "選択したアイコンの下で波が広がる",
     "ko": "선택한 아이콘 아래로 물결이 퍼짐",
     "uz": "Tanlangan ikonka ostida to‘lqin yoyiladi"
+  },
+  "increase": {
+    "ru": "Увеличить",
+    "en": "Increase",
+    "kk": "Арттыру",
+    "es": "Aumentar",
+    "fr": "Augmenter",
+    "de": "Erhöhen",
+    "pt": "Aumentar",
+    "it": "Aumentare",
+    "tr": "Artır",
+    "ar": "زيادة",
+    "hi": "बढ़ाएँ",
+    "zh": "增加",
+    "ja": "増やす",
+    "ko": "증가",
+    "uz": "Oshirish"
+  },
+  "enable_animation": {
+    "ru": "Включить анимацию",
+    "en": "Enable animation",
+    "kk": "Анимацияны қосу",
+    "es": "Activar animación",
+    "fr": "Activer l’animation",
+    "de": "Animation aktivieren",
+    "pt": "Ativar animação",
+    "it": "Attiva animazione",
+    "tr": "Animasyonu etkinleştir",
+    "ar": "تفعيل الرسوم المتحركة",
+    "hi": "एनिमेशन सक्षम करें",
+    "zh": "启用动画",
+    "ja": "アニメーションを有効にする",
+    "ko": "애니메이션 사용",
+    "uz": "Animatsiyani yoqish"
   }
 }
 """#.utf8)
