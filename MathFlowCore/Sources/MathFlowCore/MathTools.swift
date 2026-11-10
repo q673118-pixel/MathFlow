@@ -127,16 +127,16 @@ public struct UnitCategory: Identifiable, Sendable {
 
 public enum UnitConverter {
     public static let categories: [UnitCategory] = [
-        UnitCategory(id:"length",title:"Длина",units:[("mm","мм"),("cm","см"),("m","м"),("km","км"),("in","дюйм"),("ft","фут"),("yd","ярд"),("mi","миля")].map(UnitDefinition.init)),
-        UnitCategory(id:"mass",title:"Масса",units:[("mg","мг"),("g","г"),("kg","кг"),("t","т"),("oz","унция"),("lb","фунт")].map(UnitDefinition.init)),
-        UnitCategory(id:"area",title:"Площадь",units:[("mm2","мм²"),("cm2","см²"),("m2","м²"),("ha","га"),("km2","км²"),("ft2","фут²"),("acre","акр")].map(UnitDefinition.init)),
-        UnitCategory(id:"volume",title:"Объём",units:[("ml","мл"),("l","л"),("m3","м³"),("tsp","ч. л."),("tbsp","ст. л."),("cup","чашка"),("gal","галлон")].map(UnitDefinition.init)),
-        UnitCategory(id:"temperature",title:"Температура",units:[("c","°C"),("f","°F"),("k","K")].map(UnitDefinition.init)),
-        UnitCategory(id:"speed",title:"Скорость",units:[("ms","м/с"),("kmh","км/ч"),("mph","миль/ч"),("knot","узел")].map(UnitDefinition.init)),
-        UnitCategory(id:"time",title:"Время",units:[("ms","мс"),("s","с"),("min","мин"),("h","ч"),("day","день"),("week","неделя")].map(UnitDefinition.init)),
-        UnitCategory(id:"pressure",title:"Давление",units:[("pa","Па"),("kpa","кПа"),("bar","бар"),("atm","атм"),("mmhg","мм рт. ст.")].map(UnitDefinition.init)),
-        UnitCategory(id:"energy",title:"Энергия",units:[("j","Дж"),("kj","кДж"),("cal","кал"),("kcal","ккал"),("wh","Вт·ч"),("kwh","кВт·ч")].map(UnitDefinition.init)),
-        UnitCategory(id:"data",title:"Данные",units:[("b","Б"),("kb","КБ"),("mb","МБ"),("gb","ГБ"),("tb","ТБ"),("kib","КиБ"),("mib","МиБ"),("gib","ГиБ"),("tib","ТиБ")].map(UnitDefinition.init))
+        UnitCategory(id:"length",title:"Длина",units:[("mm","мм"),("cm","см"),("m","м"),("km","км"),("in","дюйм"),("ft","фут"),("yd","ярд"),("mi","миля")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"mass",title:"Масса",units:[("mg","мг"),("g","г"),("kg","кг"),("t","т"),("oz","унция"),("lb","фунт")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"area",title:"Площадь",units:[("mm2","мм²"),("cm2","см²"),("m2","м²"),("ha","га"),("km2","км²"),("ft2","фут²"),("acre","акр")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"volume",title:"Объём",units:[("ml","мл"),("l","л"),("m3","м³"),("tsp","ч. л."),("tbsp","ст. л."),("cup","чашка"),("gal","галлон")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"temperature",title:"Температура",units:[("c","°C"),("f","°F"),("k","K")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"speed",title:"Скорость",units:[("ms","м/с"),("kmh","км/ч"),("mph","миль/ч"),("knot","узел")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"time",title:"Время",units:[("ms","мс"),("s","с"),("min","мин"),("h","ч"),("day","день"),("week","неделя")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"pressure",title:"Давление",units:[("pa","Па"),("kpa","кПа"),("bar","бар"),("atm","атм"),("mmhg","мм рт. ст.")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"energy",title:"Энергия",units:[("j","Дж"),("kj","кДж"),("cal","кал"),("kcal","ккал"),("wh","Вт·ч"),("kwh","кВт·ч")].map { UnitDefinition(id: $0.0, label: $0.1) }),
+        UnitCategory(id:"data",title:"Данные",units:[("b","Б"),("kb","КБ"),("mb","МБ"),("gb","ГБ"),("tb","ТБ"),("kib","КиБ"),("mib","МиБ"),("gib","ГиБ"),("tib","ТиБ")].map { UnitDefinition(id: $0.0, label: $0.1) })
     ]
 
     private static let factors: [String: [String: Double]] = [
