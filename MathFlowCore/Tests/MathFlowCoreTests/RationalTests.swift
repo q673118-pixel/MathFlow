@@ -16,6 +16,13 @@ final class RationalTests: XCTestCase {
         XCTAssertThrowsError(try Rational.parseDecimal("1e"))
     }
 
+    func testDecimalRoundingUsesSignificantDigitsLikeAndroid() throws {
+        XCTAssertEqual(try Rational(1, 3).decimalString(scale: 10), "0.3333333333")
+        XCTAssertEqual(try Rational(123456789123, 1).decimalString(scale: 10), "123456789100")
+        XCTAssertEqual(try Rational(-123456789123, 1).decimalString(scale: 10), "-123456789100")
+        XCTAssertEqual(try Rational(19999999999, 10000000000).decimalString(scale: 3), "2")
+    }
+
     func testReducedFractionArithmetic() throws {
         let a = try Rational(3, 4)
         let b = try Rational(2, 5)
