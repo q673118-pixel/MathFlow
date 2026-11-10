@@ -821,7 +821,7 @@ struct ToolsView: View {
                 let targetX = minX + fraction * (maxX - minX)
                 selectedGraphIndex = graphPoints.indices
                     .filter { graphPoints[$0].y.isFinite }
-                    .min { abs(graphPoints[$0].x - targetX) < abs(graphPoints[$1].x - targetX) }
+                    .min { abs(Double(graphPoints[$0].x) - targetX) < abs(Double(graphPoints[$1].x) - targetX) }
             })
         }
     }
