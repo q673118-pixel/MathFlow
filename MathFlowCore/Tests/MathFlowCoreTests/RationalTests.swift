@@ -8,6 +8,14 @@ final class RationalTests: XCTestCase {
         XCTAssertEqual(value.decimalString(), "0.125")
     }
 
+    func testScientificNotationMatchesBigDecimalInput() throws {
+        XCTAssertEqual(try Rational.parseDecimal("1e3").fractionString, "1000")
+        XCTAssertEqual(try Rational.parseDecimal("1.25E+2").fractionString, "125")
+        XCTAssertEqual(try Rational.parseDecimal("1.2e-3").fractionString, "3/2500")
+        XCTAssertThrowsError(try Rational.parseDecimal("1e1001"))
+        XCTAssertThrowsError(try Rational.parseDecimal("1e"))
+    }
+
     func testReducedFractionArithmetic() throws {
         let a = try Rational(3, 4)
         let b = try Rational(2, 5)
