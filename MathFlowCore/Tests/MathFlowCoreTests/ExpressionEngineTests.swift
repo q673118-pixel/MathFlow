@@ -83,6 +83,8 @@ final class ExpressionEngineTests: XCTestCase {
                        "3.14159265358979311599796")
         XCTAssertEqual(try ExpressionEngine().calculate("e", includeSteps: false).decimalValue,
                        "2.7182818284590450907956")
+        XCTAssertEqual(try ExpressionEngine().calculate("pi^2", includeSteps: false).decimalValue,
+                       "9.86960440108935784936619")
     }
 
     func testApproximateArithmeticMatchesAndroid24DigitBigDecimalContext() throws {
