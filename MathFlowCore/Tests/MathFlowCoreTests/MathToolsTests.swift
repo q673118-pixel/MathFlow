@@ -103,11 +103,25 @@ final class MathToolsTests: XCTestCase {
         let identity = try AlgebraSolver.solve("(x - 1)/(x - 1) = 1")
         XCTAssertEqual(identity.kind, "identity")
         XCTAssertTrue(identity.steps.contains(where: { $0.contains("ОДЗ") }))
+        let quotient = try AlgebraSolver.solve("(1/x)/(1/(x - 1)) = 2")
+        XCTAssertEqual(quotient.kind, "linear")
+        XCTAssertTrue(quotient.answer.contains("-1"))
+        XCTAssertTrue(quotient.steps.contains(where: { $0.contains("ОДЗ") }))
+        let zeroPower = try AlgebraSolver.solve("(1/x)^0 = 1")
+        XCTAssertEqual(zeroPower.kind, "identity")
+        XCTAssertTrue(zeroPower.answer.contains("0"))
     }
 
     func testNegativePowersAndNestedRationalExpressions() throws {
         XCTAssertTrue(try AlgebraSolver.solve("x^-1 = 0.5").answer.contains("2"))
         XCTAssertTrue(try AlgebraSolver.solve("(x + 1)/(x - 2) = 3").answer.contains("3.5"))
+        let constantDenominator = try AlgebraSolver.solve("x/2 = 3")
+        XCTAssertEqual(constantDenominator.kind, "linear")
+        XCTAssertTrue(constantDenominator.answer.contains("6"))
+        let poweredFraction = try AlgebraSolver.solve("(1/x)^2 = 1/4")
+        XCTAssertEqual(poweredFraction.kind, "quadratic")
+        XCTAssertTrue(poweredFraction.answer.contains("-2"))
+        XCTAssertTrue(poweredFraction.answer.contains("2"))
     }
 
     func testSuperscriptEquationInput() throws {
@@ -147,6 +161,8 @@ final class MathToolsTests: XCTestCase {
         XCTAssertEqual(result.kind, "polynomial_numeric")
         XCTAssertTrue(result.answer.contains("-1"))
         XCTAssertTrue(result.answer.contains("1"))
+        XCTAssertEqual(try AlgebraSolver.solve("x^4 + 1 = 0").kind, "no_real_roots")
+        XCTAssertEqual(try AlgebraSolver.solve("x^2 + 1 = 0").kind, "no_real_roots")
     }
 
     func testGeneralSolverSupportsAndroidNumericParserFunctions() throws {
