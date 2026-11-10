@@ -122,6 +122,7 @@ struct RootView: View {
         }
         .background(settings.palette.background.ignoresSafeArea())
         .environment(\.layoutDirection, settings.languageID == "ar" ? .rightToLeft : .leftToRight)
+        .font(settings.fontPostScriptName.map { .custom($0, size: 17 * settings.textScale) } ?? .system(size: 17 * settings.textScale))
         .animation(.easeInOut(duration: 0.2), value: selection)
         .overlay {
             if showSplash {
