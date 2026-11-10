@@ -129,7 +129,8 @@ private enum MathDecimal {
         let rational = try Rational.parseDecimal(string(base))
         let magnitude = try rational.power(abs(exponent))
         let powered = Decimal(string: magnitude.decimalString(scale: 24, rounding: .halfEven), locale: locale) ?? .zero
-        return exponent >= 0 ? powered : try calculate(1, powered, operation: .divide)
+        if exponent >= 0 { return powered }
+        return try calculate(1, powered, operation: .divide)
     }
 
     static func calculate(_ lhs: Decimal, _ rhs: Decimal, operation: TokenKind) throws -> Decimal {
