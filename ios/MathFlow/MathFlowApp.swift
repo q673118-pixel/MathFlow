@@ -789,6 +789,8 @@ struct SettingsView: View {
     @State private var fontName: String?
     @State private var showFontPicker = false
     @State private var fontMessage: String?
+    @State private var languageSearch = ""
+    @State private var savedFonts: [SavedFont] = []
     @State private var initialized = false
 
     private let themes = ["vanilla", "black", "white", "purple", "ocean", "emerald", "sunset", "rose", "midnight", "graphite"]
@@ -822,7 +824,9 @@ struct SettingsView: View {
                     Text(settings.text("theme_hint")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
                 }
                 Section(settings.text("app_language")) {
-                    ForEach(MathFlowLanguage.all) { item in
+                    ForEach(MathFlowLanguage.all.filter {
+                        languageSearch.isEmpty || $0.nativeName.localizedCaseInsensitiveContains(languageSearch) || $0.id.localizedCaseInsensitiveContains(languageSearch)
+                    }) { item in
                         Button { language = item.id } label: {
                             HStack { Text(item.nativeName).foregroundStyle(p.text); Spacer(); if language == item.id { Image(systemName:"checkmark").foregroundStyle(p.accent) } }
                         }.listRowBackground(p.surface)
@@ -848,6 +852,22 @@ struct SettingsView: View {
                         Label(fontName ?? settings.text("choose_font"), systemImage: "textformat")
                             .foregroundStyle(p.accent)
                     }.listRowBackground(p.surface)
+                    ForEach(savedFonts) { saved in
+                        Button {
+                            _ = CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: saved.path) as CFURL, .process, nil)
+                            fontPath = saved.path
+                            fontName = postScriptName(for: URL(fileURLWithPath: saved.path)) ?? saved.name
+                        } label: {
+                            HStack {
+                                Text(saved.name).foregroundStyle(p.text)
+                                Spacer()
+                                if fontPath == saved.path { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
+                            }
+                        }.listRowBackground(p.surface)
+                    }
+                    if savedFonts.isEmpty {
+                        Text(settings.text("no_saved_fonts")).font(.caption).foregroundStyle(p.muted).listRowBackground(p.surface)
+                    }
                     if fontPath != nil {
                         Button(settings.text("reset"), role: .destructive) { fontPath = nil; fontName = nil }
                             .listRowBackground(p.surface)
@@ -856,7 +876,7 @@ struct SettingsView: View {
                 }
                 Section(settings.text("animations")) {
                     Picker(settings.text("animation_spring"), selection: $keyStyle) {
-                        ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
+                        ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(settings.text("animation_" + entry.element.0)).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
                     settingSlider(settings.text("animation_duration"), value: $keyDuration, range: 70...400, suffix: " мс", p: p)
                     settingSlider(settings.text("animation_opacity"), value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
@@ -872,19 +892,20 @@ struct SettingsView: View {
                 }
                 Section(settings.text("nav_animations")) {
                     Toggle(settings.text("nav_enabled"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
-                    Picker("Стиль", selection: $navStyle) {
+                    Picker(settings.text("animations"), selection: $navStyle) {
                         ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
                     }.listRowBackground(p.surface)
-                    settingSlider("Длительность", value: $navDuration, range: 100...1000, suffix: " мс", p: p)
-                    settingSlider("Интенсивность", value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
+                    settingSlider(settings.text("nav_duration"), value: $navDuration, range: 100...1000, suffix: " мс", p: p)
+                    settingSlider(settings.text("animation_intensity"), value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
                     settingSlider(settings.text("nav_icon_scale"), value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
                     settingSlider(settings.text("nav_indicator_opacity"), value: $navOpacity, range: 0...1, suffix: "%", p: p, percent: true)
                 }
-                Section(settings.text("about_description")) { Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface) }
+                Section("MathFlow") { Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface) }
             }
             .scrollContentBackground(.hidden)
             .background(p.background)
             .navigationTitle(settings.text("settings"))
+            .searchable(text: $languageSearch, prompt: settings.text("search_languages"))
             .safeAreaInset(edge: .bottom) {
                 if hasChanges {
                     Button {
@@ -912,6 +933,7 @@ struct SettingsView: View {
             navStyle=settings.navStyle; navDuration=settings.navDuration; navIntensity=settings.navIntensity
             navIconScale=settings.navIconScale; navOpacity=settings.navOpacity; iconID=settings.iconID
             fontPath=settings.fontPath; fontName=settings.fontPostScriptName
+            loadSavedFonts()
         }
         .fileImporter(isPresented: $showFontPicker, allowedContentTypes: [.font], allowsMultipleSelection: false) { outcome in
             do {
@@ -928,9 +950,24 @@ struct SettingsView: View {
                 let descriptor = descriptors?.first
                 let postScript = descriptor.flatMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
                 fontPath = destination.path; fontName = postScript ?? source.deletingPathExtension().lastPathComponent
+                loadSavedFonts()
                 fontMessage = "Шрифт добавлен: \(fontName ?? source.lastPathComponent). Нажмите «Применить»."
             } catch { fontMessage = error.localizedDescription }
         }
+    }
+
+    private func loadSavedFonts() {
+        let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Fonts", isDirectory: true)
+        let urls = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        savedFonts = urls
+            .filter { ["ttf", "otf", "ttc"].contains($0.pathExtension.lowercased()) }
+            .map { SavedFont(path: $0.path, name: $0.deletingPathExtension().lastPathComponent) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func postScriptName(for url: URL) -> String? {
+        let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor]
+        return descriptors?.first.flatMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
     }
 
     private func effectColor(for id: String, palette: MathFlowPalette) -> Color {
@@ -994,6 +1031,12 @@ struct MathFlowPressStyle: ButtonStyle {
                 value: configuration.isPressed
             )
     }
+}
+
+struct SavedFont: Identifiable {
+    let path: String
+    let name: String
+    var id: String { path }
 }
 
 struct HistoryEntry: Identifiable {
