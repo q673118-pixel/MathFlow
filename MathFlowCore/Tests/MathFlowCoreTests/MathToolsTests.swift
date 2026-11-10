@@ -261,4 +261,10 @@ final class MathToolsTests: XCTestCase {
         XCTAssertEqual(result.kind, "general_identity")
     }
 
+    func testRationalEquationDegreeOverflowFallsBackToNumericSolver() throws {
+        let result = try AlgebraSolver.solve("1/(x^2+1) + 1/(x^2+2) + 1/(x^2+3) = 0")
+        XCTAssertEqual(result.kind, "general_no_roots_in_range")
+        XCTAssertTrue(result.steps.contains(where: { $0.contains("численный") }))
+    }
+
 }
