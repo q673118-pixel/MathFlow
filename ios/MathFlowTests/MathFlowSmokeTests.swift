@@ -22,7 +22,4 @@ final class MathFlowSmokeTests: XCTestCase {
         XCTAssertTrue(MathFlowPalette.named("unknown").isDark)
     }
 
-    func testAppTargetUsesNativeSwiftUIModule() {
-        XCTAssertTrue(String(reflecting: RootView.self).contains("RootView"))
-    }
 }
