@@ -155,6 +155,7 @@ struct CalculatorView: View {
     @State private var showSteps = true
     @State private var scientific = false
     @State private var degrees = true
+    @State private var didEvaluate = false
 
     private let basicRows = [
         ["(", ")", "⌫", "÷"],
@@ -226,7 +227,7 @@ struct CalculatorView: View {
                                 Text(key)
                                     .font(.system(size: 18, weight: .medium, design: .rounded))
                                     .frame(maxWidth: .infinity, minHeight: 45)
-                                    .background(key == "=" ? p.keyEquals : key == "AC" ? p.keyAccent : p.key,
+                                    .background(key == "=" ? p.keyEquals : (key == "AC" || ["÷", "×", "−", "+"].contains(key)) ? p.keyAccent : p.key,
                                                 in: RoundedRectangle(cornerRadius: 15, style: .continuous))
                                     .foregroundStyle(key == "=" ? p.onKeyEquals : p.text)
                             }
@@ -242,22 +243,44 @@ struct CalculatorView: View {
     }
 
     private func press(_ key: String) {
-        switch key {
-        case "AC": expression = ""; result = "0"; error = nil; steps = []
-        case "⌫": expression = String(expression.dropLast())
-        case "=":
+        let operators = ["+", "−", "×", "÷", "^"]
+        if key == "AC" {
+            expression = ""; result = "0"; error = nil; steps = []
+            return
+        }
+        if key == "⌫" {
+            if didEvaluate { didEvaluate = false }
+            expression = String(expression.dropLast())
+            error = nil
+            return
+        }
+        if key == "=" {
             do {
+                var normalized = expression
+                let opens = normalized.filter { $0 == "(" }.count
+                let closes = normalized.filter { $0 == ")" }.count
+                if opens > closes { normalized += String(repeating: ")", count: opens - closes) }
                 let mode: AngleMode = degrees ? .degrees : .radians
-                let calculation = try ExpressionEngine(angleMode: mode).calculate(expression)
+                let calculation = try ExpressionEngine(angleMode: mode).calculate(normalized)
                 result = calculation.displayValue
                 steps = calculation.steps
                 error = nil
-                HistoryStore.shared.add(expression: expression, result: result, steps: steps)
+                didEvaluate = true
+                HistoryStore.shared.add(expression: normalized, result: result, steps: steps)
             } catch {
                 result = "Ошибка"
                 self.error = error.localizedDescription
                 steps = []
+                didEvaluate = false
             }
+            return
+        }
+        if didEvaluate {
+            if operators.contains(key) { expression = result }
+            else { expression = "" }
+            didEvaluate = false
+        }
+        switch key {
         case "√": expression += "sqrt("
         case "x²": expression += "^2"
         case "xʸ": expression += "^"
@@ -265,6 +288,7 @@ struct CalculatorView: View {
         case "sin", "cos", "tan", "ln", "log", "abs": expression += key + "("
         default: expression += key
         }
+        error = nil
     }
 }
 
