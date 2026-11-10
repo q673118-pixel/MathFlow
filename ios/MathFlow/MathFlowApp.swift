@@ -178,7 +178,10 @@ private struct BottomNavigation: View {
                     VStack(spacing: 5) {
                         Image(systemName: items[index].0)
                             .font(.system(size: selected ? 20 : 18, weight: selected ? .semibold : .regular))
-                            .scaleEffect(settings.navEnabled && selected ? 1 + settings.navIconScale : 1)
+                            .scaleEffect(
+                                x: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 + settings.navIconScale * 0.45 : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1),
+                                y: settings.navEnabled && selected && settings.navStyle == "morph" ? 1 - settings.navIconScale * (0.35 + settings.navIntensity * 0.45) : (settings.navEnabled && selected ? 1 + settings.navIconScale : 1)
+                            )
                         Text(settings.text(items[index].1))
                             .font(.system(size: 10, weight: selected ? .semibold : .medium))
                             .lineLimit(1).minimumScaleFactor(0.75)
@@ -186,17 +189,24 @@ private struct BottomNavigation: View {
                     .foregroundStyle(selected ? p.accent : p.muted)
                     .frame(maxWidth: .infinity).frame(height: 58)
                     .background {
-                        if selected && settings.navEnabled && ["fluid_pill","morph","ripple_bloom","expand"].contains(settings.navStyle) {
+                        if selected && settings.navEnabled && !["soft_focus", "light_trail"].contains(settings.navStyle) {
                             RoundedRectangle(cornerRadius: settings.navStyle == "morph" ? 15 : 22, style: .continuous)
                                 .fill(p.navActive.opacity(settings.navOpacity))
                                 .matchedGeometryEffect(id: "mathflow.nav.indicator", in: namespace)
+                                .scaleEffect(x: settings.navStyle == "expand" ? 1 + settings.navIntensity * 0.12 : settings.navStyle == "elastic_slide" ? 1 + settings.navIntensity * 0.08 : settings.navStyle == "ripple_bloom" ? 0.72 + settings.navIntensity * 0.28 : 1, y: 1)
+                        }
+                        if selected && settings.navEnabled && settings.navStyle == "soft_focus" {
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .fill(p.navActive.opacity(settings.navOpacity * 0.62))
                         }
                     }
                     .opacity(settings.navEnabled && settings.navStyle == "soft_focus" && !selected ? 0.58 : 1)
-                    .scaleEffect(settings.navEnabled && selected && settings.navStyle == "expand" ? 1.04 : 1)
+                    .scaleEffect(settings.navEnabled && selected && settings.navStyle == "expand" ? 1 + settings.navIntensity * 0.12 : 1)
                     .overlay(alignment: .bottom) {
                         if selected && settings.navStyle == "light_trail" {
-                            Capsule().fill(p.accent).frame(width: 24, height: 3).padding(.bottom, 2)
+                            Capsule().fill(p.accent)
+                                .frame(width: 38 + 24 * settings.navIntensity, height: 3)
+                                .padding(.bottom, 2)
                         }
                     }
                 }
@@ -204,9 +214,9 @@ private struct BottomNavigation: View {
                 .accessibilityLabel(settings.text(items[index].1))
             }
         }
-        .padding(.horizontal, 8).padding(.top, 5).padding(.bottom, 2)
-        .background(p.surface)
-        .overlay(alignment: .top) { Rectangle().fill(p.muted.opacity(0.12)).frame(height: 0.5) }
+        .padding(.horizontal, 6).padding(.vertical, 5)
+        .background(p.surface, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .padding(.horizontal, 28).padding(.vertical, 8)
     }
 
     @Namespace private var namespace
