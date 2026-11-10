@@ -653,6 +653,7 @@ struct HistoryView: View {
                 ForEach(history.entries) { entry in
                     VStack(alignment: .leading, spacing: 5) {
                         Text(entry.expression).foregroundStyle(p.muted)
+                        Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(p.muted)
                         Text(entry.result).font(.title2.weight(.semibold)).foregroundStyle(p.text)
                         ForEach(Array(entry.steps.enumerated()), id: \.offset) { _, step in
                             Text(step).font(.caption).foregroundStyle(p.muted)
@@ -788,7 +789,7 @@ struct SettingsView: View {
                         settings.keyColorEffect = keyColorEffect; settings.navEnabled = navEnabled; settings.navStyle = navStyle
                         settings.navDuration = min(1000,max(100,navDuration)); settings.navIntensity = navIntensity
                         settings.navIconScale = navIconScale; settings.navOpacity = navOpacity; settings.iconID = iconID
-                        settings.fontPath = fontPath
+                        settings.fontPath = fontPath; settings.fontPostScriptName = fontName
                         withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) { }
                     } label: {
                         Text("Применить изменения").font(.system(size: 15, weight: .semibold))
@@ -877,6 +878,7 @@ struct HistoryEntry: Identifiable {
     let expression: String
     let result: String
     let steps: [String]
+    let createdAt: Date
 }
 
 final class HistoryStore: ObservableObject {
@@ -885,7 +887,7 @@ final class HistoryStore: ObservableObject {
     private let key = "mathflow.history.v1"
     private init() { load() }
     func add(expression: String, result: String, steps: [String]) {
-        entries.insert(HistoryEntry(expression: expression, result: result, steps: steps), at: 0)
+        entries.insert(HistoryEntry(expression: expression, result: result, steps: steps, createdAt: Date()), at: 0)
         entries = Array(entries.prefix(100))
         save()
     }
@@ -893,15 +895,19 @@ final class HistoryStore: ObservableObject {
     private func load() {
         guard let data = UserDefaults.standard.data(forKey: key),
               let decoded = try? JSONDecoder().decode([StoredEntry].self, from: data) else { return }
-        entries = decoded.map { HistoryEntry(expression: $0.expression, result: $0.result, steps: $0.steps) }
+        entries = decoded.map { HistoryEntry(expression: $0.expression, result: $0.result, steps: $0.steps, createdAt: $0.createdAt ?? .distantPast) }
     }
     private func save() {
-        let values = entries.map { StoredEntry(expression: $0.expression, result: $0.result, steps: $0.steps) }
+        let values = entries.map { StoredEntry(expression: $0.expression, result: $0.result, steps: $0.steps, createdAt: $0.createdAt) }
         UserDefaults.standard.set(try? JSONEncoder().encode(values), forKey: key)
     }
     private struct StoredEntry: Codable {
         let expression: String
         let result: String
         let steps: [String]
+        let createdAt: Date?
+        init(expression: String, result: String, steps: [String], createdAt: Date) {
+            self.expression = expression; self.result = result; self.steps = steps; self.createdAt = createdAt
+        }
     }
 }
