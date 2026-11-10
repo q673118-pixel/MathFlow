@@ -280,7 +280,7 @@ private final class Parser {
             _ = take()
             switch try parseUnary() {
             case .exact(let value): return .exact(try Rational(-value.numerator, value.denominator))
-            case .approximate(let value): return .approximate(-value)
+            case .approximate(let value): return .approximate(try Rational(-value.numerator, value.denominator))
             }
         }
         return try parsePower()
@@ -316,7 +316,7 @@ private final class Parser {
         var value = try parsePrimary()
         while peek.kind == .percent {
             _ = take()
-            value = try binary(value, .exact(Rational(100)), .divide)
+            value = try binary(value, .exact(try Rational(100)), .divide)
             if includeSteps { steps.append("Процент: \(value.description)") }
         }
         return value
