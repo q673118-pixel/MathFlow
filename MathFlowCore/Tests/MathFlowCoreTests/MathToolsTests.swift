@@ -174,11 +174,23 @@ final class MathToolsTests: XCTestCase {
         XCTAssertEqual(try AlgebraSolver.solve("x^2 + 1 = 0").kind, "no_real_roots")
     }
 
-    func testGeneralSolverSupportsAndroidNumericParserFunctions() throws {
+    func testGeneralSolverSupportsMinimumFunction() throws {
         XCTAssertTrue(try AlgebraSolver.solve("min(x, 1) = 0.5").answer.contains("0.5"))
+    }
+
+    func testGeneralSolverSupportsMaximumFunction() throws {
         XCTAssertTrue(try AlgebraSolver.solve("max(x, 1) = 2").answer.contains("2"))
+    }
+
+    func testGeneralSolverSupportsExponentialFunction() throws {
         XCTAssertTrue(try AlgebraSolver.solve("exp(x) = e").answer.contains("1"))
+    }
+
+    func testGeneralSolverSupportsInverseTrigonometricFunctions() throws {
         XCTAssertTrue(try AlgebraSolver.solve("asin(x) = 0").answer.contains("0"))
+    }
+
+    func testGeneralSolverUsesRadiansForTrigonometricFunctions() throws {
         XCTAssertTrue(try AlgebraSolver.solve("sin(x) = 0.5").answer.contains("0.5235987756"))
     }
 
