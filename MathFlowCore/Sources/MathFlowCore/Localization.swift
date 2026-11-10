@@ -2462,6 +2462,8 @@ public enum MathFlowLocalization {
 """#.utf8)
         return (try? JSONDecoder().decode([String: [String: String]].self, from: json)) ?? [:]
     }()
+    public static var keys: [String] { strings.keys.sorted() }
+
     public static func text(_ key: String, language: String) -> String {
         strings[key]?[language] ?? strings[key]?["en"] ?? key
     }
