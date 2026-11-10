@@ -146,12 +146,10 @@ struct RootView: View {
                 }.transition(.opacity)
             }
         }
-        .alert(settings.languageID == "kk" ? "MathFlow қолданбасына қош келдіңіз" : "Добро пожаловать в MathFlow", isPresented: $showWelcome) {
-            Button(settings.languageID == "kk" ? "ЖАРАЙДЫ" : "ОК") { UserDefaults.standard.set(true, forKey: "mathflow.welcomeSeen") }
+        .alert(settings.text("welcome_title"), isPresented: $showWelcome) {
+            Button(settings.text("welcome_ok")) { UserDefaults.standard.set(true, forKey: "mathflow.welcomeSeen") }
         } message: {
-            Text(settings.languageID == "kk"
-                 ? "MathFlow қолданбасын жүктегеніңізге рақмет. Бұл қолданба математиканы түсінікті әрі ыңғайлы етуге көмектеседі деп сенеміз."
-                 : "Спасибо, что скачали MathFlow. Мы надеемся, что приложение сделает работу с математикой удобнее и понятнее.")
+            Text(settings.text("welcome_message"))
         }
         .onAppear(perform: runIntro)
     }
@@ -591,19 +589,19 @@ struct ToolsView: View {
         field(settings.text("fraction_two"), text: $second, palette: p)
         action(settings.text("calculate"), palette: p) {
             let value = try FractionTools.calculate(first, second, operation: operation)
-            return "Точный ответ: \(value.mixed)\nДесятичный вид: \(value.decimal)\nСокращённая дробь: \(value.exact)"
+            return "\(settings.text("exact_answer")): \(value.mixed)\n\(settings.text("decimal_form")): \(value.decimal)\n\(settings.text("reduced_fraction")): \(value.exact)"
         }
     }
 
     @ViewBuilder private func percentContent(_ p: MathFlowPalette) -> some View {
         Text(settings.text("percentages")).mathFlowFont(size: 22, weight: .bold).foregroundStyle(p.text)
-        Picker("Операция", selection: $percentMode) {
+        Picker(settings.text("operation"), selection: $percentMode) {
             Text(settings.text("percent_of")).tag(0); Text(settings.text("what_percent")).tag(1); Text(settings.text("change_percent")).tag(2)
         }.pickerStyle(.segmented)
         field(percentMode == 1 ? settings.text("part") : settings.text("percent"), text: $first, palette: p)
         field(percentMode == 1 ? settings.text("whole") : settings.text("number"), text: $second, palette: p)
         if percentMode == 2 {
-            Picker("Изменение", selection: $increase) {
+            Picker(settings.text("change"), selection: $increase) {
                 Text(settings.text("increase")).tag(true); Text(settings.text("percent_decrease")).tag(false)
             }.pickerStyle(.segmented)
         }
@@ -611,7 +609,7 @@ struct ToolsView: View {
             switch percentMode {
             case 0: return "\(first)% от \(second) = \(try PercentTools.percentOf(first, second))"
             case 1: return "\(first) составляет \(try PercentTools.whatPercent(first, second))% от \(second)"
-            default: return (increase ? "После увеличения" : "После уменьшения") + ": " + (try PercentTools.change(second, percent: first, increase: increase))
+            default: return (increase ? settings.text("after_increase") : settings.text("after_decrease")) + ": " + (try PercentTools.change(second, percent: first, increase: increase))
             }
         }
     }
@@ -626,19 +624,19 @@ struct ToolsView: View {
         } else if geometryMode == 1 {
             field(settings.text("radius"), text: $first, palette: p)
         } else {
-            field("Сторона A", text: $first, palette: p); field("Сторона B", text: $second, palette: p); field(settings.text("side_c"), text: $third, palette: p)
+            field(settings.text("side_a"), text: $first, palette: p); field(settings.text("side_b"), text: $second, palette: p); field(settings.text("side_c"), text: $third, palette: p)
         }
-        action("Вычислить", palette: p) {
+        action(settings.text("calculate"), palette: p) {
             if geometryMode == 0 {
                 let r = try GeometryTools.rectangle(first, second)
-                return "Площадь: \(r.area)\nПериметр: \(r.perimeter)"
+                return "\(settings.text("area")): \(r.area)\n\(settings.text("perimeter")): \(r.perimeter)"
             }
             if geometryMode == 1 {
                 let r = try GeometryTools.circle(first)
-                return "Площадь: \(r.area)\nДлина окружности: \(r.circumference)"
+                return "\(settings.text("area")): \(r.area)\n\(settings.text("circumference")): \(r.circumference)"
             }
             let r = try GeometryTools.triangle(first, second, third)
-            return "Периметр: \(r.perimeter)\nПолупериметр: \(r.semiperimeter)\nПлощадь (формула Герона): \(r.area)"
+            return "\(settings.text("perimeter")): \(r.perimeter)\n\(settings.text("semiperimeter")): \(r.semiperimeter)\n\(settings.text("heron_area")): \(r.area)"
         }
     }
 
@@ -663,7 +661,7 @@ struct ToolsView: View {
             }
             unitPicker(settings.text("to"), selection: $toID, p: p)
         }
-        action("Конвертировать", palette: p) {
+        action(settings.text("convert"), palette: p) {
             let value = try UnitConverter.convert(converterValue, category: categoryID, from: fromID, to: toID)
             return "\(converterValue) \(fromUnit.label) = \(value) \(toUnit.label)"
         }
@@ -701,8 +699,8 @@ struct ToolsView: View {
             }
         }
         HStack(spacing: 10) {
-            field("X от", text: $graphMin, palette: p)
-            field("X до", text: $graphMax, palette: p)
+            field(settings.text("x_from"), text: $graphMin, palette: p)
+            field(settings.text("x_to"), text: $graphMax, palette: p)
         }
         if graphIsCalculating {
             Text(settings.text("graph_calculating")).mathFlowFont(size: 12).foregroundStyle(p.muted)
@@ -743,7 +741,7 @@ struct ToolsView: View {
               let upper = Double(graphMax.replacingOccurrences(of: ",", with: ".")),
               lower.isFinite, upper.isFinite, lower < upper else {
             graphIsCalculating = false
-            error = "Некорректный диапазон X"
+            error = settings.text("invalid_x_range")
             return
         }
         let expression = graphExpression
@@ -1163,7 +1161,7 @@ struct SettingsView: View {
                 let postScript = descriptor.flatMap { CTFontDescriptorCopyAttribute($0, kCTFontNameAttribute) as? String }
                 fontPath = destination.path; fontName = postScript ?? source.deletingPathExtension().lastPathComponent
                 loadSavedFonts()
-                fontMessage = "Шрифт добавлен: \(fontName ?? source.lastPathComponent). Нажмите «Применить»."
+                fontMessage = settings.text("font_added")
             } catch { fontMessage = error.localizedDescription }
         }
     }
