@@ -8,14 +8,15 @@ public struct EquationSolution: Sendable {
 
 public enum AlgebraSolver {
     public static func solve(_ equation: String, searchRange: ClosedRange<Double> = -1000...1000) throws -> EquationSolution {
-        if let exact = try? ExactPolynomialEquationSolver.solve(equation) { return exact }
-        let parts = equation.components(separatedBy: "=")
+        let normalizedEquation = normalizeAbsoluteBars(equation)
+        if let exact = try? ExactPolynomialEquationSolver.solve(normalizedEquation) { return exact }
+        let parts = normalizedEquation.components(separatedBy: "=")
         guard parts.count == 2, !parts[0].trimmingCharacters(in: .whitespaces).isEmpty,
               !parts[1].trimmingCharacters(in: .whitespaces).isEmpty else {
             throw MathFlowMathError.malformedExpression
         }
         let left = parts[0], right = parts[1]
-        let engine = ExpressionEngine()
+        let engine = ExpressionEngine(allowsFractionalPowers: true)
         func residual(_ x: Double) -> Double? {
             guard let a = try? engine.calculate(left, variables: ["x": x], includeSteps: false),
                   let b = try? engine.calculate(right, variables: ["x": x], includeSteps: false),
@@ -86,6 +87,20 @@ public enum AlgebraSolver {
         }
         let labels = roots.enumerated().map { "x\(subscriptDigits($0.offset + 1)) ≈ \(format($0.element))" }
         return EquationSolution(kind: "general_numeric", answer: labels.joined(separator: ", "), steps: steps + labels)
+    }
+
+    private static func normalizeAbsoluteBars(_ source: String) -> String {
+        var output = ""
+        var opening = false
+        for character in source {
+            if character == "|" {
+                output += opening ? ")" : "abs("
+                opening.toggle()
+            } else {
+                output.append(character)
+            }
+        }
+        return opening ? source : output
     }
 
     private static func format(_ value: Double) -> String {
