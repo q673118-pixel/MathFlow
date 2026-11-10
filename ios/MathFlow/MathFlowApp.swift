@@ -447,6 +447,11 @@ struct CalculatorView: View {
     }
 }
 
+private struct MathFlowGraphSample: Sendable {
+    let x: Double
+    let y: Double?
+}
+
 struct ToolsView: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var selected = "fractions"
@@ -741,18 +746,21 @@ struct ToolsView: View {
             error = "Некорректный диапазон X"
             return
         }
-        let engine = ExpressionEngine(angleMode: .radians)
-        let computed = (0...120).map { index -> CGPoint in
-            let x = lower + (upper - lower) * Double(index) / 120
-            if let value = try? engine.calculate(graphExpression, variables: ["x": x], includeSteps: false),
-               let y = Double(value.decimalValue), y.isFinite, abs(y) < 1.0e7 {
-                return CGPoint(x: x, y: y)
+        let expression = graphExpression
+        let computed = await Task.detached(priority: .userInitiated) { () -> [MathFlowGraphSample] in
+            let engine = ExpressionEngine(angleMode: .radians)
+            return (0...120).map { index in
+                let x = lower + (upper - lower) * Double(index) / 120
+                if let value = try? engine.calculate(expression, variables: ["x": x], includeSteps: false),
+                   let y = Double(value.decimalValue), y.isFinite, abs(y) < 1.0e7 {
+                    return MathFlowGraphSample(x: x, y: y)
+                }
+                return MathFlowGraphSample(x: x, y: nil)
             }
-            return CGPoint(x: x, y: .nan)
-        }
+        }.value
         guard !Task.isCancelled else { return }
-        graphPoints = computed
-        graphHasValidPoints = computed.contains { $0.y.isFinite }
+        graphPoints = computed.map { CGPoint(x: $0.x, y: $0.y ?? .nan) }
+        graphHasValidPoints = computed.contains { $0.y != nil }
         graphIsCalculating = false
     }
 
