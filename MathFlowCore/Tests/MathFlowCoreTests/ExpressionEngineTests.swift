@@ -78,6 +78,11 @@ final class ExpressionEngineTests: XCTestCase {
         XCTAssertFalse(small.decimalValue.contains("e"))
     }
 
+    func testApproximateArithmeticMatchesAndroid24DigitBigDecimalContext() throws {
+        let result = try ExpressionEngine().calculate("sin(30) + 1", includeSteps: false)
+        XCTAssertEqual(result.decimalValue, "1.49999999999999994")
+    }
+
     func testRadianModeMatchesAndroidEngineOption() throws {
         let result = try ExpressionEngine(angleMode: .radians).calculate("sin(pi/2)")
         XCTAssertEqual(Double(result.decimalValue) ?? .nan, 1.0, accuracy: 1e-12)
