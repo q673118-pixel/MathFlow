@@ -144,7 +144,7 @@ final class MathToolsTests: XCTestCase {
         XCTAssertTrue(absolute.answer.contains("2"))
         XCTAssertTrue(try AlgebraSolver.solve("sqrt(x) = 2").answer.contains("4"))
         XCTAssertTrue(try AlgebraSolver.solve("ln(x) = 0").answer.contains("1"))
-        XCTAssertTrue(try AlgebraSolver.solve("sin(x) = 0").answer.contains("0"))
+        XCTAssertTrue(try AlgebraSolver.solve("sin(x) = 0", searchRange: -1...1).answer.contains("0"))
     }
 
     func testGeneralSolverSupportsFractionalPowers() throws {
@@ -191,7 +191,7 @@ final class MathToolsTests: XCTestCase {
     }
 
     func testGeneralSolverUsesRadiansForTrigonometricFunctions() throws {
-        XCTAssertTrue(try AlgebraSolver.solve("sin(x) = 0.5").answer.contains("0.5235987756"))
+        XCTAssertTrue(try AlgebraSolver.solve("sin(x) = 0.5", searchRange: -1...1).answer.contains("0.5235987756"))
     }
 
     func testGeneralSolverReportsIdentityAndFiniteRangeNoRoots() throws {
