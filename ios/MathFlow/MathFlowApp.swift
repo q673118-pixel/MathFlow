@@ -97,7 +97,7 @@ final class AppSettings: ObservableObject {
 
 struct RootView: View {
     @EnvironmentObject private var settings: AppSettings
-    @State private var selection = 0
+    @State private var selection = UserDefaults.standard.bool(forKey: "mathflow.settingsPreview") ? 4 : 0
     @State private var showSplash = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
     @State private var showWelcome = false
     @State private var splashScale: CGFloat = 0
@@ -265,6 +265,7 @@ private struct BottomNavigation: View {
                 }
                 .buttonStyle(MathFlowInteractionPressStyle())
                 .accessibilityLabel(settings.text(items[index].1))
+                .accessibilityIdentifier("mathflow.tab.\\(items[index].1)")
             }
         }
         .padding(.horizontal, 6).padding(.vertical, 5)
@@ -1031,6 +1032,7 @@ struct SettingsView: View {
                             } label: {
                                 Label(settings.text("settings"), systemImage: "chevron.left")
                             }
+                            .accessibilityIdentifier("settings.back")
                         }
                     }
                 }
@@ -1118,22 +1120,22 @@ struct SettingsView: View {
     private var settingsHome: some View {
         let p = MathFlowPalette.named(theme)
         Section {
-            settingsMenuRow(settings.text("app_icons"), subtitle: iconID.capitalized, symbol: "app", palette: p) {
+            settingsMenuRow(settings.text("app_icons"), subtitle: iconID.capitalized, symbol: "app", palette: p, identifier: "settings.menu.app_icons") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_icons" }
             }
-            settingsMenuRow(settings.text("themes"), subtitle: themeDescription(theme), symbol: "paintpalette", palette: p) {
+            settingsMenuRow(settings.text("themes"), subtitle: themeDescription(theme), symbol: "paintpalette", palette: p, identifier: "settings.menu.themes") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "themes" }
             }
-            settingsMenuRow(settings.text("app_language"), subtitle: MathFlowLanguage.all.first(where: { $0.id == language })?.nativeName ?? language, symbol: "globe", palette: p) {
+            settingsMenuRow(settings.text("app_language"), subtitle: MathFlowLanguage.all.first(where: { $0.id == language })?.nativeName ?? language, symbol: "globe", palette: p, identifier: "settings.menu.app_language") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_language" }
             }
-            settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p) {
+            settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p, identifier: "settings.menu.animations") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "animations" }
             }
-            settingsMenuRow(settings.text("font"), subtitle: fontName ?? settings.text("choose_font"), symbol: "textformat", palette: p) {
+            settingsMenuRow(settings.text("font"), subtitle: fontName ?? settings.text("choose_font"), symbol: "textformat", palette: p, identifier: "settings.menu.font") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "font" }
             }
-            settingsMenuRow(settings.text("text_size"), subtitle: "\(Int(scale * 100))%", symbol: "textformat.size", palette: p) {
+            settingsMenuRow(settings.text("text_size"), subtitle: "\(Int(scale * 100))%", symbol: "textformat.size", palette: p, identifier: "settings.menu.text_size") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "text_size" }
             }
         }
@@ -1242,6 +1244,7 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(id.capitalized)
+        .accessibilityIdentifier("settings.theme.\\(id)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -1389,6 +1392,7 @@ struct SettingsView: View {
         subtitle: String,
         symbol: String,
         palette: MathFlowPalette,
+        identifier: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -1411,6 +1415,7 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
         .listRowBackground(palette.surface)
     }
 
