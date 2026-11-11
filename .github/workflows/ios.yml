@@ -50,9 +50,20 @@ jobs:
         run: |
           xcodebuild build -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO
 
-      - name: Run native iOS simulator tests
+      - name: Run native iOS simulator tests on multiple screen sizes
         run: |
-          xcodebuild test -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'platform=iOS Simulator,name=iPhone 16' -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO
+          set -euo pipefail
+          xcrun simctl list devices available
+          for DEVICE in "iPhone SE (3rd generation)" "iPhone 16" "iPhone 16 Pro Max"; do
+            echo "Testing on ${DEVICE}"
+            xcodebuild test \
+              -project ios/MathFlow.xcodeproj \
+              -scheme MathFlow \
+              -destination "platform=iOS Simulator,name=${DEVICE}" \
+              -derivedDataPath "build/ios-${DEVICE// /-}" \
+              -parallel-testing-enabled NO \
+              CODE_SIGNING_ALLOWED=NO
+          done
 
       - name: Verify all alternate icons are registered in the app bundle
         run: |
