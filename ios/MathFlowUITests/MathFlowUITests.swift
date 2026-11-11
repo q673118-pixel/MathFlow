@@ -18,8 +18,8 @@ final class MathFlowUITests: XCTestCase {
         attachScreenshot(of: app, named: "settings-root-arabic")
 
         themesRow.tap()
-        let oceanTheme = app.buttons["settings.theme.ocean"]
-        XCTAssertTrue(oceanTheme.waitForExistence(timeout: 5), "Theme gallery must display all theme cards")
+        let vanillaTheme = app.buttons["settings.theme.vanilla"]
+        XCTAssertTrue(vanillaTheme.waitForExistence(timeout: 5), "Theme gallery must display its preview cards")
         attachScreenshot(of: app, named: "theme-gallery-arabic")
 
         let back = app.buttons["settings.back"]
@@ -29,7 +29,11 @@ final class MathFlowUITests: XCTestCase {
         let languageRow = app.buttons["settings.menu.app_language"]
         XCTAssertTrue(languageRow.waitForExistence(timeout: 5), "Language settings must be available")
         languageRow.tap()
-        XCTAssertTrue(app.staticTexts["العربية"].waitForExistence(timeout: 5), "Arabic language option must be visible")
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5), "Language page must expose its search field")
+        search.tap()
+        search.typeText("العربية")
+        XCTAssertTrue(app.staticTexts["العربية"].waitForExistence(timeout: 5), "Arabic language option must be searchable")
         attachScreenshot(of: app, named: "language-list-arabic")
     }
 
