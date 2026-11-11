@@ -73,7 +73,7 @@ jobs:
             xcrun simctl bootstatus "$DEVICE" -b
             xcrun simctl install "$DEVICE" "$APP_PATH"
             xcrun simctl terminate "$DEVICE" com.mathflow.ios 2>/dev/null || true
-            xcrun simctl launch "$DEVICE" com.mathflow.ios -mathflow.welcomeSeen YES -mathflow.language ar -mathflow.settingsPreview YES
+            xcrun simctl launch "$DEVICE" com.mathflow.ios -mathflow.welcomeSeen YES -mathflow.language ar -mathflow.settingsPreview YES -mathflow.skipIntro YES
             sleep 3
             SAFE_NAME="$(echo "$DEVICE" | tr ' ()' '___')"
             xcrun simctl io "$DEVICE" screenshot "build/screenshots/${SAFE_NAME}-settings-ar.png"
