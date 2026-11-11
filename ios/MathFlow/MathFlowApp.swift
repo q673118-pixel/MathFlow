@@ -978,52 +978,7 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        let p = MathFlowPalette.named(theme)
-        NavigationStack {
-            List { settingsContent }
-            .scrollContentBackground(.hidden)
-            .background(p.background)
-            .navigationTitle(activeSection.map { settings.text($0) } ?? settings.text("settings"))
-            .toolbar {
-                if activeSection != nil {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button {
-                            languageSearch = ""
-                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = true; activeSection = nil }
-                        } label: {
-                            Label(settings.text("settings"), systemImage: "chevron.left")
-                        }
-                    }
-                }
-            }
-            .searchable(
-                text: $languageSearch,
-                isPresented: Binding(
-                    get: { activeSection == "app_language" },
-                    set: { if !$0 { languageSearch = "" } }
-                ),
-                prompt: settings.text("search_languages")
-            )
-            .animation(.easeInOut(duration: 0.18), value: activeSection)
-            .safeAreaInset(edge: .bottom) {
-                if hasChanges {
-                    Button {
-                        settings.themeID = theme; settings.languageID = language; settings.textScale = scale
-                        settings.keyStyle = keyStyle; settings.keyDuration = min(400,max(70,keyDuration))
-                        settings.keyOpacity = min(1,max(0.2,keyOpacity)); settings.keyIntensity = min(0.2,max(0.02,keyIntensity))
-                        settings.keyColorEffect = keyColorEffect; settings.keyEffectColorID = keyEffectColorID; settings.navEnabled = navEnabled; settings.navStyle = navStyle
-                        settings.navDuration = min(1000,max(100,navDuration)); settings.navIntensity = navIntensity
-                        settings.navIconScale = navIconScale; settings.navOpacity = navOpacity; settings.applyIcon(iconID)
-                        settings.fontPath = fontPath; settings.fontPostScriptName = fontName
-                        withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) { }
-                    } label: {
-                        Text(settings.text("apply")).mathFlowFont(size: 15, weight: .semibold)
-                            .frame(maxWidth: .infinity).padding(.vertical, 14)
-                            .background(p.keyEquals, in: Capsule()).foregroundStyle(p.onKeyEquals)
-                    }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
-                }
-            }
-        }
+        settingsNavigation
         .onAppear {
             guard !initialized else { return }; initialized = true
             theme=settings.themeID; language=settings.languageID; scale=settings.textScale
@@ -1056,6 +1011,75 @@ struct SettingsView: View {
     }
 
     @ViewBuilder
+    private var settingsNavigation: some View {
+            let p = MathFlowPalette.named(theme)
+            return NavigationStack {
+                List { settingsContent }
+                .scrollContentBackground(.hidden)
+                .background(p.background)
+                .navigationTitle(activeSection.map { settings.text($0) } ?? settings.text("settings"))
+                .toolbar {
+                    if activeSection != nil {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button {
+                                languageSearch = ""
+                                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = true; activeSection = nil }
+                            } label: {
+                                Label(settings.text("settings"), systemImage: "chevron.left")
+                            }
+                        }
+                    }
+                }
+                .searchable(
+                    text: $languageSearch,
+                    isPresented: Binding(
+                        get: { activeSection == "app_language" },
+                        set: { if !$0 { languageSearch = "" } }
+                    ),
+                    prompt: settings.text("search_languages")
+                )
+                .animation(.easeInOut(duration: 0.18), value: activeSection)
+                .safeAreaInset(edge: .bottom) { settingsApplyBar }
+            }
+    }
+
+    @ViewBuilder
+    private var settingsApplyBar: some View {
+        if hasChanges {
+            let p = MathFlowPalette.named(theme)
+            Button {
+                settings.themeID = theme
+                settings.languageID = language
+                settings.textScale = scale
+                settings.keyStyle = keyStyle
+                settings.keyDuration = min(400, max(70, keyDuration))
+                settings.keyOpacity = min(1, max(0.2, keyOpacity))
+                settings.keyIntensity = min(0.2, max(0.02, keyIntensity))
+                settings.keyColorEffect = keyColorEffect
+                settings.keyEffectColorID = keyEffectColorID
+                settings.navEnabled = navEnabled
+                settings.navStyle = navStyle
+                settings.navDuration = min(1000, max(100, navDuration))
+                settings.navIntensity = navIntensity
+                settings.navIconScale = navIconScale
+                settings.navOpacity = navOpacity
+                settings.applyIcon(iconID)
+                settings.fontPath = fontPath
+                settings.fontPostScriptName = fontName
+            } label: {
+                Text(settings.text("apply"))
+                    .mathFlowFont(size: 15, weight: .semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(p.keyEquals, in: Capsule())
+                    .foregroundStyle(p.onKeyEquals)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+        }
+    }
+
     private var settingsContent: some View {
         if let activeSection {
             Group {
