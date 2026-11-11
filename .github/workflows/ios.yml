@@ -14,7 +14,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mathflow-ios-${{ github.ref }}
+  group: mathflow-ios-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
