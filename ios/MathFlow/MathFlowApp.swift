@@ -1017,7 +1017,7 @@ struct SettingsView: View {
 
     private var settingsNavigation: some View {
         let p = MathFlowPalette.named(theme)
-        NavigationStack {
+        return NavigationStack {
                 List { settingsContent }
                 .scrollContentBackground(.hidden)
                 .background(p.background)
@@ -1083,6 +1083,7 @@ struct SettingsView: View {
         }
     }
 
+    @ViewBuilder
     private var settingsContent: some View {
         if let activeSection {
             Group {
@@ -1144,7 +1145,7 @@ struct SettingsView: View {
 
     private var themesSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
-        Section(settings.text("themes")) {
+        return Section(settings.text("themes")) {
                                                         ForEach(themes, id: \.self) { id in
                                                             Button { theme = id } label: {
                                                                 HStack(spacing: 12) {
@@ -1164,7 +1165,7 @@ struct SettingsView: View {
 
     private var languageSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
-        Section(settings.text("app_language")) {
+        return Section(settings.text("app_language")) {
                                                         ForEach(MathFlowLanguage.all.filter {
                                                             languageSearch.isEmpty || $0.nativeName.localizedCaseInsensitiveContains(languageSearch) || $0.id.localizedCaseInsensitiveContains(languageSearch)
                                                         }) { item in
@@ -1177,7 +1178,7 @@ struct SettingsView: View {
 
     private var textSizeSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
-        Section(settings.text("text_size")) {
+        return Section(settings.text("text_size")) {
                                                         HStack { Text("\(Int(scale * 100))%").foregroundStyle(p.text); Spacer(); Slider(value: $scale, in: 0.8...1.4, step: 0.05).tint(p.accent).frame(maxWidth: 190) }
                                                             .listRowBackground(p.surface)
                                                     }
@@ -1185,7 +1186,7 @@ struct SettingsView: View {
 
     private var iconsSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
-        Section(settings.text("app_icons")) {
+        return Section(settings.text("app_icons")) {
                                                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                                                             ForEach(themes, id: \.self) { id in
                                                                 let iconPalette = MathFlowPalette.named(id)
@@ -1214,7 +1215,7 @@ struct SettingsView: View {
 
     private var fontSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
-        Section(settings.text("font")) {
+        return Section(settings.text("font")) {
                                                         Button { showFontPicker = true } label: {
                                                             Label(fontName ?? settings.text("choose_font"), systemImage: "textformat")
                                                                 .foregroundStyle(p.accent)
@@ -1245,7 +1246,7 @@ struct SettingsView: View {
 
     private var keyAnimationsSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
-        Section(settings.text("animations")) {
+        return Section(settings.text("animations")) {
                                                         Picker(settings.text("animation_spring"), selection: $keyStyle) {
                                                             ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(settings.text("animation_" + entry.element.0)).tag(entry.element.0) }
                                                         }.listRowBackground(p.surface)
@@ -1281,7 +1282,7 @@ struct SettingsView: View {
 
     private var navAnimationsSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
-        Section(settings.text("nav_animations")) {
+        return Section(settings.text("nav_animations")) {
                                                         Toggle(settings.text("enable_animation"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
                                                         Picker(settings.text("animations"), selection: $navStyle) {
                                                             ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
