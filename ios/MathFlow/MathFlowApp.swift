@@ -1010,10 +1010,9 @@ struct SettingsView: View {
         }
     }
 
-    @ViewBuilder
     private var settingsNavigation: some View {
-            let p = MathFlowPalette.named(theme)
-            return NavigationStack {
+        let p = MathFlowPalette.named(theme)
+        NavigationStack {
                 List { settingsContent }
                 .scrollContentBackground(.hidden)
                 .background(p.background)
