@@ -320,84 +320,133 @@ struct CalculatorView: View {
 
     var body: some View {
         let p = settings.palette
-        VStack(spacing: 10) {
-            VStack(alignment: .trailing, spacing: 10) {
-                HStack(spacing: 8) {
-                    Button("f(x)") { withAnimation(.easeInOut(duration: 0.18)) { scientific.toggle() } }
+        let rows = scientific ? scientificRows + basicRows : basicRows
+
+        GeometryReader { geometry in
+            let displayHeight = min(max(geometry.size.height * (scientific ? 0.29 : 0.36), 205), 270)
+            let keypadHeight = max(0, geometry.size.height - displayHeight - 10)
+            let keySize = min(
+                (geometry.size.width - 24 - 24) / 4,
+                (keypadHeight - CGFloat(rows.count - 1) * 8) / CGFloat(rows.count)
+            )
+
+            VStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Button("f(x)") {
+                            withAnimation(.easeInOut(duration: 0.18)) { scientific.toggle() }
+                        }
                         .mathFlowFont(size: 13, weight: .medium)
                         .foregroundStyle(scientific ? p.accent : p.muted)
-                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
                         .background(scientific ? p.navActive : p.key, in: Capsule())
-                    if scientific {
-                        Button(degrees ? "DEG" : "RAD") { degrees.toggle() }
-                            .mathFlowFont(size: 13, weight: .medium).foregroundStyle(p.accent)
-                            .padding(.horizontal, 12).padding(.vertical, 7).background(p.navActive, in: Capsule())
-                    }
-                    if !steps.isEmpty {
-                        Button(settings.text("steps")) { withAnimation(.easeInOut(duration: 0.2)) { showSteps.toggle() } }
+
+                        if scientific {
+                            Button(degrees ? "DEG" : "RAD") { degrees.toggle() }
+                                .mathFlowFont(size: 13, weight: .medium)
+                                .foregroundStyle(p.accent)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(p.navActive, in: Capsule())
+                        }
+
+                        if !steps.isEmpty {
+                            Button(settings.text("steps")) {
+                                withAnimation(.easeInOut(duration: 0.2)) { showSteps.toggle() }
+                            }
                             .mathFlowFont(size: 13, weight: .medium)
                             .foregroundStyle(showSteps ? p.accent : p.muted)
-                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
                             .background(showSteps ? p.navActive : p.key, in: Capsule())
-                    }
-                    Spacer()
-                    Button { expression = String(expression.dropLast()) } label: {
-                        Image(systemName: "delete.left").font(.system(size: 18)).foregroundStyle(p.muted)
-                            .frame(width: 40, height: 40).background(p.key, in: Circle())
-                    }
-                }
-                Text(expression.isEmpty ? " " : expression.replacingOccurrences(of: "sqrt", with: "√").replacingOccurrences(of: "pi", with: "π"))
-                    .mathFlowFont(size: 23, weight: .regular, design: .rounded)
-                    .foregroundStyle(p.muted)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                Text(result)
-                    .mathFlowFont(size: result.count > 16 ? 24 : result.count > 11 ? 32 : result.count > 8 ? 40 : 52, weight: .medium, design: .rounded)
-                    .foregroundStyle(error == nil ? p.text : p.error)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                    .contentTransition(.numericText())
-                if let error { Text(error).mathFlowFont(size: 12).foregroundStyle(p.error) }
-            }
-            .padding(18)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-            .background(p.surface, in: RoundedRectangle(cornerRadius: 27, style: .continuous))
-
-            if !steps.isEmpty && showSteps {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                            Text("\(index + 1). \(step)").mathFlowFont(size: 12).foregroundStyle(p.muted)
-                                .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                    }
-                    .padding(12)
-                }
-                .frame(maxHeight: 94)
-                .background(p.surface, in: RoundedRectangle(cornerRadius: 18))
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
 
-            VStack(spacing: 8) {
-                ForEach(Array((scientific ? scientificRows + basicRows : basicRows).enumerated()), id: \.offset) { _, row in
-                    HStack(spacing: 8) {
-                        ForEach(row, id: \.self) { key in
-                            Button { press(key) } label: {
-                                Text(key)
-                                    .mathFlowFont(size: key.count > 1 && key != "AC" ? (scientific ? 18 : 20) : (scientific ? 22 : 28), weight: .regular, design: .rounded)
-                                    .frame(maxWidth: .infinity, minHeight: 50)
-                                     .background(key == "=" ? p.keyEquals : (key == "AC" || ["÷", "×", "−", "+"].contains(key)) ? p.keyAccent : p.key,
-                                                in: Capsule())
-                                    .foregroundStyle(key == "=" ? p.onKeyEquals : p.text)
+                        Spacer()
+
+                        Button {
+                            expression = String(expression.dropLast())
+                            error = nil
+                        } label: {
+                            Image(systemName: "delete.left")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(p.muted)
+                                .frame(width: 40, height: 40)
+                                .background(p.key, in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    if !steps.isEmpty && showSteps {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
+                                    Text("\(index + 1). \(step)")
+                                        .mathFlowFont(size: 12)
+                                        .foregroundStyle(p.muted)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                             }
-                            .buttonStyle(MathFlowPressStyle())
                         }
+                        .frame(maxHeight: 58)
+                    }
+
+                    Text(expression.isEmpty ? " " : expression.replacingOccurrences(of: "sqrt", with: "√").replacingOccurrences(of: "pi", with: "π"))
+                        .mathFlowFont(size: 23, weight: .regular, design: .rounded)
+                        .foregroundStyle(p.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    Text(result)
+                        .mathFlowFont(size: result.count > 16 ? 24 : result.count > 11 ? 32 : result.count > 8 ? 40 : 52, weight: .medium, design: .rounded)
+                        .foregroundStyle(error == nil ? p.text : p.error)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .contentTransition(.numericText())
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    if let error {
+                        Text(error).mathFlowFont(size: 12).foregroundStyle(p.error)
                     }
                 }
+                .padding(18)
+                .frame(maxWidth: .infinity)
+                .frame(height: displayHeight)
+                .background(p.surface, in: RoundedRectangle(cornerRadius: 27, style: .continuous))
+
+                VStack(spacing: 8) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                        HStack(spacing: 8) {
+                            ForEach(row, id: \.self) { key in
+                                Button { press(key) } label: {
+                                    Text(key)
+                                        .mathFlowFont(
+                                            size: key.count > 1 && key != "AC" ? (scientific ? 18 : 20) : (scientific ? 22 : 28),
+                                            weight: .regular,
+                                            design: .rounded
+                                        )
+                                        .frame(width: keySize, height: keySize)
+                                        .background(
+                                            key == "=" ? p.keyEquals :
+                                                (key == "AC" || ["÷", "×", "−", "+"].contains(key)) ? p.keyAccent : p.key,
+                                            in: Circle()
+                                        )
+                                        .foregroundStyle(key == "=" ? p.onKeyEquals : p.text)
+                                }
+                                .buttonStyle(MathFlowPressStyle())
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(height: keypadHeight, alignment: .top)
             }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
         .background(p.background)
     }
 
