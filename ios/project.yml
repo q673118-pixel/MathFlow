@@ -26,6 +26,18 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "16.0"
     dependencies:
       - package: MathFlowCore
+  MathFlowUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: MathFlowUITests
+    dependencies:
+      - target: MathFlow
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.9"
+        TEST_TARGET_NAME: MathFlow
   MathFlowTests:
     type: bundle.unit-test
     platform: iOS
