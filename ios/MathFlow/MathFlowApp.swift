@@ -949,6 +949,7 @@ struct SettingsView: View {
     @State private var previewNavSelection = 0
     @State private var initialized = false
     @State private var activeSection: String?
+    @State private var settingsGoingBack = false
 
     private let themes = ["vanilla", "black", "white", "purple", "ocean", "emerald", "sunset", "rose", "midnight", "graphite"]
     private let keyStyles = [("spring","Spring"),("press","Press"),("scale","Scale"),("flash","Flash"),("ripple","Ripple"),("bounce","Bounce"),("elastic","Elastic"),("minimal","Minimal")]
@@ -1128,29 +1129,36 @@ struct SettingsView: View {
                             
                         }
                     }
-                    .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .trailing)), removal: .opacity))
+                    .transition(.asymmetric(
+                        insertion: .move(edge: settingsGoingBack ? .leading : .trailing).combined(with: .opacity),
+                        removal: .move(edge: settingsGoingBack ? .trailing : .leading).combined(with: .opacity)
+                    ))
                 } else {
                     Section {
                         settingsMenuRow(settings.text("themes"), subtitle: themeDescription(theme), symbol: "paintpalette", palette: p) {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = "themes" }
+                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "themes" }
                         }
                         settingsMenuRow(settings.text("app_language"), subtitle: MathFlowLanguage.all.first(where: { $0.id == language })?.nativeName ?? language, symbol: "globe", palette: p) {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = "app_language" }
+                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_language" }
                         }
                         settingsMenuRow(settings.text("text_size"), subtitle: "\(Int(scale * 100))%", symbol: "textformat.size", palette: p) {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = "text_size" }
+                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "text_size" }
                         }
                         settingsMenuRow(settings.text("app_icons"), subtitle: iconID.capitalized, symbol: "app", palette: p) {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = "app_icons" }
+                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_icons" }
                         }
                         settingsMenuRow(settings.text("font"), subtitle: fontName ?? settings.text("choose_font"), symbol: "textformat", palette: p) {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = "font" }
+                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "font" }
                         }
                         settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p) {
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = "animations" }
+                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "animations" }
                         }
                     }
                     .listRowBackground(p.surface)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .leading).combined(with: .opacity),
+                        removal: .move(edge: .trailing).combined(with: .opacity)
+                    ))
                     Section("MathFlow") {
                         Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface)
                     }
@@ -1164,7 +1172,7 @@ struct SettingsView: View {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {
                             languageSearch = ""
-                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = nil }
+                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = true; activeSection = nil }
                         } label: {
                             Label(settings.text("settings"), systemImage: "chevron.left")
                         }
