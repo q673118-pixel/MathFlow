@@ -1118,23 +1118,23 @@ struct SettingsView: View {
     private var settingsHome: some View {
         let p = MathFlowPalette.named(theme)
         Section {
+            settingsMenuRow(settings.text("app_icons"), subtitle: iconID.capitalized, symbol: "app", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_icons" }
+            }
             settingsMenuRow(settings.text("themes"), subtitle: themeDescription(theme), symbol: "paintpalette", palette: p) {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "themes" }
             }
             settingsMenuRow(settings.text("app_language"), subtitle: MathFlowLanguage.all.first(where: { $0.id == language })?.nativeName ?? language, symbol: "globe", palette: p) {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_language" }
             }
-            settingsMenuRow(settings.text("text_size"), subtitle: "\(Int(scale * 100))%", symbol: "textformat.size", palette: p) {
-                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "text_size" }
-            }
-            settingsMenuRow(settings.text("app_icons"), subtitle: iconID.capitalized, symbol: "app", palette: p) {
-                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_icons" }
+            settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "animations" }
             }
             settingsMenuRow(settings.text("font"), subtitle: fontName ?? settings.text("choose_font"), symbol: "textformat", palette: p) {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "font" }
             }
-            settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p) {
-                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "animations" }
+            settingsMenuRow(settings.text("text_size"), subtitle: "\(Int(scale * 100))%", symbol: "textformat.size", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "text_size" }
             }
         }
         .listRowBackground(p.surface)
@@ -1146,21 +1146,103 @@ struct SettingsView: View {
     private var themesSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
         return Section(settings.text("themes")) {
-                                                        ForEach(themes, id: \.self) { id in
-                                                            Button { theme = id } label: {
-                                                                HStack(spacing: 12) {
-                                                                    Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 25, height: 25)
-                                                                    VStack(alignment: .leading, spacing: 2) {
-                                                                        Text(id.capitalized).mathFlowFont(size: 14, weight: .medium).foregroundStyle(p.text)
-                                                                        Text(themeDescription(id)).mathFlowFont(size: 11).foregroundStyle(p.muted)
-                                                                    }
-                                                                    Spacer()
-                                                                    if theme == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
-                                                                }.padding(.vertical, 3)
-                                                            }.listRowBackground(p.surface)
-                                                        }
-                                                        Text(settings.text("theme_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
-                                                    }
+            VStack(alignment: .leading, spacing: 12) {
+                Text(settings.text("theme_hint"))
+                    .mathFlowFont(size: 12)
+                    .foregroundStyle(p.muted)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    ForEach(themes, id: \.self) { id in
+                        themeOptionCard(id, palette: p)
+                    }
+                }
+                let selectedPalette = MathFlowPalette.named(theme)
+                HStack(spacing: 12) {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(selectedPalette.background)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(p.key, lineWidth: 1)
+                        )
+                        .frame(width: 48, height: 48)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(theme.capitalized)
+                            .mathFlowFont(size: 15, weight: .semibold)
+                            .foregroundStyle(p.text)
+                        Text(settings.text("theme_option_description"))
+                            .mathFlowFont(size: 11)
+                            .foregroundStyle(p.muted)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(10)
+                .background(p.surface, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            }
+            .listRowBackground(p.surface)
+        }
+    }
+
+    private func themeOptionCard(_ id: String, palette p: MathFlowPalette) -> some View {
+        let preview = MathFlowPalette.named(id)
+        let selected = theme == id
+        return Button {
+            withAnimation(.spring(response: 0.24, dampingFraction: 0.78)) { theme = id }
+        } label: {
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 5) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Capsule().fill(preview.text.opacity(0.82)).frame(width: 34, height: 4)
+                        Capsule().fill(preview.muted.opacity(0.8)).frame(width: 24, height: 3)
+                        Spacer(minLength: 0)
+                        Capsule().fill(preview.accent).frame(width: 28, height: 6)
+                    }
+                    .padding(6)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .background(preview.surface, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Capsule().fill(preview.text.opacity(0.82)).frame(width: 32, height: 4)
+                        HStack(spacing: 4) {
+                            RoundedRectangle(cornerRadius: 4).fill(preview.key)
+                            RoundedRectangle(cornerRadius: 4).fill(preview.keyEquals)
+                        }
+                    }
+                    .padding(6)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                    .background(preview.surface, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                }
+                .frame(height: 42)
+                .padding(6)
+                .background(preview.background, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                HStack(alignment: .top, spacing: 5) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(id.capitalized)
+                            .mathFlowFont(size: 13, weight: .semibold)
+                            .foregroundStyle(p.text)
+                        Text(themeDescription(id))
+                            .mathFlowFont(size: 10)
+                            .foregroundStyle(p.muted)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 0)
+                    if selected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(p.accent)
+                    }
+                }
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(selected ? p.navActive : p.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(selected ? p.accent : p.key, lineWidth: selected ? 1.8 : 1)
+            )
+            .scaleEffect(selected ? 1 : 0.985)
+            .animation(.spring(response: 0.24, dampingFraction: 0.78), value: selected)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(id.capitalized)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private var languageSettingsSection: some View {
