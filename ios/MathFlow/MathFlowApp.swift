@@ -1034,13 +1034,12 @@ struct SettingsView: View {
                         }
                     }
                 }
-                .searchable(
-                    text: $languageSearch,
-                    isPresented: Binding(
-                        get: { activeSection == "app_language" },
-                        set: { if !$0 { languageSearch = "" } }
-                    ),
-                    prompt: settings.text("search_languages")
+                .modifier(
+                    ConditionalLanguageSearch(
+                        isEnabled: activeSection == "app_language",
+                        text: $languageSearch,
+                        prompt: settings.text("search_languages")
+                    )
                 )
                 .animation(.easeInOut(duration: 0.18), value: activeSection)
                 .safeAreaInset(edge: .bottom) { settingsApplyBar }
@@ -1463,6 +1462,21 @@ struct MathFlowPressStyle: ButtonStyle {
                 }
             }
             .animation(pressAnimation, value: configuration.isPressed)
+    }
+}
+
+private struct ConditionalLanguageSearch: ViewModifier {
+    let isEnabled: Bool
+    @Binding var text: String
+    let prompt: String
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isEnabled {
+            content.searchable(text: $text, prompt: prompt)
+        } else {
+            content
+        }
     }
 }
 
