@@ -119,13 +119,18 @@ struct RootView: View {
                 default: SettingsView()
                 }
             }
+            .id(selection)
+            .transition(.asymmetric(
+                insertion: .opacity.combined(with: .offset(x: 8)),
+                removal: .opacity
+            ))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             BottomNavigation(selection: $selection)
         }
         .background(settings.palette.background.ignoresSafeArea())
         .environment(\.layoutDirection, settings.languageID == "ar" ? .rightToLeft : .leftToRight)
         .font(settings.fontPostScriptName.map { .custom($0, size: inheritedFontSize * CGFloat(settings.textScale)) } ?? .system(size: inheritedFontSize * CGFloat(settings.textScale)))
-        .animation(.easeInOut(duration: 0.2), value: selection)
+        .animation(.easeInOut(duration: 0.15), value: selection)
         .overlay {
             if showSplash {
                 ZStack {
