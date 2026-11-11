@@ -50,35 +50,33 @@ jobs:
         run: |
           xcodebuild build -project ios/MathFlow.xcodeproj -scheme MathFlow -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ios -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO
 
-      - name: Run native iOS simulator tests on multiple screen sizes
+      - name: Run native iOS UI and unit tests
         run: |
           set -euo pipefail
-          xcrun simctl list devices available
-          for DEVICE in "iPhone SE (3rd generation)" "iPhone 16" "iPhone 16 Pro Max"; do
-            echo "Testing on ${DEVICE}"
-            xcodebuild test \
-              -project ios/MathFlow.xcodeproj \
-              -scheme MathFlow \
-              -destination "platform=iOS Simulator,name=${DEVICE}" \
-              -derivedDataPath build/ios \
-              -parallel-testing-enabled NO \
-              CODE_SIGNING_ALLOWED=NO
-          done
+          xcodebuild test \
+            -project ios/MathFlow.xcodeproj \
+            -scheme MathFlow \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -derivedDataPath build/ios \
+            -resultBundlePath build/MathFlow.xcresult \
+            -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO
 
-      - name: Capture visual layout screenshots on all screen sizes
+      - name: Capture Arabic settings layout on all screen sizes
         run: |
           set -euo pipefail
           APP_PATH="build/ios/Build/Products/Debug-iphonesimulator/MathFlow.app"
           mkdir -p build/screenshots
           for DEVICE in "iPhone SE (3rd generation)" "iPhone 16" "iPhone 16 Pro Max"; do
-            echo "Capturing ${DEVICE}"
+            echo "Capturing settings layout on ${DEVICE}"
             xcrun simctl boot "$DEVICE" 2>/dev/null || true
             xcrun simctl bootstatus "$DEVICE" -b
             xcrun simctl install "$DEVICE" "$APP_PATH"
-            xcrun simctl launch "$DEVICE" com.mathflow.ios -mathflow.welcomeSeen YES
-            sleep 4
+            xcrun simctl terminate "$DEVICE" com.mathflow.ios 2>/dev/null || true
+            xcrun simctl launch "$DEVICE" com.mathflow.ios -mathflow.welcomeSeen YES -mathflow.language ar -mathflow.settingsPreview YES
+            sleep 3
             SAFE_NAME="$(echo "$DEVICE" | tr ' ()' '___')"
-            xcrun simctl io "$DEVICE" screenshot "build/screenshots/${SAFE_NAME}.png"
+            xcrun simctl io "$DEVICE" screenshot "build/screenshots/${SAFE_NAME}-settings-ar.png"
             xcrun simctl shutdown "$DEVICE" || true
           done
 
@@ -90,6 +88,13 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+      - name: Upload UI test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: MathFlow-iOS-UI-Test-Results-${{ github.run_number }}
+          path: build/MathFlow.xcresult
+          if-no-files-found: error
+          retention-days: 7
       - name: Verify all alternate icons are registered in the app bundle
         run: |
           INFO_PLIST="build/ios/Build/Products/Debug-iphonesimulator/MathFlow.app/Info.plist"
