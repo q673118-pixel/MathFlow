@@ -60,7 +60,7 @@ final class AppSettings: ObservableObject {
         themeID = themes.contains(savedTheme) ? savedTheme : "vanilla"
         languageID = languages.contains(savedLanguage) ? savedLanguage : "ru"
         let savedScale = d.object(forKey: "mathflow.textScale") as? Double ?? 1
-        textScale = min(1.4, max(0.8, (savedScale * 20).rounded() / 20))
+        textScale = min(1.25, max(0.85, (savedScale * 20).rounded() / 20))
         let savedKeyStyle = d.string(forKey: "mathflow.keyStyle") ?? "spring"
         keyStyle = keyStyles.contains(savedKeyStyle) ? savedKeyStyle : "spring"
         keyDuration = min(400, max(70, d.object(forKey: "mathflow.keyDuration") as? Double ?? 140))
@@ -1179,7 +1179,7 @@ struct SettingsView: View {
     private var textSizeSettingsSection: some View {
         let p = MathFlowPalette.named(theme)
         return Section(settings.text("text_size")) {
-                                                        HStack { Text("\(Int(scale * 100))%").foregroundStyle(p.text); Spacer(); Slider(value: $scale, in: 0.8...1.4, step: 0.05).tint(p.accent).frame(maxWidth: 190) }
+                                                        HStack { Text("\(Int(scale * 100))%").foregroundStyle(p.text); Spacer(); Slider(value: $scale, in: 0.85...1.25, step: 0.05).tint(p.accent).frame(maxWidth: 190) }
                                                             .listRowBackground(p.surface)
                                                     }
     }
