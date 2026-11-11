@@ -80,6 +80,20 @@ jobs:
             xcrun simctl shutdown "$DEVICE" || true
           done
 
+      - name: Capture Russian calculator home screen with bottom navigation
+        run: |
+          set -euo pipefail
+          DEVICE="iPhone 16"
+          APP_PATH="build/ios/Build/Products/Debug-iphonesimulator/MathFlow.app"
+          xcrun simctl boot "$DEVICE" 2>/dev/null || true
+          xcrun simctl bootstatus "$DEVICE" -b
+          xcrun simctl install "$DEVICE" "$APP_PATH"
+          xcrun simctl terminate "$DEVICE" com.mathflow.ios 2>/dev/null || true
+          xcrun simctl launch "$DEVICE" com.mathflow.ios -mathflow.welcomeSeen YES -mathflow.language ru -mathflow.settingsPreview NO -mathflow.skipIntro YES
+          sleep 3
+          xcrun simctl io "$DEVICE" screenshot "build/screenshots/iPhone_16-calculator-home-ru.png"
+          xcrun simctl shutdown "$DEVICE" || true
+
       - name: Upload visual layout screenshots
         uses: actions/upload-artifact@v4
         with:
