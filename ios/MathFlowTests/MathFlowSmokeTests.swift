@@ -24,4 +24,41 @@ final class MathFlowSmokeTests: XCTestCase {
         XCTAssertTrue(MathFlowPalette.named("unknown").isDark)
     }
 
+    @MainActor
+    func testAppearancePreferencesPersistAcrossSettingsReload() {
+        let defaults = UserDefaults.standard
+        let values: [(String, Any)] = [
+            ("mathflow.theme", "ocean"),
+            ("mathflow.language", "ar"),
+            ("mathflow.textScale", 1.25),
+            ("mathflow.keyStyle", "elastic"),
+            ("mathflow.navStyle", "ripple_bloom"),
+            ("mathflow.navEnabled", false),
+            ("mathflow.icon", "graphite")
+        ]
+        let previous = values.map { (key: $0.0, value: defaults.object(forKey: $0.0)) }
+        defer {
+            for item in previous {
+                if let value = item.value { defaults.set(value, forKey: item.key) }
+                else { defaults.removeObject(forKey: item.key) }
+            }
+        }
+        for (key, value) in values { defaults.set(value, forKey: key) }
+
+        let reloaded = AppSettings()
+        XCTAssertEqual(reloaded.themeID, "ocean")
+        XCTAssertEqual(reloaded.languageID, "ar")
+        XCTAssertEqual(reloaded.textScale, 1.25, accuracy: 0.001)
+        XCTAssertEqual(reloaded.keyStyle, "elastic")
+        XCTAssertEqual(reloaded.navStyle, "ripple_bloom")
+        XCTAssertFalse(reloaded.navEnabled)
+        XCTAssertEqual(reloaded.iconID, "graphite")
+    }
+
+    func testArabicLocaleIsRegisteredAndTranslated() {
+        XCTAssertTrue(MathFlowLanguage.all.contains(where: { $0.id == "ar" }))
+        XCTAssertNotEqual(MathFlowLocalization.text("settings", language: "ar"), "settings")
+    }
+
+
 }
