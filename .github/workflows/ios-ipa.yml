@@ -1,0 +1,65 @@
+name: MathFlow iOS unsigned IPA
+
+# Собирает неподписанный .ipa для реального iPhone.
+# Подписывается потом локально через Sideloadly / AltStore бесплатным Apple ID.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -n 1)"
+          if [ -n "$XCODE_PATH" ]; then sudo xcode-select -s "$XCODE_PATH/Contents/Developer"; fi
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate native iOS app icons from Android vectors
+        run: swift scripts/generate_ios_icons.swift
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build for device (no code signing)
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project ios/MathFlow.xcodeproj \
+            -scheme MathFlow \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/device \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/device/Build/Products/Release-iphoneos/MathFlow.app"
+          test -d "$APP_PATH"
+          rm -rf build/ipa && mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/
+          (cd build/ipa && zip -qry MathFlow.ipa Payload)
+          ls -lh build/ipa/MathFlow.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: MathFlow-unsigned-ipa-${{ github.run_number }}
+          path: build/ipa/MathFlow.ipa
+          if-no-files-found: error
+          retention-days: 14
