@@ -56,6 +56,40 @@ jobs:
           (cd build/ipa && zip -qry MathFlow.ipa Payload)
           ls -lh build/ipa/MathFlow.ipa
 
+      - name: Validate physical-device IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/device/Build/Products/Release-iphoneos/MathFlow.app"
+          IPA_PATH="build/ipa/MathFlow.ipa"
+          INFO_PLIST="$APP_PATH/Info.plist"
+
+          test -d "$APP_PATH"
+          test -f "$INFO_PLIST"
+          test -f "$IPA_PATH"
+          plutil -lint "$INFO_PLIST"
+
+          BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$INFO_PLIST")"
+          MIN_IOS="$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$INFO_PLIST")"
+          EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$INFO_PLIST")"
+          PLATFORM="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$INFO_PLIST")"
+          test "$BUNDLE_ID" = "com.mathflow.ios"
+          test "$MIN_IOS" = "16.0"
+          test "$PLATFORM" = "iPhoneOS"
+          test -f "$APP_PATH/$EXECUTABLE"
+
+          ARCHS="$(xcrun lipo -archs "$APP_PATH/$EXECUTABLE")"
+          echo "Executable architectures: $ARCHS"
+          echo "$ARCHS" | grep -qw "arm64"
+
+          unzip -t "$IPA_PATH"
+          unzip -Z1 "$IPA_PATH" | grep -Fxq "Payload/MathFlow.app/Info.plist"
+          unzip -Z1 "$IPA_PATH" | grep -Fxq "Payload/MathFlow.app/$EXECUTABLE"
+
+          echo "Bundle ID: $BUNDLE_ID"
+          echo "Minimum iOS: $MIN_IOS"
+          echo "Platform: $PLATFORM"
+          echo "IPA structure and arm64 executable validated."
+
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
