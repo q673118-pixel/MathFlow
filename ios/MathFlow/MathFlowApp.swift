@@ -948,6 +948,7 @@ struct SettingsView: View {
     @State private var savedFonts: [SavedFont] = []
     @State private var previewNavSelection = 0
     @State private var initialized = false
+    @State private var activeSection: String?
 
     private let themes = ["vanilla", "black", "white", "purple", "ocean", "emerald", "sunset", "rose", "midnight", "graphite"]
     private let keyStyles = [("spring","Spring"),("press","Press"),("scale","Scale"),("flash","Flash"),("ripple","Ripple"),("bounce","Bounce"),("elastic","Elastic"),("minimal","Minimal")]
@@ -1157,8 +1158,28 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(p.background)
-            .navigationTitle(settings.text("settings"))
-            .searchable(text: $languageSearch, prompt: settings.text("search_languages"))
+            .navigationTitle(activeSection.map { settings.text($0) } ?? settings.text("settings"))
+            .toolbar {
+                if activeSection != nil {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            languageSearch = ""
+                            withAnimation(.spring(response: 0.32, dampingFraction: 0.88)) { activeSection = nil }
+                        } label: {
+                            Label(settings.text("settings"), systemImage: "chevron.left")
+                        }
+                    }
+                }
+            }
+            .searchable(
+                text: $languageSearch,
+                isPresented: Binding(
+                    get: { activeSection == "app_language" },
+                    set: { if !$0 { languageSearch = "" } }
+                ),
+                prompt: settings.text("search_languages")
+            )
+            .animation(.easeInOut(duration: 0.18), value: activeSection)
             .safeAreaInset(edge: .bottom) {
                 if hasChanges {
                     Button {
