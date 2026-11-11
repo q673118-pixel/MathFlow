@@ -5,7 +5,9 @@ final class MathFlowUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "-mathflow.welcomeSeen", "YES",
-            "-mathflow.language", "ar"
+            "-mathflow.language", "ar",
+            "-mathflow.settingsPreview", "YES",
+            "-mathflow.skipIntro", "YES"
         ]
         app.launch()
 
