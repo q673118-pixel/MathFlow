@@ -980,190 +980,7 @@ struct SettingsView: View {
     var body: some View {
         let p = MathFlowPalette.named(theme)
         NavigationStack {
-            List {
-                if let activeSection {
-                    Group {
-                        if activeSection == "themes" {
-                                            Section(settings.text("themes")) {
-                                                ForEach(themes, id: \.self) { id in
-                                                    Button { theme = id } label: {
-                                                        HStack(spacing: 12) {
-                                                            Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 25, height: 25)
-                                                            VStack(alignment: .leading, spacing: 2) {
-                                                                Text(id.capitalized).mathFlowFont(size: 14, weight: .medium).foregroundStyle(p.text)
-                                                                Text(themeDescription(id)).mathFlowFont(size: 11).foregroundStyle(p.muted)
-                                                            }
-                                                            Spacer()
-                                                            if theme == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
-                                                        }.padding(.vertical, 3)
-                                                    }.listRowBackground(p.surface)
-                                                }
-                                                Text(settings.text("theme_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
-                                            }
-                            
-                        } else if activeSection == "app_language" {
-                                            Section(settings.text("app_language")) {
-                                                ForEach(MathFlowLanguage.all.filter {
-                                                    languageSearch.isEmpty || $0.nativeName.localizedCaseInsensitiveContains(languageSearch) || $0.id.localizedCaseInsensitiveContains(languageSearch)
-                                                }) { item in
-                                                    Button { language = item.id } label: {
-                                                        HStack { Text(item.nativeName).foregroundStyle(p.text); Spacer(); if language == item.id { Image(systemName:"checkmark").foregroundStyle(p.accent) } }
-                                                    }.listRowBackground(p.surface)
-                                                }
-                                            }
-                            
-                        } else if activeSection == "text_size" {
-                                            Section(settings.text("text_size")) {
-                                                HStack { Text("\(Int(scale * 100))%").foregroundStyle(p.text); Spacer(); Slider(value: $scale, in: 0.8...1.4, step: 0.05).tint(p.accent).frame(maxWidth: 190) }
-                                                    .listRowBackground(p.surface)
-                                            }
-                            
-                        } else if activeSection == "app_icons" {
-                                            Section(settings.text("app_icons")) {
-                                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                                                    ForEach(themes, id: \.self) { id in
-                                                        let iconPalette = MathFlowPalette.named(id)
-                                                        Button { iconID = id } label: {
-                                                            HStack(spacing: 8) {
-                                                                ZStack {
-                                                                    iconPalette.background
-                                                                    MathFlowMark().fill(iconPalette.text).padding(5)
-                                                                }
-                                                                .frame(width: 30, height: 30)
-                                                                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-                                                                VStack(alignment: .leading, spacing: 2) {
-                                                                    Text(id.capitalized).mathFlowFont(size: 12, weight: .medium)
-                                                                    Text(iconDescription(id)).mathFlowFont(size: 9).foregroundStyle(p.muted).lineLimit(2)
-                                                                }
-                                                                Spacer(minLength: 0)
-                                                                if iconID == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
-                                                            }
-                                                            .foregroundStyle(p.text).padding(9).background(p.key, in: RoundedRectangle(cornerRadius: 12))
-                                                        }
-                                                    }
-                                                }.listRowBackground(p.surface)
-                                                Text(settings.text("icon_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
-                                            }
-                            
-                        } else if activeSection == "font" {
-                                            Section(settings.text("font")) {
-                                                Button { showFontPicker = true } label: {
-                                                    Label(fontName ?? settings.text("choose_font"), systemImage: "textformat")
-                                                        .foregroundStyle(p.accent)
-                                                }.listRowBackground(p.surface)
-                                                ForEach(savedFonts) { saved in
-                                                    Button {
-                                                        _ = CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: saved.path) as CFURL, .process, nil)
-                                                        fontPath = saved.path
-                                                        fontName = postScriptName(for: URL(fileURLWithPath: saved.path)) ?? saved.name
-                                                    } label: {
-                                                        HStack {
-                                                            Text(saved.name).foregroundStyle(p.text)
-                                                            Spacer()
-                                                            if fontPath == saved.path { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
-                                                        }
-                                                    }.listRowBackground(p.surface)
-                                                }
-                                                if savedFonts.isEmpty {
-                                                    Text(settings.text("no_saved_fonts")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
-                                                }
-                                                if fontPath != nil {
-                                                    Button(settings.text("reset"), role: .destructive) { fontPath = nil; fontName = nil }
-                                                        .listRowBackground(p.surface)
-                                                }
-                                                if let fontMessage { Text(fontMessage).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface) }
-                                            }
-                            
-                        } else if activeSection == "animations" {
-                                            Section(settings.text("animations")) {
-                                                Picker(settings.text("animation_spring"), selection: $keyStyle) {
-                                                    ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(settings.text("animation_" + entry.element.0)).tag(entry.element.0) }
-                                                }.listRowBackground(p.surface)
-                                                settingSlider(settings.text("animation_duration"), value: $keyDuration, range: 70...400, suffix: " ms", p: p)
-                                                settingSlider(settings.text("animation_opacity"), value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
-                                                settingSlider(settings.text("animation_intensity"), value: $keyIntensity, range: 0.02...0.2, suffix: "%", p: p, percent: true)
-                                                Toggle(settings.text("button_color_effect"), isOn: $keyColorEffect).tint(p.accent).listRowBackground(p.surface)
-                                                HStack(spacing: 13) {
-                                                    ForEach(["accent","purple","cyan","green","pink","orange"], id: \.self) { colorID in
-                                                        Circle().fill(effectColor(for: colorID, palette: p)).frame(width: 27, height: 27)
-                                                            .overlay(Circle().stroke(keyEffectColorID == colorID ? p.text : .clear, lineWidth: 2).padding(-3))
-                                                            .onTapGesture { keyEffectColorID = colorID }
-                                                    }
-                                                }.padding(.vertical, 5).listRowBackground(p.surface)
-                                                HStack {
-                                                    Text(settings.text("animation_preview")).foregroundStyle(p.muted)
-                                                    Spacer()
-                                                    Button("123") {}
-                                                        .mathFlowFont(size: 18, weight: .semibold, design: .rounded)
-                                                        .padding(.horizontal, 22).padding(.vertical, 10)
-                                                        .background(p.key, in: Capsule())
-                                                        .buttonStyle(MathFlowPressStyle(
-                                                            styleOverride: keyStyle,
-                                                            durationOverride: keyDuration,
-                                                            opacityOverride: keyOpacity,
-                                                            intensityOverride: keyIntensity,
-                                                            colorEffectOverride: keyColorEffect,
-                                                            colorOverride: effectColor(for: keyEffectColorID, palette: p)
-                                                        ))
-                                                }.listRowBackground(p.surface)
-                                            }
-                            
-                                            Section(settings.text("nav_animations")) {
-                                                Toggle(settings.text("enable_animation"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
-                                                Picker(settings.text("animations"), selection: $navStyle) {
-                                                    ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
-                                                }.listRowBackground(p.surface)
-                                                Text(settings.text(navStyleDescriptionKey)).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
-                                                Text(settings.text("animation_preview")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
-                                                BottomNavigation(
-                                                    selection: $previewNavSelection,
-                                                    previewSettings: NavPreviewSettings(enabled: navEnabled, style: navStyle, duration: navDuration, intensity: navIntensity, iconScale: navIconScale, opacity: navOpacity)
-                                                )
-                                                .listRowInsets(EdgeInsets())
-                                                .listRowBackground(p.surface)
-                                                settingSlider(settings.text("nav_duration"), value: $navDuration, range: 100...1000, suffix: " ms", p: p)
-                                                settingSlider(settings.text("animation_intensity"), value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
-                                                settingSlider(settings.text("nav_icon_scale"), value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
-                                                settingSlider(settings.text("nav_indicator_opacity"), value: $navOpacity, range: 0...1, suffix: "%", p: p, percent: true)
-                                            }
-                            
-                        }
-                    }
-                    .transition(.asymmetric(
-                        insertion: .move(edge: settingsGoingBack ? .leading : .trailing).combined(with: .opacity),
-                        removal: .move(edge: settingsGoingBack ? .trailing : .leading).combined(with: .opacity)
-                    ))
-                } else {
-                    Section {
-                        settingsMenuRow(settings.text("themes"), subtitle: themeDescription(theme), symbol: "paintpalette", palette: p) {
-                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "themes" }
-                        }
-                        settingsMenuRow(settings.text("app_language"), subtitle: MathFlowLanguage.all.first(where: { $0.id == language })?.nativeName ?? language, symbol: "globe", palette: p) {
-                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_language" }
-                        }
-                        settingsMenuRow(settings.text("text_size"), subtitle: "\(Int(scale * 100))%", symbol: "textformat.size", palette: p) {
-                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "text_size" }
-                        }
-                        settingsMenuRow(settings.text("app_icons"), subtitle: iconID.capitalized, symbol: "app", palette: p) {
-                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_icons" }
-                        }
-                        settingsMenuRow(settings.text("font"), subtitle: fontName ?? settings.text("choose_font"), symbol: "textformat", palette: p) {
-                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "font" }
-                        }
-                        settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p) {
-                            withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "animations" }
-                        }
-                    }
-                    .listRowBackground(p.surface)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .leading).combined(with: .opacity),
-                        removal: .move(edge: .trailing).combined(with: .opacity)
-                    ))
-                    Section("MathFlow") {
-                        Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface)
-                    }
-                }
-            }
+            List { settingsContent }
             .scrollContentBackground(.hidden)
             .background(p.background)
             .navigationTitle(activeSection.map { settings.text($0) } ?? settings.text("settings"))
@@ -1236,6 +1053,225 @@ struct SettingsView: View {
                 fontMessage = settings.text("font_added")
             } catch { fontMessage = error.localizedDescription }
         }
+    }
+
+    @ViewBuilder
+    private var settingsContent: some View {
+        if let activeSection {
+            Group {
+                switch activeSection {
+                case "themes": themesSettingsSection
+                case "app_language": languageSettingsSection
+                case "text_size": textSizeSettingsSection
+                case "app_icons": iconsSettingsSection
+                case "font": fontSettingsSection
+                case "animations":
+                    Group {
+                        keyAnimationsSettingsSection
+                        navAnimationsSettingsSection
+                    }
+                default: EmptyView()
+                }
+            }
+            .transition(.asymmetric(
+                insertion: .move(edge: settingsGoingBack ? .leading : .trailing).combined(with: .opacity),
+                removal: .move(edge: settingsGoingBack ? .trailing : .leading).combined(with: .opacity)
+            ))
+        } else {
+            Group { settingsHome }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .leading).combined(with: .opacity),
+                    removal: .move(edge: .trailing).combined(with: .opacity)
+                ))
+        }
+    }
+
+    @ViewBuilder
+    private var settingsHome: some View {
+        let p = MathFlowPalette.named(theme)
+        Section {
+            settingsMenuRow(settings.text("themes"), subtitle: themeDescription(theme), symbol: "paintpalette", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "themes" }
+            }
+            settingsMenuRow(settings.text("app_language"), subtitle: MathFlowLanguage.all.first(where: { $0.id == language })?.nativeName ?? language, symbol: "globe", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_language" }
+            }
+            settingsMenuRow(settings.text("text_size"), subtitle: "\(Int(scale * 100))%", symbol: "textformat.size", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "text_size" }
+            }
+            settingsMenuRow(settings.text("app_icons"), subtitle: iconID.capitalized, symbol: "app", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_icons" }
+            }
+            settingsMenuRow(settings.text("font"), subtitle: fontName ?? settings.text("choose_font"), symbol: "textformat", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "font" }
+            }
+            settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p) {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "animations" }
+            }
+        }
+        .listRowBackground(p.surface)
+        Section("MathFlow") {
+            Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface)
+        }
+    }
+
+    private var themesSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        Section(settings.text("themes")) {
+                                                        ForEach(themes, id: \.self) { id in
+                                                            Button { theme = id } label: {
+                                                                HStack(spacing: 12) {
+                                                                    Circle().fill(MathFlowPalette.named(id).keyEquals).frame(width: 25, height: 25)
+                                                                    VStack(alignment: .leading, spacing: 2) {
+                                                                        Text(id.capitalized).mathFlowFont(size: 14, weight: .medium).foregroundStyle(p.text)
+                                                                        Text(themeDescription(id)).mathFlowFont(size: 11).foregroundStyle(p.muted)
+                                                                    }
+                                                                    Spacer()
+                                                                    if theme == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
+                                                                }.padding(.vertical, 3)
+                                                            }.listRowBackground(p.surface)
+                                                        }
+                                                        Text(settings.text("theme_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
+                                                    }
+    }
+
+    private var languageSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        Section(settings.text("app_language")) {
+                                                        ForEach(MathFlowLanguage.all.filter {
+                                                            languageSearch.isEmpty || $0.nativeName.localizedCaseInsensitiveContains(languageSearch) || $0.id.localizedCaseInsensitiveContains(languageSearch)
+                                                        }) { item in
+                                                            Button { language = item.id } label: {
+                                                                HStack { Text(item.nativeName).foregroundStyle(p.text); Spacer(); if language == item.id { Image(systemName:"checkmark").foregroundStyle(p.accent) } }
+                                                            }.listRowBackground(p.surface)
+                                                        }
+                                                    }
+    }
+
+    private var textSizeSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        Section(settings.text("text_size")) {
+                                                        HStack { Text("\(Int(scale * 100))%").foregroundStyle(p.text); Spacer(); Slider(value: $scale, in: 0.8...1.4, step: 0.05).tint(p.accent).frame(maxWidth: 190) }
+                                                            .listRowBackground(p.surface)
+                                                    }
+    }
+
+    private var iconsSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        Section(settings.text("app_icons")) {
+                                                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                                                            ForEach(themes, id: \.self) { id in
+                                                                let iconPalette = MathFlowPalette.named(id)
+                                                                Button { iconID = id } label: {
+                                                                    HStack(spacing: 8) {
+                                                                        ZStack {
+                                                                            iconPalette.background
+                                                                            MathFlowMark().fill(iconPalette.text).padding(5)
+                                                                        }
+                                                                        .frame(width: 30, height: 30)
+                                                                        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                                                                        VStack(alignment: .leading, spacing: 2) {
+                                                                            Text(id.capitalized).mathFlowFont(size: 12, weight: .medium)
+                                                                            Text(iconDescription(id)).mathFlowFont(size: 9).foregroundStyle(p.muted).lineLimit(2)
+                                                                        }
+                                                                        Spacer(minLength: 0)
+                                                                        if iconID == id { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
+                                                                    }
+                                                                    .foregroundStyle(p.text).padding(9).background(p.key, in: RoundedRectangle(cornerRadius: 12))
+                                                                }
+                                                            }
+                                                        }.listRowBackground(p.surface)
+                                                        Text(settings.text("icon_hint")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
+                                                    }
+    }
+
+    private var fontSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        Section(settings.text("font")) {
+                                                        Button { showFontPicker = true } label: {
+                                                            Label(fontName ?? settings.text("choose_font"), systemImage: "textformat")
+                                                                .foregroundStyle(p.accent)
+                                                        }.listRowBackground(p.surface)
+                                                        ForEach(savedFonts) { saved in
+                                                            Button {
+                                                                _ = CTFontManagerRegisterFontsForURL(URL(fileURLWithPath: saved.path) as CFURL, .process, nil)
+                                                                fontPath = saved.path
+                                                                fontName = postScriptName(for: URL(fileURLWithPath: saved.path)) ?? saved.name
+                                                            } label: {
+                                                                HStack {
+                                                                    Text(saved.name).foregroundStyle(p.text)
+                                                                    Spacer()
+                                                                    if fontPath == saved.path { Image(systemName: "checkmark.circle.fill").foregroundStyle(p.accent) }
+                                                                }
+                                                            }.listRowBackground(p.surface)
+                                                        }
+                                                        if savedFonts.isEmpty {
+                                                            Text(settings.text("no_saved_fonts")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
+                                                        }
+                                                        if fontPath != nil {
+                                                            Button(settings.text("reset"), role: .destructive) { fontPath = nil; fontName = nil }
+                                                                .listRowBackground(p.surface)
+                                                        }
+                                                        if let fontMessage { Text(fontMessage).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface) }
+                                                    }
+    }
+
+    private var keyAnimationsSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        Section(settings.text("animations")) {
+                                                        Picker(settings.text("animation_spring"), selection: $keyStyle) {
+                                                            ForEach(Array(keyStyles.enumerated()), id: \.offset) { entry in Text(settings.text("animation_" + entry.element.0)).tag(entry.element.0) }
+                                                        }.listRowBackground(p.surface)
+                                                        settingSlider(settings.text("animation_duration"), value: $keyDuration, range: 70...400, suffix: " ms", p: p)
+                                                        settingSlider(settings.text("animation_opacity"), value: $keyOpacity, range: 0.2...1, suffix: "%", p: p, percent: true)
+                                                        settingSlider(settings.text("animation_intensity"), value: $keyIntensity, range: 0.02...0.2, suffix: "%", p: p, percent: true)
+                                                        Toggle(settings.text("button_color_effect"), isOn: $keyColorEffect).tint(p.accent).listRowBackground(p.surface)
+                                                        HStack(spacing: 13) {
+                                                            ForEach(["accent","purple","cyan","green","pink","orange"], id: \.self) { colorID in
+                                                                Circle().fill(effectColor(for: colorID, palette: p)).frame(width: 27, height: 27)
+                                                                    .overlay(Circle().stroke(keyEffectColorID == colorID ? p.text : .clear, lineWidth: 2).padding(-3))
+                                                                    .onTapGesture { keyEffectColorID = colorID }
+                                                            }
+                                                        }.padding(.vertical, 5).listRowBackground(p.surface)
+                                                        HStack {
+                                                            Text(settings.text("animation_preview")).foregroundStyle(p.muted)
+                                                            Spacer()
+                                                            Button("123") {}
+                                                                .mathFlowFont(size: 18, weight: .semibold, design: .rounded)
+                                                                .padding(.horizontal, 22).padding(.vertical, 10)
+                                                                .background(p.key, in: Capsule())
+                                                                .buttonStyle(MathFlowPressStyle(
+                                                                    styleOverride: keyStyle,
+                                                                    durationOverride: keyDuration,
+                                                                    opacityOverride: keyOpacity,
+                                                                    intensityOverride: keyIntensity,
+                                                                    colorEffectOverride: keyColorEffect,
+                                                                    colorOverride: effectColor(for: keyEffectColorID, palette: p)
+                                                                ))
+                                                        }.listRowBackground(p.surface)
+                                                    }
+    }
+
+    private var navAnimationsSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        Section(settings.text("nav_animations")) {
+                                                        Toggle(settings.text("enable_animation"), isOn: $navEnabled).tint(p.accent).listRowBackground(p.surface)
+                                                        Picker(settings.text("animations"), selection: $navStyle) {
+                                                            ForEach(Array(navStyles.enumerated()), id: \.offset) { entry in Text(entry.element.1).tag(entry.element.0) }
+                                                        }.listRowBackground(p.surface)
+                                                        Text(settings.text(navStyleDescriptionKey)).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
+                                                        Text(settings.text("animation_preview")).mathFlowFont(size: 12).foregroundStyle(p.muted).listRowBackground(p.surface)
+                                                        BottomNavigation(
+                                                            selection: $previewNavSelection,
+                                                            previewSettings: NavPreviewSettings(enabled: navEnabled, style: navStyle, duration: navDuration, intensity: navIntensity, iconScale: navIconScale, opacity: navOpacity)
+                                                        )
+                                                        .listRowInsets(EdgeInsets())
+                                                        .listRowBackground(p.surface)
+                                                        settingSlider(settings.text("nav_duration"), value: $navDuration, range: 100...1000, suffix: " ms", p: p)
+                                                        settingSlider(settings.text("animation_intensity"), value: $navIntensity, range: 0...1, suffix: "%", p: p, percent: true)
+                                                        settingSlider(settings.text("nav_icon_scale"), value: $navIconScale, range: 0...0.2, suffix: "%", p: p, percent: true)
+                                                        settingSlider(settings.text("nav_indicator_opacity"), value: $navOpacity, range: 0...1, suffix: "%", p: p, percent: true)
+                                                    }
     }
 
     private func settingsMenuRow(
