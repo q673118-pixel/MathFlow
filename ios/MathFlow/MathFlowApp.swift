@@ -98,7 +98,7 @@ final class AppSettings: ObservableObject {
 struct RootView: View {
     @EnvironmentObject private var settings: AppSettings
     @State private var selection = UserDefaults.standard.bool(forKey: "mathflow.settingsPreview") ? 4 : 0
-    @State private var showSplash = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil
+    @State private var showSplash = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil && !UserDefaults.standard.bool(forKey: "mathflow.skipIntro")
     @State private var showWelcome = false
     @State private var splashScale: CGFloat = 0
     @State private var splashAlpha = 1.0
