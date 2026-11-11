@@ -265,7 +265,7 @@ private struct BottomNavigation: View {
                 }
                 .buttonStyle(MathFlowInteractionPressStyle())
                 .accessibilityLabel(settings.text(items[index].1))
-                .accessibilityIdentifier("mathflow.tab.\\(items[index].1)")
+                .accessibilityIdentifier("mathflow.tab.\(items[index].1)")
             }
         }
         .padding(.horizontal, 6).padding(.vertical, 5)
@@ -1244,7 +1244,7 @@ struct SettingsView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(id.capitalized)
-        .accessibilityIdentifier("settings.theme.\\(id)")
+        .accessibilityIdentifier("settings.theme.\(id)")
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
