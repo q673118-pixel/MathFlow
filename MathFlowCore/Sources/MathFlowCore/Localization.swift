@@ -3001,7 +3001,43 @@ public enum MathFlowLocalization {
     "ja": "に相当",
     "ko": "에 해당",
     "uz": "tashkil etadi"
+  },
+  "nav_icon_style": {
+    "ru": "Стиль иконок панели",
+    "en": "Navigation icon style",
+    "kk": "Панель белгішелерінің стилі",
+    "es": "Estilo de iconos de navegación",
+    "fr": "Style des icônes de navigation",
+    "de": "Navigationssymbolstil",
+    "pt": "Estilo dos ícones de navegação",
+    "it": "Stile delle icone di navigazione",
+    "tr": "Gezinme simgesi stili",
+    "ar": "نمط أيقونات التنقل",
+    "hi": "नेविगेशन आइकन शैली",
+    "zh": "导航图标样式",
+    "ja": "ナビゲーションアイコンのスタイル",
+    "ko": "탐색 아이콘 스타일",
+    "uz": "Navigatsiya belgilarining uslubi"
+  },
+  "nav_icon_style_desc": {
+    "ru": "Выберите набор иконок для нижней панели. Изменится только их внешний вид.",
+    "en": "Choose the icon set for the bottom bar. Only the icon appearance will change.",
+    "kk": "Төменгі панельге арналған белгішелер жиынын таңдаңыз. Тек олардың көрінісі өзгереді.",
+    "es": "Elige el conjunto de iconos de la barra inferior. Solo cambiará su apariencia.",
+    "fr": "Choisissez le jeu d’icônes de la barre inférieure. Seule leur apparence changera.",
+    "de": "Wähle das Symbolset für die untere Leiste. Nur das Aussehen der Symbole ändert sich.",
+    "pt": "Escolha o conjunto de ícones da barra inferior. Apenas a aparência dos ícones mudará.",
+    "it": "Scegli il set di icone della barra inferiore. Cambierà solo il loro aspetto.",
+    "tr": "Alt çubuk için simge takımını seçin. Yalnızca simgelerin görünümü değişir.",
+    "ar": "اختر مجموعة الأيقونات للشريط السفلي. سيتغير مظهر الأيقونات فقط.",
+    "hi": "निचली पट्टी के लिए आइकन सेट चुनें। केवल आइकन का रूप बदलेगा।",
+    "zh": "选择底部栏的图标集。只会改变图标外观。",
+    "ja": "下部バーのアイコンセットを選択します。アイコンの見た目だけが変わります。",
+    "ko": "하단 바에 사용할 아이콘 세트를 선택합니다. 아이콘 모양만 변경됩니다.",
+    "uz": "Pastki panel uchun belgilar to‘plamini tanlang. Faqat belgilar ko‘rinishi o‘zgaradi."
   }
+}
+"""#.utf8)  }
 }
 """#.utf8)
         return (try? JSONDecoder().decode([String: [String: String]].self, from: json)) ?? [:]
