@@ -3037,8 +3037,6 @@ public enum MathFlowLocalization {
     "uz": "Pastki panel uchun belgilar to‘plamini tanlang. Faqat belgilar ko‘rinishi o‘zgaradi."
   }
 }
-"""#.utf8)  }
-}
 """#.utf8)
         return (try? JSONDecoder().decode([String: [String: String]].self, from: json)) ?? [:]
     }()
