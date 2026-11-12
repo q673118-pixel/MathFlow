@@ -35,6 +35,7 @@ final class AppSettings: ObservableObject {
     @Published var navIntensity: Double { didSet { UserDefaults.standard.set(navIntensity, forKey: "mathflow.navIntensity") } }
     @Published var navIconScale: Double { didSet { UserDefaults.standard.set(navIconScale, forKey: "mathflow.navIconScale") } }
     @Published var navOpacity: Double { didSet { UserDefaults.standard.set(navOpacity, forKey: "mathflow.navOpacity") } }
+    @Published var navIconStyle: String { didSet { UserDefaults.standard.set(navIconStyle, forKey: "mathflow.navIconStyle") } }
     @Published var iconID: String { didSet { UserDefaults.standard.set(iconID, forKey: "mathflow.icon") } }
 
     func applyIcon(_ id: String) {
@@ -76,6 +77,8 @@ final class AppSettings: ObservableObject {
         navIntensity = min(1, max(0, d.object(forKey: "mathflow.navIntensity") as? Double ?? 0.65))
         navIconScale = min(0.2, max(0, d.object(forKey: "mathflow.navIconScale") as? Double ?? 0.08))
         navOpacity = min(1, max(0, d.object(forKey: "mathflow.navOpacity") as? Double ?? 0.85))
+        let savedNavIconStyle = d.string(forKey: "mathflow.navIconStyle") ?? "ios"
+        navIconStyle = ["ios", "android"].contains(savedNavIconStyle) ? savedNavIconStyle : "ios"
         let savedIcon = d.string(forKey: "mathflow.icon") ?? "vanilla"
         iconID = themes.contains(savedIcon) ? savedIcon : "vanilla"
         let savedFontPath = d.string(forKey: "mathflow.fontPath")
@@ -219,6 +222,9 @@ private struct BottomNavigation: View {
         let intensity = previewSettings?.intensity ?? settings.navIntensity
         let iconScale = previewSettings?.iconScale ?? settings.navIconScale
         let opacity = previewSettings?.opacity ?? settings.navOpacity
+        let iconNames = settings.navIconStyle == "android"
+            ? ["calculator", "wrench.and.screwdriver", "function", "clock.arrow.circlepath", "gearshape"]
+            : items.map(\.0)
         HStack(spacing: 3) {
             ForEach(items.indices, id: \.self) { index in
                 let selected = selection == index
@@ -231,7 +237,7 @@ private struct BottomNavigation: View {
                     }
                     withAnimation(animation) { selection = index }
                 } label: {
-                    Image(systemName: items[index].0)
+                    Image(systemName: iconNames[index])
                         .font(.system(size: 26, weight: .regular))
                         .scaleEffect(
                             x: enabled && selected && ["spring_motion", "morph", "soft_focus", "elastic_slide"].contains(style)
@@ -994,6 +1000,7 @@ struct SettingsView: View {
     @State private var navIntensity = 0.65
     @State private var navIconScale = 0.08
     @State private var navOpacity = 0.85
+    @State private var navIconStyle = "ios"
     @State private var iconID = "vanilla"
     @State private var fontPath: String?
     @State private var fontName: String?
@@ -1029,7 +1036,7 @@ struct SettingsView: View {
         keyIntensity != settings.keyIntensity || keyColorEffect != settings.keyColorEffect || keyEffectColorID != settings.keyEffectColorID ||
         navEnabled != settings.navEnabled || navStyle != settings.navStyle || navDuration != settings.navDuration ||
         navIntensity != settings.navIntensity || navIconScale != settings.navIconScale || navOpacity != settings.navOpacity ||
-        iconID != settings.iconID || fontPath != settings.fontPath
+        navIconStyle != settings.navIconStyle || iconID != settings.iconID || fontPath != settings.fontPath
     }
 
     var body: some View {
@@ -1040,7 +1047,7 @@ struct SettingsView: View {
             keyStyle=settings.keyStyle; keyDuration=settings.keyDuration; keyOpacity=settings.keyOpacity
             keyIntensity=settings.keyIntensity; keyColorEffect=settings.keyColorEffect; keyEffectColorID=settings.keyEffectColorID; navEnabled=settings.navEnabled
             navStyle=settings.navStyle; navDuration=settings.navDuration; navIntensity=settings.navIntensity
-            navIconScale=settings.navIconScale; navOpacity=settings.navOpacity; iconID=settings.iconID
+            navIconScale=settings.navIconScale; navOpacity=settings.navOpacity; navIconStyle=settings.navIconStyle; iconID=settings.iconID
             fontPath=settings.fontPath; fontName=settings.fontPostScriptName
             loadSavedFonts()
         }
@@ -1117,6 +1124,7 @@ struct SettingsView: View {
                 settings.navIntensity = navIntensity
                 settings.navIconScale = navIconScale
                 settings.navOpacity = navOpacity
+                settings.navIconStyle = navIconStyle
                 settings.applyIcon(iconID)
                 settings.fontPath = fontPath
                 settings.fontPostScriptName = fontName
@@ -1144,6 +1152,7 @@ struct SettingsView: View {
                 case "text_size": textSizeSettingsSection
                 case "app_icons": iconsSettingsSection
                 case "font": fontSettingsSection
+                case "nav_icons": navIconsSettingsSection
                 case "animations":
                     Group {
                         keyAnimationsSettingsSection
@@ -1178,6 +1187,9 @@ struct SettingsView: View {
             settingsMenuRow(settings.text("app_language"), subtitle: MathFlowLanguage.all.first(where: { $0.id == language })?.nativeName ?? language, symbol: "globe", palette: p, identifier: "settings.menu.app_language") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "app_language" }
             }
+            settingsMenuRow(settings.text("nav_icon_style"), subtitle: navIconStyle == "android" ? "Android" : "iOS", symbol: "rectangle.bottomthird.inset.filled", palette: p, identifier: "settings.menu.nav_icons") {
+                withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "nav_icons" }
+            }
             settingsMenuRow(settings.text("animations"), subtitle: settings.text("nav_animations"), symbol: "sparkles", palette: p, identifier: "settings.menu.animations") {
                 withAnimation(.easeInOut(duration: 0.18)) { settingsGoingBack = false; activeSection = "animations" }
             }
@@ -1191,6 +1203,58 @@ struct SettingsView: View {
         .listRowBackground(p.surface)
         Section("MathFlow") {
             Text("Native iOS · SwiftUI").foregroundStyle(p.muted).listRowBackground(p.surface)
+        }
+    }
+
+    private var navIconsSettingsSection: some View {
+        let p = MathFlowPalette.named(theme)
+        return Section(settings.text("nav_icon_style")) {
+            Text(settings.text("nav_icon_style_desc"))
+                .mathFlowFont(size: 12)
+                .foregroundStyle(p.muted)
+                .listRowBackground(p.surface)
+
+            ForEach(["ios", "android"], id: \.self) { style in
+                let selected = navIconStyle == style
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                        navIconStyle = style
+                    }
+                } label: {
+                    HStack(spacing: 14) {
+                        HStack(spacing: 13) {
+                            ForEach((style == "android"
+                                ? ["calculator", "wrench.and.screwdriver", "function", "clock.arrow.circlepath", "gearshape"]
+                                : ["function", "square.grid.2x2", "equal", "clock.arrow.circlepath", "slider.horizontal.3"]), id: \.self) { symbol in
+                                Image(systemName: symbol)
+                                    .font(.system(size: 18, weight: .regular))
+                                    .foregroundStyle(selected ? p.accent : p.muted)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(style == "ios" ? "iOS" : "Android")
+                                .mathFlowFont(size: 15, weight: .semibold)
+                                .foregroundStyle(p.text)
+                            Text(style == "ios" ? "SF Symbols" : "Material-style icons")
+                                .mathFlowFont(size: 11)
+                                .foregroundStyle(p.muted)
+                        }
+                        Spacer(minLength: 0)
+                        if selected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(p.accent)
+                        }
+                    }
+                    .padding(12)
+                    .background(selected ? p.navActive : p.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(selected ? p.accent : p.key, lineWidth: selected ? 1.6 : 1))
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("settings.navIcons.\(style)")
+                .accessibilityAddTraits(selected ? .isSelected : [])
+                .listRowBackground(p.surface)
+            }
         }
     }
 
