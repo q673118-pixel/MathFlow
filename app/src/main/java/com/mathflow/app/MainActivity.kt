@@ -964,10 +964,15 @@ private val CALCULATOR_SCIENTIFIC_ROWS = listOf(
 @Composable
 private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
+    val context = LocalContext.current
+    val prefs = remember(context) { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
     val calculationScope = rememberCoroutineScope()
     var calculationJob by remember { mutableStateOf<Job?>(null) }
     var expression by rememberSaveable { mutableStateOf("") }
     var result by rememberSaveable { mutableStateOf("0") }
+    var decimalResult by rememberSaveable { mutableStateOf("0") }
+    var fractionResult by rememberSaveable { mutableStateOf("0") }
+    var resultFormat by rememberSaveable { mutableStateOf(prefs.getString("calculator_result_format", "fraction") ?: "fraction") }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var showSteps by rememberSaveable { mutableStateOf(true) }
@@ -979,7 +984,8 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
     fun clearAll() {
         calculationJob?.cancel()
         calculationJob = null
-        expression = ""; result = "0"; message = null; steps = emptyList()
+        expression = ""; result = "0"; decimalResult = "0"; fractionResult = "0"
+        message = null; steps = emptyList()
         finished = false; continuation = ""
     }
 
@@ -1008,7 +1014,9 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 val r = withContext(Dispatchers.Default) {
                     ExpressionEngine(angleMode).calculate(source)
                 }
-                result = r.displayValue
+                fractionResult = r.displayValue
+                decimalResult = r.decimalValue
+                result = if (resultFormat == "decimal") decimalResult else fractionResult
                 steps = r.steps
                 message = null
                 continuation = r.exactValue?.let {
@@ -1021,6 +1029,8 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 throw e
             } catch (e: IllegalArgumentException) {
                 result = "Ошибка"
+                fractionResult = "Ошибка"
+                decimalResult = "Ошибка"
                 message = when {
                     e.message?.contains("Division by zero") == true -> "Деление на ноль"
                     else -> e.message ?: "Проверьте выражение"
@@ -1028,6 +1038,8 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 steps = emptyList()
             } catch (_: Exception) {
                 result = "Ошибка"
+                fractionResult = "Ошибка"
+                decimalResult = "Ошибка"
                 message = "Не удалось вычислить выражение"
                 steps = emptyList()
             }
@@ -1093,6 +1105,16 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                     Icon(Icons.AutoMirrored.Filled.Backspace, tx("delete"), tint = p.muted, modifier = Modifier.size(22.dp))
                 }
                 Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
+                    Box(Modifier.width(190.dp)) {
+                        Segmented(
+                            listOf(tx("decimal_format"), tx("fraction_format")),
+                            if (resultFormat == "decimal") tx("decimal_format") else tx("fraction_format")
+                        ) { selected ->
+                            resultFormat = if (selected == tx("decimal_format")) "decimal" else "fraction"
+                            prefs.edit().putString("calculator_result_format", resultFormat).apply()
+                            result = if (resultFormat == "decimal") decimalResult else fractionResult
+                        }
+                    }
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState(), reverseScrolling = true), horizontalArrangement = Arrangement.End) {
                         Text(
                             expression.replace("sqrt", "√").replace("pi", "π").ifEmpty { " " },
