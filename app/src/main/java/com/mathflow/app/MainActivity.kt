@@ -1107,7 +1107,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 }
                 val decimalFormatLabel = tx("decimal_format")
                 val fractionFormatLabel = tx("fraction_format")
-                Box(Modifier.align(Alignment.TopEnd).padding(top = 42.dp).width(204.dp)) {
+                Box(Modifier.align(Alignment.TopStart).padding(top = 54.dp).width(220.dp)) {
                     Segmented(
                         listOf(decimalFormatLabel, fractionFormatLabel),
                         if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
