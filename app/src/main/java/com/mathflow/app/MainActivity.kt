@@ -1105,13 +1105,15 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 ) {
                     Icon(Icons.AutoMirrored.Filled.Backspace, tx("delete"), tint = p.muted, modifier = Modifier.size(22.dp))
                 }
+                val decimalFormatLabel = tx("decimal_format")
+                val fractionFormatLabel = tx("fraction_format")
                 Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
                     Box(Modifier.width(190.dp)) {
                         Segmented(
-                            listOf(tx("decimal_format"), tx("fraction_format")),
-                            if (resultFormat == "decimal") tx("decimal_format") else tx("fraction_format")
+                            listOf(decimalFormatLabel, fractionFormatLabel),
+                            if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
                         ) { selected ->
-                            resultFormat = if (selected == tx("decimal_format")) "decimal" else "fraction"
+                            resultFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
                             prefs.edit().putString("calculator_result_format", resultFormat).apply()
                             result = if (resultFormat == "decimal") decimalResult else fractionResult
                         }
