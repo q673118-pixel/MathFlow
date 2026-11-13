@@ -4,7 +4,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.IndicationNodeFactory
 import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
@@ -30,7 +29,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -174,7 +172,7 @@ internal fun MathFlowKeyButton(
         KeyAnimationStyle.BOUNCE -> if (pressed) 1f - amount * 0.60f else 1f
         KeyAnimationStyle.SPRING -> if (pressed) 1f - amount else 1f
         KeyAnimationStyle.FLASH -> if (pressed) 1f - amount * 0.12f else 1f
-        KeyAnimationStyle.RIPPLE -> 1f
+        KeyAnimationStyle.RIPPLE -> 1f - amount * 0.15f
     }
     val targetScaleY = when (normalized.style) {
         KeyAnimationStyle.ELASTIC -> if (pressed) 1f - amount * 1.25f else 1f
@@ -193,7 +191,7 @@ internal fun MathFlowKeyButton(
     val durationFraction = ((normalized.durationMs - 70) / 330f).coerceIn(0f, 1f)
     val springStiffness = 1200f - durationFraction * 1080f
     val scaleSpec = if (springStyle) {
-        spring<Float>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = springStiffness)
+        spring<Float>(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = springStiffness)
     } else {
         tween<Float>(durationMillis = normalized.durationMs)
     }
@@ -214,17 +212,12 @@ internal fun MathFlowKeyButton(
         if (pressed && normalized.colorEffectEnabled) {
             when (normalized.style) {
                 KeyAnimationStyle.FLASH -> normalized.opacity
-                KeyAnimationStyle.RIPPLE -> normalized.opacity * 0.34f
+                KeyAnimationStyle.RIPPLE -> 0f
                 else -> normalized.opacity * 0.22f
             }
         } else 0f,
         tween(normalized.durationMs),
         label = "MathFlowKeyOverlay"
-    )
-    val rippleProgress by animateFloatAsState(
-        if (pressed && normalized.style == KeyAnimationStyle.RIPPLE) 1f else 0f,
-        tween(normalized.durationMs),
-        label = "MathFlowKeyRippleProgress"
     )
     val overlayColor = if (normalized.pressColorArgb != 0L) Color(normalized.pressColorArgb.toInt()) else palette.accent
     val shape = RoundedCornerShape(50)
@@ -246,26 +239,10 @@ internal fun MathFlowKeyButton(
             Modifier.fillMaxSize().clip(shape),
             contentAlignment = Alignment.Center
         ) {
-            if (normalized.style == KeyAnimationStyle.RIPPLE) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val rippleReach = 0.45f + normalized.intensity * 3.3f
-                    val radius = size.maxDimension * rippleReach * rippleProgress
-                    if (radius > 0f) {
-                        drawCircle(
-                            color = overlayColor.copy(alpha = overlayAlpha),
-                            radius = radius,
-                            center = Offset(size.width / 2f, size.height / 2f)
-                        )
-                    }
-                }
-            } else {
-                Box(
-                    Modifier.fillMaxSize()
-                        .background(
-                            overlayColor.copy(alpha = overlayAlpha)
-                        )
-                )
-            }
+            Box(
+                Modifier.fillMaxSize()
+                    .background(overlayColor.copy(alpha = overlayAlpha))
+            )
             Text(
                 label,
                 fontSize = when {
