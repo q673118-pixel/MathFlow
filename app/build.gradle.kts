@@ -23,7 +23,7 @@ android {
         applicationId = "com.mathflow.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 14
+        versionCode = providers.environmentVariable("GITHUB_RUN_NUMBER").orNull?.toIntOrNull() ?: 14
         versionName = "1.5.4"
     }
 
