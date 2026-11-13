@@ -1107,17 +1107,17 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                 }
                 val decimalFormatLabel = tx("decimal_format")
                 val fractionFormatLabel = tx("fraction_format")
-                Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
-                    Box(Modifier.width(190.dp)) {
-                        Segmented(
-                            listOf(decimalFormatLabel, fractionFormatLabel),
-                            if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
-                        ) { selected ->
-                            resultFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
-                            prefs.edit().putString("calculator_result_format", resultFormat).apply()
-                            result = if (resultFormat == "decimal") decimalResult else fractionResult
-                        }
+                Box(Modifier.align(Alignment.TopEnd).padding(top = 54.dp).width(178.dp)) {
+                    Segmented(
+                        listOf(decimalFormatLabel, fractionFormatLabel),
+                        if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
+                    ) { selected ->
+                        resultFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
+                        prefs.edit().putString("calculator_result_format", resultFormat).apply()
+                        result = if (resultFormat == "decimal") decimalResult else fractionResult
                     }
+                }
+                Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState(), reverseScrolling = true), horizontalArrangement = Arrangement.End) {
                         Text(
                             expression.replace("sqrt", "√").replace("pi", "π").ifEmpty { " " },
@@ -1388,8 +1388,15 @@ private fun ToolsPage() {
                 Chip(tx("graph"), true) { tool = "График" }
             }
         } else {
-            Segmented(listOf("Дроби", "Проценты", "Геометрия", "Конвертер"), tool) { tool = it }
-            Chip(tx("graph"), false) { tool = "График" }
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf("Дроби", "Проценты", "Геометрия", "Конвертер", "График").forEach { option ->
+                    Chip(option, tool == option) { tool = option }
+                }
+            }
         }
         Panel {
             androidx.compose.animation.AnimatedContent(
