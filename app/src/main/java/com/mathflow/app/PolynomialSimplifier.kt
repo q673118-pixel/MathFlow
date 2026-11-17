@@ -34,7 +34,7 @@ class PolynomialSimplifier {
         }
     }
     fun simplify(source: String): SimplificationResult {
-        val parsed = Parser(source.replace("−", "-").replace("×", "*").replace("÷", "/")).parse()
+        val parsed = Parser(source.replace("⁴", "^4").replace("³", "^3").replace("²", "^2").replace("−", "-").replace("×", "*").replace("÷", "/")).parse()
         val result = format(parsed)
         return SimplificationResult(result, listOf("Раскрываем скобки и приводим подобные слагаемые", "Собираем коэффициенты при одинаковых степенях x", "Итог: $result"))
     }
