@@ -504,15 +504,8 @@ private fun MathFlowApp() {
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalKeyAnimationSettings provides keyAnimationSettings,
-        LocalIndication provides if (keyAnimationSettings.colorEffectEnabled) {
-            MathFlowPressIndication(
-                color = if (keyAnimationSettings.pressColorArgb == 0L) palette.accent
-                    else Color(keyAnimationSettings.pressColorArgb.toInt()),
-                maxAlpha = keyAnimationSettings.opacity * 0.20f
-            )
-        } else MathFlowNoIndication,
-        // Material 3 ripple is suppressed so it cannot stack with our single
-        // configurable press-color indication from LocalIndication.
+        // Disable all global press indications: no ripple, droplets, particles, or color overlay.
+        LocalIndication provides MathFlowNoIndication,
         LocalRippleConfiguration provides RippleConfiguration(
             color = Color.Transparent,
             rippleAlpha = androidx.compose.material.ripple.RippleAlpha(
