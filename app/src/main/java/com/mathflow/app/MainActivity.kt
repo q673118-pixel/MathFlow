@@ -397,7 +397,21 @@ private fun MathFlowApp() {
     }
     var selectedIconId by remember { mutableStateOf(prefs.getString("app_icon", "vanilla") ?: "vanilla") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
-    var fontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
+    val initialFontPath = remember {
+        if (!prefs.getBoolean("font_selection_initialized", false)) {
+            // Before the font selector had a separate bundled-font entry, a missing
+            // selection meant the app's default font. Migrate that state to Artegra.
+            val storedPath = prefs.getString("font_path", null) ?: BUILTIN_ARTEGRA_FONT
+            prefs.edit()
+                .putBoolean("font_selection_initialized", true)
+                .putString("font_path", storedPath)
+                .apply()
+            storedPath
+        } else {
+            prefs.getString("font_path", null)
+        }
+    }
+    var fontPath by remember { mutableStateOf(initialFontPath) }
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
     var keyAnimationSettings by remember {
         mutableStateOf(
@@ -437,14 +451,18 @@ private fun MathFlowApp() {
     }
 
     val customFont: FontFamily? = remember(fontPath) {
-        fontPath?.let { path ->
+        fontPath?.takeUnless { it == BUILTIN_ARTEGRA_FONT }?.let { path ->
             runCatching {
                 val file = File(path)
                 if (file.exists() && file.length() > 0L) FontFamily(Font(file, FontWeight.Normal)) else null
             }.getOrNull()
         }
     }
-    val family = customFont ?: FontFamily(Font(R.font.artegra_soft_global_bold_rounded, FontWeight.Normal))
+    val family = when (fontPath) {
+        null -> FontFamily.Default
+        BUILTIN_ARTEGRA_FONT -> FontFamily(Font(R.font.artegra_soft_global_bold_rounded, FontWeight.Normal))
+        else -> customFont ?: FontFamily.Default
+    }
 
     val baseDensity = LocalDensity.current
     val density = remember(baseDensity, fontScale) {
@@ -588,7 +606,9 @@ private fun MathFlowApp() {
                                                 },
                                                 onResetFont = {
                                                     fontPath = null
-                                                    prefs.edit().remove("font_path").apply()
+                                                    prefs.edit().remove("font_path")
+                                                        .putBoolean("font_selection_initialized", true)
+                                                        .apply()
                                                 },
                                                 appliedAnimationSettings = keyAnimationSettings,
                                                 onAnimationSettingsApplied = { settings ->
@@ -1913,6 +1933,8 @@ private fun setLauncherIcon(context: Context, iconId: String) {
     }
 }
 
+private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
+
 private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, ANIMATIONS, FONTS }
 
 @Composable
@@ -1946,13 +1968,14 @@ private fun SettingsPage(
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var savedFonts by remember {
         mutableStateOf<List<Pair<String, String>>>(
-            File(context.filesDir, "fonts").listFiles()
-                ?.filter { it.isFile && (it.extension.equals("ttf", true) || it.extension.equals("otf", true)) }
-                ?.map { file ->
-                    val storedName = file.name.substringAfter('_').substringAfter('_', file.name)
-                    file.absolutePath to storedName
-                }
-                ?: emptyList()
+            listOf(BUILTIN_ARTEGRA_FONT to "Artegra Soft Global") +
+                (File(context.filesDir, "fonts").listFiles()
+                    ?.filter { it.isFile && (it.extension.equals("ttf", true) || it.extension.equals("otf", true)) }
+                    ?.map { file ->
+                        val storedName = file.name.substringAfter('_').substringAfter('_', file.name)
+                        file.absolutePath to storedName
+                    }
+                    ?: emptyList())
         )
     }
     var pendingFontPath by remember(fontPath) { mutableStateOf(fontPath) }
@@ -2011,19 +2034,13 @@ private fun SettingsPage(
         targetState = section,
         transitionSpec = {
             val forward = initialState == SettingsSection.MAIN && targetState != SettingsSection.MAIN
-            if (forward) {
-                slideInHorizontally(
-                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
-                ) { it } togetherWith slideOutHorizontally(
-                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
-                ) { -it }
-            } else {
-                slideInHorizontally(
-                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
-                ) { -it } togetherWith slideOutHorizontally(
-                    animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
-                ) { it }
-            }
+            val rtl = layoutDirection == LayoutDirection.Rtl
+            val enterFrom = if (forward != rtl) 1 else -1
+            slideInHorizontally(
+                animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
+            ) { it * enterFrom } togetherWith slideOutHorizontally(
+                animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
+            ) { -it * enterFrom }
         },
         label = "SettingsSubpageTransition"
     ) { target ->
