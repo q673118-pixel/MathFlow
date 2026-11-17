@@ -1651,9 +1651,10 @@ private fun EquationSolverPage() {
     var systemFirst by rememberSaveable { mutableStateOf("x + y = 5") }
     var systemSecond by rememberSaveable { mutableStateOf("x - y = 1") }
     var systemThird by rememberSaveable { mutableStateOf("x + y + z = 6") }
+    var expressionToSimplify by rememberSaveable { mutableStateOf("2(x + 3) - x") }
 
     PageColumn(tx("solver")) {
-        Segmented(listOf("Уравнение", "Система"), mode) {
+        Segmented(listOf("Уравнение", "Система", "Упростить"), mode) {
             mode = it
             answer = null
             steps = emptyList()
@@ -1676,7 +1677,7 @@ private fun EquationSolverPage() {
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: tx("equation_error") }
                 }
             }
-        } else {
+        } else if (mode == "Система") {
             Panel {
                 Text("Линейная система: 2–3 неизвестных (x, y, z)", color = p.muted, fontSize = 12.sp)
                 Field(systemFirst, { systemFirst = it; answer = null; error = null }, "Уравнение 1", Modifier.fillMaxWidth(), numeric = false)
@@ -1696,6 +1697,22 @@ private fun EquationSolverPage() {
                 }
             }
             Text("Поддерживаются линейные выражения, скобки, дробные коэффициенты и точные рациональные ответы.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        } else {
+            Panel {
+                Text("Упрощение многочленов от одной переменной x (до 4-й степени).", color = p.muted, fontSize = 12.sp)
+                Field(expressionToSimplify, { expressionToSimplify = it; answer = null; error = null }, "Выражение", Modifier.fillMaxWidth(), numeric = false)
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("x", "x²", "^", "(", ")", "+", "−", "×", "÷").forEach { symbol ->
+                        Chip(symbol, false) { expressionToSimplify += symbol }
+                    }
+                }
+                ActionButton("Упростить выражение") {
+                    runCatching { PolynomialSimplifier().simplify(expressionToSimplify) }
+                        .onSuccess { answer = it.expression; steps = it.steps; error = null }
+                        .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось упростить выражение" }
+                }
+            }
+            Text("Поддерживаются точные дробные коэффициенты, скобки, раскрытие произведений и приведение подобных слагаемых. Деление на выражение с x не поддерживается.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = error != null,
