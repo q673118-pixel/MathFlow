@@ -520,7 +520,7 @@ private fun MathFlowApp() {
                                     LaunchedEffect(Unit) {
                                         enterProgress.animateTo(
                                             targetValue = 1f,
-                                            animationSpec = tween(150, easing = FastOutSlowInEasing)
+                                            animationSpec = tween(PAGE_ENTER_DURATION_MS, easing = FastOutSlowInEasing)
                                         )
                                     }
                                     Box(
@@ -732,6 +732,7 @@ private fun FirstLaunchWelcome(
 }
 
 private const val NAV_TRANSITION_DURATION_MS = 180
+private const val PAGE_ENTER_DURATION_MS = 260
 
 @Composable
 private fun BottomNav(
@@ -748,6 +749,9 @@ private fun BottomNav(
         BottomNavAnimationStyle.SPRING_MOTION,
         BottomNavAnimationStyle.ELASTIC_SLIDE
     )
+    // Compose springs do not have a fixed duration. Map the duration control to
+    // spring stiffness so slower settings remain visibly slower in spring styles.
+    val springStiffness = bottomNavSpringStiffness(duration)
     Box(
         Modifier.fillMaxWidth()
             .then(if (preview) Modifier else Modifier.navigationBarsPadding())
@@ -783,16 +787,12 @@ private fun BottomNav(
                 val targetOffset = with(density) {
                     (itemWidth * visualIndex + (itemWidth - indicatorWidth) / 2).toPx()
                 }
-                val offsetSpec = if (springMotion) {
-                    spring<Float>(
-                        dampingRatio = if (style == BottomNavAnimationStyle.ELASTIC_SLIDE) 0.48f else 0.78f,
-                        stiffness = when (style) {
-                            BottomNavAnimationStyle.ELASTIC_SLIDE -> 520f
-                            BottomNavAnimationStyle.SPRING_MOTION -> 360f
-                            else -> 440f
-                        }
-                    )
-                } else tween<Float>(durationMillis = duration, easing = FastOutSlowInEasing)
+                // The indicator always follows the duration slider. Spring-like character
+                // is retained by the stretch and icon-scale effects below.
+                val offsetSpec = tween<Float>(
+                    durationMillis = duration,
+                    easing = FastOutSlowInEasing
+                )
                 val indicatorOffset by animateFloatAsState(
                     targetValue = targetOffset,
                     animationSpec = offsetSpec,
@@ -838,7 +838,7 @@ private fun BottomNav(
                             1f,
                             spring(
                                 dampingRatio = if (style == BottomNavAnimationStyle.FLUID_PILL) 0.72f else 0.48f,
-                                stiffness = if (style == BottomNavAnimationStyle.FLUID_PILL) 430f else 520f
+                                stiffness = springStiffness * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.95f else 1.05f
                             )
                         )
                     } else {
@@ -897,7 +897,7 @@ private fun BottomNav(
                             ) 1f + settings.iconScale else 1f,
                             animationSpec = if (springMotion) spring(
                                 dampingRatio = 0.88f - settings.intensity * 0.38f,
-                                stiffness = 300f + settings.intensity * 360f
+                                stiffness = springStiffness
                             ) else tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconScale"
                         )
