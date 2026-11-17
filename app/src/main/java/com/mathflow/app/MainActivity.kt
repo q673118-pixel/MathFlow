@@ -444,7 +444,7 @@ private fun MathFlowApp() {
             }.getOrNull()
         }
     }
-    val family = customFont ?: FontFamily.Default
+    val family = customFont ?: FontFamily(Font(R.font.artegra_soft_global_bold_rounded, FontWeight.Normal))
 
     val baseDensity = LocalDensity.current
     val density = remember(baseDensity, fontScale) {
