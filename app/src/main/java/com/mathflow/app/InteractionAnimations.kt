@@ -8,7 +8,6 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.heightIn
@@ -25,17 +24,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
 
-/**
- * Shared lightweight press feedback for every interactive MathFlow surface.
- * It reuses the app's configured indication and animates only the pressed state.
- */
-@Composable
+/** Click handling without any press ripple, particle, or overlay indication. */
 internal fun Modifier.mathFlowClickable(
     enabled: Boolean = true,
     onClick: () -> Unit
 ): Modifier = clickable(
     interactionSource = null,
-    indication = LocalIndication.current,
+    indication = null,
     enabled = enabled,
     onClick = onClick
 )
