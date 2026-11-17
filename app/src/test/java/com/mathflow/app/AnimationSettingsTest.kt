@@ -34,6 +34,30 @@ class AnimationSettingsTest {
     }
 
     @Test
+    fun bottomNavigationSpringSlowsDownAsDurationIncreases() {
+        val fast = bottomNavSpringStiffness(100)
+        val slow = bottomNavSpringStiffness(1000)
+
+        assertEquals(1800f, fast, 0.01f)
+        assertEquals(180f, slow, 0.01f)
+        assertTrue(fast > slow)
+    }
+
+    @Test
+    fun bottomNavigationSpringDurationIsClamped() {
+        assertEquals(
+            bottomNavSpringStiffness(100),
+            bottomNavSpringStiffness(-500),
+            0.01f
+        )
+        assertEquals(
+            bottomNavSpringStiffness(1000),
+            bottomNavSpringStiffness(5000),
+            0.01f
+        )
+    }
+
+    @Test
     fun unknownBottomNavigationStyleFallsBackSafely() {
         assertEquals(
             BottomNavAnimationStyle.FLUID_PILL,
