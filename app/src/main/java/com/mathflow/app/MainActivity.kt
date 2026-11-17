@@ -50,6 +50,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -110,6 +111,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.TextStyle
@@ -2296,11 +2298,13 @@ private fun SettingsPage(
                 }
                 Panel {
                     Row(
-                        Modifier.fillMaxWidth().mathFlowClickable {
-                            pendingNavAnimationSettings = pendingNavAnimationSettings.copy(
-                                enabled = !pendingNavAnimationSettings.enabled
-                            )
-                        },
+                        Modifier.fillMaxWidth().toggleable(
+                            value = pendingNavAnimationSettings.enabled,
+                            role = Role.Switch,
+                            onValueChange = { enabled ->
+                                pendingNavAnimationSettings = pendingNavAnimationSettings.copy(enabled = enabled)
+                            }
+                        ).padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -2311,6 +2315,10 @@ private fun SettingsPage(
                                 color = p.muted, fontSize = 12.sp
                             )
                         }
+                        Switch(
+                            checked = pendingNavAnimationSettings.enabled,
+                            onCheckedChange = null
+                        )
                     }
                     BottomNavAnimationStyle.values().toList().chunked(2).forEach { pair ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
