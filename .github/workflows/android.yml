@@ -62,10 +62,13 @@ jobs:
           path: app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: warn
 
+      - name: Rename APK for distribution
+        run: cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/MathFlow-v1.6.0.apk
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: MathFlow-v1.6.0-${{ github.ref_name }}-build-${{ github.run_number }}-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: MathFlow-v1.6.0-${{ github.ref_name }}-build-${{ github.run_number }}-apk
+          path: app/build/outputs/apk/debug/MathFlow-v1.6.0.apk
           if-no-files-found: error
           retention-days: 7
