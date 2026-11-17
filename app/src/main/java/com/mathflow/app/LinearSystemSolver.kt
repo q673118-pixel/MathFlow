@@ -93,7 +93,7 @@ class LinearSystemSolver {
             }
             return v
         }
-        private fun startsPrimary(t: String?) = t == "(" || t?.firstOrNull()?.isDigit() == true || t?.lowercase() in variables
+        private fun startsPrimary(t: String?) = t == "(" || t?.firstOrNull()?.isDigit() == true || t != null && t.lowercase() in variables
         private fun unary(): Form = when (peek()) { "+" -> { take(); unary() }; "-" -> { take(); -unary() }; else -> primary() }
         private fun primary(): Form {
             val t = take(); val size = variables.size + 1
