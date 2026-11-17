@@ -2019,6 +2019,8 @@ private fun SettingsPage(
         }
     }
 
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+
     val hasPendingChanges =
         pendingFontScale != fontScale ||
         pendingIconId != selectedIconId ||
@@ -2034,7 +2036,7 @@ private fun SettingsPage(
         targetState = section,
         transitionSpec = {
             val forward = initialState == SettingsSection.MAIN && targetState != SettingsSection.MAIN
-            val rtl = layoutDirection == LayoutDirection.Rtl
+            val rtl = isRtl
             val enterFrom = if (forward != rtl) 1 else -1
             slideInHorizontally(
                 animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing)
