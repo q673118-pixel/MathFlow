@@ -1,10 +1,12 @@
-# MathFlow Android — 1.5.4
+# MathFlow Android — 1.6.0
 
 MathFlow is a Kotlin / Jetpack Compose / Material 3 Android mathematics app.
 
 ## Features
 - Scientific calculator: exact fractions, arithmetic, parentheses, integer powers, percentages, roots, trigonometric and logarithmic functions, constants π and e.
-- Linear and quadratic equation solver with a worked solution.
+- Equation solver for linear and quadratic equations, rational equations, and numerical polynomial roots up to degree four, with step-by-step explanations.
+- Linear systems with two or three variables using exact rational Gaussian elimination; detects unique, inconsistent, and underdetermined systems.
+- Polynomial expression simplifier (one variable, degree up to four): expands parentheses, combines like terms, and preserves exact rational coefficients.
 - Fraction calculator: exact addition, subtraction, multiplication and division; reduced fraction, mixed and decimal representations.
 - Percentage tools: percentage of a value, part-to-whole percentage, increase and decrease.
 - Geometry: rectangle, circle and triangle (Heron's formula).
@@ -17,7 +19,7 @@ MathFlow is a Kotlin / Jetpack Compose / Material 3 Android mathematics app.
 - Percent calculations use `BigDecimal` with 16 significant digits.
 - Trigonometry and transcendental functions are approximations; trigonometry defaults to degrees.
 - Circle and triangle geometry use floating-point approximations.
-- The equation solver supports one variable and degree at most two.
+- The equation solver supports one variable; exact polynomial processing is supported through degree four, with numerical root finding for higher-degree or general-function cases. Linear systems support two or three variables. The expression simplifier supports one-variable polynomials through degree four and division by non-zero constants.
 
 ## Build requirements
 - Android Studio with JDK 17+
@@ -28,10 +30,10 @@ Open the project root in Android Studio, sync Gradle, run the `test` task, then 
 
 Application ID: `com.mathflow.app`
 Minimum Android: API 26
-Version: `1.0.0` (versionCode 5)
+Version: `1.6.0` (versionCode is assigned from the GitHub Actions run number for CI builds)
 
 ## Important release status
-This repository is a **source release**, not an APK. In the environment where this archive was prepared, Gradle, the Gradle wrapper, the Kotlin compiler and Android SDK were unavailable. The Android app has therefore not been built or run here; compile and device verification remain required in Android Studio.
+GitHub Actions compiles the Android app, runs the JVM unit tests, and publishes a debug APK artifact. A permanent release-signing keystore must be configured as repository Actions secrets before builds can be installed as in-place updates across workflow runs. Device-level UI and installation checks remain required on a physical Android phone.
 
 ## Build an APK from an Android phone (GitHub Actions)
 
