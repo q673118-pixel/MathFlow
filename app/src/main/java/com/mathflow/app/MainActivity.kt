@@ -1642,111 +1642,86 @@ private fun friendly(error: Throwable, fallback: String): String = when {
 @Composable
 private fun EquationSolverPage() {
     val p = LocalPalette.current
-    val solveScope = rememberCoroutineScope()
-    var solveJob by remember { mutableStateOf<Job?>(null) }
+    var mode by rememberSaveable { mutableStateOf("Уравнение") }
     var equation by rememberSaveable { mutableStateOf("") }
     var answer by rememberSaveable { mutableStateOf<String?>(null) }
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
-    val equationFallback = tx("equation_error")
-    val divisionByZeroText = tx("divide_zero")
+    var systemCount by rememberSaveable { mutableStateOf(2) }
+    var systemFirst by rememberSaveable { mutableStateOf("x + y = 5") }
+    var systemSecond by rememberSaveable { mutableStateOf("x - y = 1") }
+    var systemThird by rememberSaveable { mutableStateOf("x + y + z = 6") }
 
     PageColumn(tx("solver")) {
-        Panel {
-            Field(equation, {
-                solveJob?.cancel()
-                solveJob = null
-                equation = it
-            }, tx("example_equation"), Modifier.fillMaxWidth(), numeric = false)
-            Row(
-                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                listOf("x", "x²", "x³", "x⁴", "^", "(", ")", "√(", "abs(", "sin(", "cos(", "tan(", "ln(", "log(", "π", "e", "+", "−", "×", "÷", "=").forEach { symbol ->
-                    Chip(symbol, false) {
-                        solveJob?.cancel()
-                        solveJob = null
-                        equation += symbol
+        Segmented(listOf("Уравнение", "Система"), mode) {
+            mode = it
+            answer = null
+            steps = emptyList()
+            error = null
+        }
+        if (mode == "Уравнение") {
+            Panel {
+                Field(equation, { equation = it; answer = null; error = null }, tx("example_equation"), Modifier.fillMaxWidth(), numeric = false)
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf("x", "x²", "x³", "x⁴", "^", "(", ")", "√(", "abs(", "sin(", "cos(", "tan(", "ln(", "log(", "π", "e", "+", "−", "×", "÷", "=").forEach { symbol ->
+                        Chip(symbol, false) { equation += symbol }
                     }
                 }
-            }
-            ActionButton(tx("solve")) {
-                val input = equation
-                solveJob?.cancel()
-                solveJob = solveScope.launch {
-                    try {
-                        val solved = withContext(Dispatchers.Default) {
-                            AlgebraSolver().solve(input)
-                        }
-                        answer = solved.answer
-                        steps = solved.steps
-                        error = null
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: IllegalArgumentException) {
-                        answer = null
-                        steps = emptyList()
-                        error = if (e.message?.contains("Деление на ноль") == true) {
-                            divisionByZeroText
-                        } else {
-                            equationFallback
-                        }
-                    } catch (_: Exception) {
-                        answer = null
-                        steps = emptyList()
-                        error = equationFallback
-                    }
+                ActionButton(tx("solve")) {
+                    runCatching { AlgebraSolver().solve(equation) }
+                        .onSuccess { answer = it.answer; steps = it.steps; error = null }
+                        .onFailure { answer = null; steps = emptyList(); error = it.message ?: tx("equation_error") }
                 }
             }
+        } else {
+            Panel {
+                Text("Линейная система: 2–3 неизвестных (x, y, z)", color = p.muted, fontSize = 12.sp)
+                Field(systemFirst, { systemFirst = it; answer = null; error = null }, "Уравнение 1", Modifier.fillMaxWidth(), numeric = false)
+                Field(systemSecond, { systemSecond = it; answer = null; error = null }, "Уравнение 2", Modifier.fillMaxWidth(), numeric = false)
+                if (systemCount == 3) {
+                    Field(systemThird, { systemThird = it; answer = null; error = null }, "Уравнение 3", Modifier.fillMaxWidth(), numeric = false)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip("2 уравнения", systemCount == 2) { systemCount = 2; answer = null; error = null }
+                    Chip("3 уравнения", systemCount == 3) { systemCount = 3; answer = null; error = null }
+                }
+                ActionButton("Решить систему") {
+                    val equations = if (systemCount == 2) listOf(systemFirst, systemSecond) else listOf(systemFirst, systemSecond, systemThird)
+                    runCatching { LinearSystemSolver().solve(equations) }
+                        .onSuccess { answer = it.answer; steps = it.steps; error = null }
+                        .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось решить систему" }
+                }
+            }
+            Text("Поддерживаются линейные выражения, скобки, дробные коэффициенты и точные рациональные ответы.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = error != null,
-            enter = androidx.compose.animation.fadeIn(tween(190)) +
-                androidx.compose.animation.expandVertically(tween(190)),
-            exit = androidx.compose.animation.fadeOut(tween(110)) +
-                androidx.compose.animation.shrinkVertically(tween(110))
-        ) {
-            error?.let { AnimatedAnswerText(it, color = p.error, fontSize = 14.sp) }
-        }
+            enter = androidx.compose.animation.fadeIn(tween(190)) + androidx.compose.animation.expandVertically(tween(190)),
+            exit = androidx.compose.animation.fadeOut(tween(110)) + androidx.compose.animation.shrinkVertically(tween(110))
+        ) { error?.let { AnimatedAnswerText(it, color = p.error, fontSize = 14.sp) } }
         androidx.compose.animation.AnimatedVisibility(
             visible = answer != null,
-            enter = androidx.compose.animation.fadeIn(tween(210)) +
-                androidx.compose.animation.expandVertically(tween(210)),
-            exit = androidx.compose.animation.fadeOut(tween(120)) +
-                androidx.compose.animation.shrinkVertically(tween(120))
+            enter = androidx.compose.animation.fadeIn(tween(210)) + androidx.compose.animation.expandVertically(tween(210)),
+            exit = androidx.compose.animation.fadeOut(tween(120)) + androidx.compose.animation.shrinkVertically(tween(120))
         ) {
             answer?.let { text ->
                 Panel {
-                    AnimatedAnswerText(
-                        text,
-                        color = p.accent,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    AnimatedAnswerText(text, color = p.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                     if (steps.isNotEmpty()) {
                         HorizontalDivider(color = p.key)
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = steps.isNotEmpty(),
-                            enter = androidx.compose.animation.fadeIn(tween(220)) +
-                                androidx.compose.animation.expandVertically(tween(220))
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                steps.forEachIndexed { index, step ->
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text("${index + 1}.", color = p.accent, fontSize = 14.sp)
-                                        Text(step, fontSize = 14.sp, lineHeight = 20.sp)
-                                    }
-                                }
+                        Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            steps.forEachIndexed { index, step ->
+                                Text("${index + 1}. $step", color = p.text, fontSize = 14.sp, lineHeight = 20.sp)
                             }
                         }
                     }
                 }
             }
         }
-        Text(
-            tx("equation_help"),
-            color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
-        )
+        if (mode == "Уравнение") Text(tx("equation_help"), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
     }
 }
 
