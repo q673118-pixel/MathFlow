@@ -96,6 +96,16 @@ internal data class BottomNavAnimationSettings(
     )
 }
 
+/**
+ * Maps the bottom-navigation duration slider to a spring stiffness value.
+ * Higher duration means lower stiffness and therefore slower spring motion.
+ */
+internal fun bottomNavSpringStiffness(durationMs: Int): Float {
+    val normalizedDuration = durationMs.coerceIn(100, 1000)
+    val fraction = (normalizedDuration - 100) / 900f
+    return 1800f - fraction * 1620f
+}
+
 internal object MathFlowNoIndication : IndicationNodeFactory {
     override fun create(interactionSource: InteractionSource): DelegatableNode =
         object : Modifier.Node(), DrawModifierNode {
