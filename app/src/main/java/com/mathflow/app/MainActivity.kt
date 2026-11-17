@@ -1642,6 +1642,7 @@ private fun friendly(error: Throwable, fallback: String): String = when {
 @Composable
 private fun EquationSolverPage() {
     val p = LocalPalette.current
+    val equationFallback = tx("equation_error")
     var mode by rememberSaveable { mutableStateOf("Уравнение") }
     var equation by rememberSaveable { mutableStateOf("") }
     var answer by rememberSaveable { mutableStateOf<String?>(null) }
@@ -1674,7 +1675,7 @@ private fun EquationSolverPage() {
                 ActionButton(tx("solve")) {
                     runCatching { AlgebraSolver().solve(equation) }
                         .onSuccess { answer = it.answer; steps = it.steps; error = null }
-                        .onFailure { answer = null; steps = emptyList(); error = it.message ?: tx("equation_error") }
+                        .onFailure { answer = null; steps = emptyList(); error = it.message ?: equationFallback }
                 }
             }
         } else if (mode == "Система") {
