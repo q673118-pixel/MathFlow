@@ -1225,7 +1225,7 @@ private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
             .mathFlowClickable(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (active) p.accent else p.muted)
+        Text(displayText(label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (active) p.accent else p.muted)
     }
 }
 
@@ -1331,7 +1331,7 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
         color = p.keyEquals
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
+            Text(displayText(text), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
         }
     }
 }
