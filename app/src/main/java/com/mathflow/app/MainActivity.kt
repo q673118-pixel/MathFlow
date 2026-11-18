@@ -2506,7 +2506,7 @@ private fun SettingsPage(
                 val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white") }
                 val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("ОСНОВНЫЕ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     baseThemes.chunked(2).forEach { pair ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             pair.forEach { option ->
