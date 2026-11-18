@@ -1728,7 +1728,7 @@ private fun EquationSolverPage() {
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось упростить выражение" }
                 }
             }
-            Text("Поддерживаются точные дробные коэффициенты, скобки, раскрытие произведений и приведение подобных слагаемых. Деление на выражение с x не поддерживается.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+            Text(displayText("Поддерживаются точные дробные коэффициенты, скобки, раскрытие произведений и приведение подобных слагаемых. Деление на выражение с x не поддерживается."), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = error != null,
@@ -2123,7 +2123,7 @@ private fun SettingsPage(
                 val baseIcons = AppIconOptions.filter { it.id in setOf("vanilla", "black", "white") }
                 val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("ОСНОВНЫЕ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     baseIcons.chunked(2).forEach { pair ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             pair.forEach { option ->
