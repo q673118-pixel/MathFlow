@@ -1695,7 +1695,7 @@ private fun EquationSolverPage() {
             }
         } else if (mode == "Система") {
             Panel {
-                Text("Линейная система: 2–3 неизвестных (x, y, z)", color = p.muted, fontSize = 12.sp)
+                Text(displayText("Линейная система: 2–3 неизвестных (x, y, z)"), color = p.muted, fontSize = 12.sp)
                 Field(systemFirst, { systemFirst = it; answer = null; error = null }, "Уравнение 1", Modifier.fillMaxWidth(), numeric = false)
                 Field(systemSecond, { systemSecond = it; answer = null; error = null }, "Уравнение 2", Modifier.fillMaxWidth(), numeric = false)
                 if (systemCount == 3) {
@@ -1705,24 +1705,24 @@ private fun EquationSolverPage() {
                     Chip("2 уравнения", systemCount == 2) { systemCount = 2; answer = null; error = null }
                     Chip("3 уравнения", systemCount == 3) { systemCount = 3; answer = null; error = null }
                 }
-                ActionButton("Решить систему") {
+                ActionButton(displayText("Решить систему")) {
                     val equations = if (systemCount == 2) listOf(systemFirst, systemSecond) else listOf(systemFirst, systemSecond, systemThird)
                     runCatching { LinearSystemSolver().solve(equations) }
                         .onSuccess { answer = it.answer; steps = it.steps; error = null }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось решить систему" }
                 }
             }
-            Text("Поддерживаются линейные выражения, скобки, дробные коэффициенты и точные рациональные ответы.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+            Text(displayText("Поддерживаются линейные выражения, скобки, дробные коэффициенты и точные рациональные ответы."), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
         } else {
             Panel {
-                Text("Упрощение многочленов от одной переменной x (до 4-й степени).", color = p.muted, fontSize = 12.sp)
+                Text(displayText("Упрощение многочленов от одной переменной x (до 4-й степени)."), color = p.muted, fontSize = 12.sp)
                 Field(expressionToSimplify, { expressionToSimplify = it; answer = null; error = null }, "Выражение", Modifier.fillMaxWidth(), numeric = false)
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     listOf("x", "x²", "^", "(", ")", "+", "−", "×", "÷").forEach { symbol ->
                         Chip(symbol, false) { expressionToSimplify += symbol }
                     }
                 }
-                ActionButton("Упростить выражение") {
+                ActionButton(displayText("Упростить выражение")) {
                     runCatching { PolynomialSimplifier().simplify(expressionToSimplify) }
                         .onSuccess { answer = it.expression; steps = it.steps; error = null }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось упростить выражение" }
@@ -2059,7 +2059,7 @@ private fun SettingsPage(
                 }
                 Panel {
                     SettingsEntry(
-                        title = "Язык приложения",
+                        title = tx("app_language"),
                         subtitle = AppLanguages.firstOrNull { it.tag == selectedLanguage }?.nativeName ?: "Русский",
                         icon = Icons.Default.Functions,
                         onClick = { section = SettingsSection.LANGUAGE }
@@ -2134,7 +2134,7 @@ private fun SettingsPage(
                         }
                     }
                     Spacer(Modifier.height(3.dp))
-                    Text("ЦВЕТОВЫЕ ИКОНКИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text(displayText("ЦВЕТОВЫЕ ИКОНКИ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     colorIcons.chunked(2).forEach { pair ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             pair.forEach { option ->
@@ -2517,7 +2517,7 @@ private fun SettingsPage(
                         }
                     }
                     Spacer(Modifier.height(3.dp))
-                    Text("ЦВЕТОВЫЕ ТЕМЫ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text(displayText("ЦВЕТОВЫЕ ТЕМЫ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     colorThemes.chunked(2).forEach { pair ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             pair.forEach { option ->
