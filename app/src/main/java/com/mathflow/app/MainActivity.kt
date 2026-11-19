@@ -445,7 +445,7 @@ private fun MathFlowApp() {
     val historyMutex = remember { Mutex() }
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
-    var showWelcome by remember { mutableStateOf(!prefs.getBoolean("welcome_seen", false)) }
+    var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 2) }
     var splashFinished by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -663,7 +663,7 @@ private fun MathFlowApp() {
                                     prefs.edit().putString("app_theme", id).apply()
                                 },
                                 onConfirm = {
-                                    prefs.edit().putBoolean("welcome_seen", true).apply()
+                                    prefs.edit().putBoolean("welcome_seen", true).putInt("welcome_version", 2).apply()
                                     showWelcome = false
                                 }
                             )
