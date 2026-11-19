@@ -28,4 +28,14 @@ class MeasurementSettingsTest {
     @Test fun convertsNewSquareFootUnit() {
         assertEquals("0.09290304", UnitConverter.convert("1", "area", "ft2", "m2"))
     }
+
+    @Test fun everyConverterUnitHasLocalizedNamesForAllSupportedLanguages() {
+        val languages = listOf("ru", "en", "kk", "es", "fr", "de", "pt", "it", "tr", "ar", "hi", "zh", "ja", "ko", "uz")
+        UnitConverter.categories.flatMap { it.units }.forEach { unit ->
+            languages.forEach { language ->
+                val name = unitDisplayName(unit.id, language)
+                assertEquals("Missing localized name for ${unit.id} / ${language}", false, name == unit.id)
+            }
+        }
+    }
 }
