@@ -850,7 +850,7 @@ private fun FirstLaunchWelcome(
                                     border = androidx.compose.foundation.BorderStroke(if (selected) 1.4.dp else 1.dp, if (selected) p.accent else Color.Transparent)
                                 ) {
                                     Column(Modifier.padding(vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        Image(painterResource(option.drawable), null, Modifier.size(34.dp))
+                                        LauncherIconPreview(option.drawable, option.title, Modifier.size(34.dp))
                                         Text(option.title, color = p.text, fontSize = 9.sp, maxLines = 1)
                                     }
                                 }
