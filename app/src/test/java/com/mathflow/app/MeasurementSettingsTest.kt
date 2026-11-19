@@ -2,6 +2,7 @@ package com.mathflow.app
 
 import java.util.Locale
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MeasurementSettingsTest {
@@ -34,7 +35,7 @@ class MeasurementSettingsTest {
         UnitConverter.categories.flatMap { it.units }.forEach { unit ->
             languages.forEach { language ->
                 val name = unitDisplayName(unit.id, language)
-                assertEquals("Missing localized name for ${unit.id} / ${language}", false, name == unit.id)
+                assertTrue("Missing localized name for ${unit.id} / ${language}: $name", hasLocalizedUnitName(unit.id, language))
             }
         }
     }
