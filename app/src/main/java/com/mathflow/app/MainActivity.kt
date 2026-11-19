@@ -650,6 +650,7 @@ private fun MathFlowApp() {
                                 language = appLanguage,
                                 measurementSystem = measurementSystem,
                                 themeId = themeId,
+                                selectedIconId = selectedIconId,
                                 fontPath = fontPath,
                                 fontScale = fontScale,
                                 onLanguageSelected = { tag ->
@@ -663,6 +664,11 @@ private fun MathFlowApp() {
                                 onThemeSelected = { id ->
                                     themeId = id
                                     prefs.edit().putString("app_theme", id).apply()
+                                },
+                                onIconSelected = { id ->
+                                    selectedIconId = id
+                                    prefs.edit().putString("app_icon", id).apply()
+                                    setLauncherIcon(context, id)
                                 },
                                 onFontSelected = { selected ->
                                     fontPath = selected
@@ -695,11 +701,13 @@ private fun FirstLaunchWelcome(
     language: String,
     measurementSystem: String,
     themeId: String,
+    selectedIconId: String,
     fontPath: String?,
     fontScale: Float,
     onLanguageSelected: (String) -> Unit,
     onMeasurementSystemSelected: (String) -> Unit,
     onThemeSelected: (String) -> Unit,
+    onIconSelected: (String) -> Unit,
     onFontSelected: (String?) -> Unit,
     onFontScaleSelected: (Float) -> Unit,
     onConfirm: () -> Unit
@@ -825,6 +833,28 @@ private fun FirstLaunchWelcome(
                                 }
                             }
                             if (rowThemes.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text(tx("app_icons"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    AppIconOptions.chunked(5).forEach { rowIcons ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            rowIcons.forEach { option ->
+                                val selected = selectedIconId == option.id
+                                Surface(
+                                    modifier = Modifier.weight(1f).mathFlowClickable { onIconSelected(option.id) },
+                                    shape = RoundedCornerShape(15.dp),
+                                    color = if (selected) p.navActive else p.key,
+                                    border = androidx.compose.foundation.BorderStroke(if (selected) 1.4.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                                ) {
+                                    Column(Modifier.padding(vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                        Image(painterResource(option.drawable), null, Modifier.size(34.dp))
+                                        Text(option.title, color = p.text, fontSize = 9.sp, maxLines = 1)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
