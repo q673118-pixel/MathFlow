@@ -1177,7 +1177,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                             androidx.compose.animation.shrinkVertically(tween(110))
                     ) {
                         message?.let {
-                            Text(it, fontSize = 13.sp, color = p.error, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                            Text(MathTextLocalization.translate(it, LocalLanguage.current), fontSize = 13.sp, color = p.error, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
                         }
                     }
                 }
@@ -1194,7 +1194,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
             Surface(Modifier.fillMaxWidth().heightIn(max = 96.dp), shape = RoundedCornerShape(20.dp), color = p.surface) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
                     steps.forEachIndexed { index, step ->
-                        Text("${index + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
+                        Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
                     }
                 }
             }
@@ -1348,7 +1348,7 @@ private fun ResultBox(text: String, error: String?) {
                 exit = androidx.compose.animation.fadeOut(tween(110)) +
                     androidx.compose.animation.shrinkVertically(tween(110))
             ) {
-                error?.let { AnimatedAnswerText(it, color = p.error, fontSize = 14.sp) }
+                error?.let { AnimatedAnswerText(MathTextLocalization.translate(it, LocalLanguage.current), color = p.error, fontSize = 14.sp) }
             }
             androidx.compose.animation.AnimatedVisibility(
                 visible = error == null && text.isNotBlank(),
@@ -1358,7 +1358,7 @@ private fun ResultBox(text: String, error: String?) {
                     androidx.compose.animation.shrinkVertically(tween(110))
             ) {
                 AnimatedAnswerText(
-                    text,
+                    MathTextLocalization.translate(text, LocalLanguage.current),
                     color = p.text,
                     fontSize = 16.sp,
                     lineHeight = 22.sp,
@@ -1734,7 +1734,7 @@ private fun EquationSolverPage() {
             visible = error != null,
             enter = androidx.compose.animation.fadeIn(tween(190)) + androidx.compose.animation.expandVertically(tween(190)),
             exit = androidx.compose.animation.fadeOut(tween(110)) + androidx.compose.animation.shrinkVertically(tween(110))
-        ) { error?.let { AnimatedAnswerText(it, color = p.error, fontSize = 14.sp) } }
+        ) { error?.let { AnimatedAnswerText(MathTextLocalization.translate(it, LocalLanguage.current), color = p.error, fontSize = 14.sp) } }
         androidx.compose.animation.AnimatedVisibility(
             visible = answer != null,
             enter = androidx.compose.animation.fadeIn(tween(210)) + androidx.compose.animation.expandVertically(tween(210)),
@@ -1742,12 +1742,12 @@ private fun EquationSolverPage() {
         ) {
             answer?.let { text ->
                 Panel {
-                    AnimatedAnswerText(text, color = p.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                    AnimatedAnswerText(MathTextLocalization.translate(text, LocalLanguage.current), color = p.accent, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                     if (steps.isNotEmpty()) {
                         HorizontalDivider(color = p.key)
                         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                             steps.forEachIndexed { index, step ->
-                                Text("${index + 1}. $step", color = p.text, fontSize = 14.sp, lineHeight = 20.sp)
+                                Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}", color = p.text, fontSize = 14.sp, lineHeight = 20.sp)
                             }
                         }
                     }
@@ -1792,7 +1792,7 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(entry.expression, fontSize = 15.sp, color = p.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text("= ${entry.result}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
+                        Text("= ${MathTextLocalization.translate(entry.result, LocalLanguage.current)}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
                         Text(
                             entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) tx("hide_solution") else tx("show_solution")) else "",
                             fontSize = 12.sp, color = p.muted
@@ -1806,7 +1806,7 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 entry.steps.forEachIndexed { index, step ->
-                                    Text("${index + 1}. $step", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
+                                    Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
                                 }
                             }
                         }
