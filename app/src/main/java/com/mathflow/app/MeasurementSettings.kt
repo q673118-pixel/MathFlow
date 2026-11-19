@@ -69,7 +69,7 @@ private val localizedUnits = mapOf(
  "c" to listOf("градус Цельсия","degree Celsius","Цельсий градусы","grado Celsius","degré Celsius","Grad Celsius","grau Celsius","grado Celsius","Santigrat derece","درجة مئوية","डिग्री सेल्सियस","摄氏度","摂氏度","섭씨","Selsiy darajasi"),
  "f" to listOf("градус Фаренгейта","degree Fahrenheit","Фаренгейт градусы","grado Fahrenheit","degré Fahrenheit","Grad Fahrenheit","grau Fahrenheit","grado Fahrenheit","Fahrenheit derece","درجة فهرنهايت","डिग्री फ़ारेनहाइट","华氏度","華氏度","화씨","Farengeyt darajasi"),
  "kmh" to listOf("километр в час","kilometer per hour","сағатына километр","kilómetro por hora","kilomètre par heure","Kilometer pro Stunde","quilômetro por hora","chilometro orario","saatte kilometre","كيلومتر في الساعة","किलोमीटर प्रति घंटा","千米每小时","キロメートル毎時","킬로미터 매시간","soatiga kilometr"),
- "mph" to listOf("миля в час","mile per hour","сағатына миль","milla por hora","mille par heure","Meile pro Stunde","milha por hora","miglio orario","saatte mil","ميل في الساعة","मील प्रति घंटा","英里每小时","マイル毎時","마일 매시간","soatiga mil")
+ "mph" to listOf("миля в час","mile per hour","сағатына миль","milla por hora","mille par heure","Meile pro Stunde","milha por hora","miglio orario","saatte mil","ميل في الساعة","मील प्रति घंटा","英里每小时","マイル毎時","마일 매시간","soatiga mil"),
 
  "yd" to listOf("ярд","yard","ярд","yarda","yard","Yard","jarda","iarda","yarda","ياردة","गज","码","ヤード","야드","yard"),
  "mg" to listOf("миллиграмм","milligram","миллиграмм","miligramo","milligramme","Milligramm","miligrama","milligrammo","miligram","ملليغرام","मिलीग्राम","毫克","ミリグラム","밀리그램","milligram"),
