@@ -413,6 +413,7 @@ private fun MathFlowApp() {
     }
     var fontPath by remember { mutableStateOf(initialFontPath) }
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
+    var measurementSystem by remember { mutableStateOf(prefs.getString("measurement_system", "auto") ?: "auto") }
     var keyAnimationSettings by remember {
         mutableStateOf(
             KeyAnimationSettings(
@@ -501,6 +502,7 @@ private fun MathFlowApp() {
 
     CompositionLocalProvider(
         LocalLanguage provides appLanguage,
+        LocalMeasurementSystem provides resolveMeasurementSystem(measurementSystem),
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalKeyAnimationSettings provides keyAnimationSettings,
@@ -585,6 +587,11 @@ private fun MathFlowApp() {
                                                 fontScale = fontScale,
                                                 fontPath = fontPath,
                                                 selectedLanguage = appLanguage,
+                                                selectedMeasurementSystem = measurementSystem,
+                                                onMeasurementSystemSelected = { mode ->
+                                                    measurementSystem = mode
+                                                    prefs.edit().putString("measurement_system", mode).apply()
+                                                },
                                                 onLanguageSelected = { tag ->
                                                     appLanguage = tag
                                                     prefs.edit().putString("app_language", tag).apply()
@@ -640,6 +647,20 @@ private fun MathFlowApp() {
                             FirstLaunchWelcome(
                                 palette = palette,
                                 language = appLanguage,
+                                measurementSystem = measurementSystem,
+                                themeId = themeId,
+                                onLanguageSelected = { tag ->
+                                    appLanguage = tag
+                                    prefs.edit().putString("app_language", tag).apply()
+                                },
+                                onMeasurementSystemSelected = { mode ->
+                                    measurementSystem = mode
+                                    prefs.edit().putString("measurement_system", mode).apply()
+                                },
+                                onThemeSelected = { id ->
+                                    themeId = id
+                                    prefs.edit().putString("app_theme", id).apply()
+                                },
                                 onConfirm = {
                                     prefs.edit().putBoolean("welcome_seen", true).apply()
                                     showWelcome = false
@@ -661,86 +682,106 @@ private fun MathFlowApp() {
 private fun FirstLaunchWelcome(
     palette: Palette,
     language: String,
+    measurementSystem: String,
+    themeId: String,
+    onLanguageSelected: (String) -> Unit,
+    onMeasurementSystemSelected: (String) -> Unit,
+    onThemeSelected: (String) -> Unit,
     onConfirm: () -> Unit
 ) {
-    val title = when (language) {
-        "ru" -> "Добро пожаловать в MathFlow"
-        "kk" -> "MathFlow қолданбасына қош келдіңіз"
-        "es" -> "Te damos la bienvenida a MathFlow"
-        "fr" -> "Bienvenue dans MathFlow"
-        "de" -> "Willkommen bei MathFlow"
-        "pt" -> "Boas-vindas ao MathFlow"
-        "it" -> "Benvenuto in MathFlow"
-        "tr" -> "MathFlow'a hoş geldiniz"
-        "ar" -> "مرحبًا بك في MathFlow"
-        "hi" -> "MathFlow में आपका स्वागत है"
-        "zh" -> "欢迎使用 MathFlow"
-        "ja" -> "MathFlow へようこそ"
-        "ko" -> "MathFlow에 오신 것을 환영합니다"
-        "uz" -> "MathFlow ilovasiga xush kelibsiz"
-        else -> "Welcome to MathFlow"
-    }
-    val message = when (language) {
-        "ru" -> "Спасибо, что скачали MathFlow. Мы надеемся, что приложение сделает работу с математикой удобнее и понятнее."
-        "kk" -> "MathFlow қолданбасын жүктегеніңізге рақмет. Бұл қолданба математиканы түсінікті әрі ыңғайлы етуге көмектеседі деп сенеміз."
-        "es" -> "Gracias por descargar MathFlow. Esperamos que la aplicación haga que trabajar con matemáticas sea más fácil y claro."
-        "fr" -> "Merci d’avoir téléchargé MathFlow. Nous espérons rendre les mathématiques plus simples et plus claires."
-        "de" -> "Danke, dass du MathFlow heruntergeladen hast. Wir hoffen, dass Mathematik damit einfacher und verständlicher wird."
-        "pt" -> "Obrigado por baixar o MathFlow. Esperamos tornar o trabalho com matemática mais simples e claro."
-        "it" -> "Grazie per aver scaricato MathFlow. Speriamo che usare la matematica diventi più semplice e chiaro."
-        "tr" -> "MathFlow'u indirdiğiniz için teşekkürler. Matematikle çalışmayı daha kolay ve anlaşılır hâle getirmeyi umuyoruz."
-        "ar" -> "شكرًا لتنزيل MathFlow. نأمل أن يجعل التطبيق التعامل مع الرياضيات أسهل وأكثر وضوحًا."
-        "hi" -> "MathFlow डाउनलोड करने के लिए धन्यवाद। हमें उम्मीद है कि यह गणित को आसान और स्पष्ट बनाएगा।"
-        "zh" -> "感谢下载 MathFlow。希望这款应用让数学学习和计算更轻松、更清晰。"
-        "ja" -> "MathFlow をダウンロードしていただきありがとうございます。数学をより簡単で分かりやすくすることを目指しています。"
-        "ko" -> "MathFlow를 다운로드해 주셔서 감사합니다. 수학을 더 쉽고 명확하게 사용할 수 있도록 돕겠습니다."
-        "uz" -> "MathFlow'ni yuklab olganingiz uchun rahmat. Ilova matematika bilan ishlashni osonroq va tushunarliroq qiladi deb umid qilamiz."
-        else -> "Thanks for downloading MathFlow. We hope it makes working with mathematics simpler and clearer."
-    }
-    val ok = when (language) {
-        "ru" -> "ОК"
-        "kk" -> "ЖАРАЙДЫ"
-        "es" -> "ACEPTAR"
-        "fr" -> "OK"
-        "de" -> "OK"
-        "pt" -> "OK"
-        "it" -> "OK"
-        "tr" -> "TAMAM"
-        "ar" -> "حسنًا"
-        "hi" -> "ठीक है"
-        "zh" -> "确定"
-        "ja" -> "OK"
-        "ko" -> "확인"
-        "uz" -> "OK"
-        else -> "OK"
-    }
+    var languageMenuExpanded by remember { mutableStateOf(false) }
+    val activeLanguage = AppLanguages.firstOrNull { it.tag == language } ?: AppLanguages.first()
+    val p = palette
     Dialog(onDismissRequest = {}) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            color = palette.surface,
-            contentColor = palette.text,
-            shadowElevation = 12.dp
+            shape = RoundedCornerShape(30.dp),
+            color = p.surface,
+            contentColor = p.text,
+            shadowElevation = 10.dp
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 26.dp, vertical = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.mark_black),
-                    contentDescription = null,
-                    modifier = Modifier.size(52.dp),
-                    colorFilter = ColorFilter.tint(palette.accent)
-                )
-                Text(title, style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
-                Text(
-                    message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = palette.muted,
-                    textAlign = TextAlign.Center
-                )
-                MathFlowTextButton(ok, palette.accent, modifier = Modifier.fillMaxWidth(), onClick = onConfirm)
+            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(p.key)) {
+                    Box(Modifier.fillMaxWidth(0.72f).height(5.dp).clip(CircleShape).background(p.accent))
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Image(painterResource(R.drawable.mark_black), null, Modifier.size(42.dp), colorFilter = ColorFilter.tint(p.accent))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(measurementText("welcome_title", language), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text(measurementText("welcome_desc", language), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(measurementText("language", language), color = p.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Box {
+                        Surface(Modifier.fillMaxWidth().mathFlowClickable { languageMenuExpanded = true }, shape = RoundedCornerShape(15.dp), color = p.key) {
+                            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(activeLanguage.nativeName, Modifier.weight(1f), fontWeight = FontWeight.Medium)
+                                Icon(Icons.Default.ArrowDropDown, null, tint = p.accent)
+                            }
+                        }
+                        androidx.compose.material3.DropdownMenu(
+                            expanded = languageMenuExpanded,
+                            onDismissRequest = { languageMenuExpanded = false },
+                            modifier = Modifier.heightIn(max = 340.dp)
+                        ) {
+                            AppLanguages.forEach { item ->
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text(item.nativeName) },
+                                    onClick = { onLanguageSelected(item.tag); languageMenuExpanded = false },
+                                    trailingIcon = if (item.tag == language) ({ Icon(Icons.Default.Check, null, tint = p.accent) }) else null
+                                )
+                            }
+                        }
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(measurementText("measurements", language), color = p.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    listOf("auto", "metric", "us").forEach { mode ->
+                        val selected = measurementSystem == mode
+                        val title = when (mode) {
+                            "auto" -> measurementText("automatic", language)
+                            "metric" -> measurementText("metric", language)
+                            else -> measurementText("us_customary", language)
+                        }
+                        val description = when (mode) {
+                            "auto" -> measurementText("automatic_desc", language)
+                            "metric" -> measurementText("metric_desc", language)
+                            else -> measurementText("us_desc", language)
+                        }
+                        Surface(
+                            Modifier.fillMaxWidth().mathFlowClickable { onMeasurementSystemSelected(mode) },
+                            shape = RoundedCornerShape(15.dp),
+                            color = if (selected) p.navActive else p.key,
+                            border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                        ) {
+                            Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(description, fontSize = 10.sp, color = p.muted)
+                                }
+                                if (selected) Icon(Icons.Default.Check, null, tint = p.accent)
+                            }
+                        }
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(measurementText("appearance", language), color = p.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("vanilla" to "dark", "white" to "light").forEach { (id, key) ->
+                            val selected = themeId == id || (id == "vanilla" && themeId == "black")
+                            Surface(
+                                Modifier.weight(1f).mathFlowClickable { onThemeSelected(id) },
+                                shape = RoundedCornerShape(13.dp),
+                                color = if (selected) p.navActive else p.key,
+                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                            ) {
+                                Text(measurementText(key, language), Modifier.padding(vertical = 10.dp), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+                MathFlowTextButton(measurementText("continue", language), p.accent, Modifier.fillMaxWidth(), onConfirm)
             }
         }
     }
@@ -1928,7 +1969,7 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
 
-private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, ANIMATIONS, FONTS }
+private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS }
 
 @Composable
 private fun SettingsPage(
@@ -1943,6 +1984,8 @@ private fun SettingsPage(
     onResetFont: () -> Unit,
     selectedLanguage: String,
     onLanguageSelected: (String) -> Unit,
+    selectedMeasurementSystem: String,
+    onMeasurementSystemSelected: (String) -> Unit,
     appliedAnimationSettings: KeyAnimationSettings,
     onAnimationSettingsApplied: (KeyAnimationSettings) -> Unit,
     appliedNavAnimationSettings: BottomNavAnimationSettings,
@@ -1955,6 +1998,7 @@ private fun SettingsPage(
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var pendingFontScale by remember(fontScale) { mutableFloatStateOf(fontScale) }
     var pendingLanguage by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
+    var pendingMeasurementSystem by remember(selectedMeasurementSystem) { mutableStateOf(selectedMeasurementSystem) }
     var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
     var pendingNavAnimationSettings by remember(appliedNavAnimationSettings) { mutableStateOf(appliedNavAnimationSettings) }
     var navPreviewPage by rememberSaveable { mutableStateOf(Page.HOME) }
@@ -2021,7 +2065,8 @@ private fun SettingsPage(
         pendingAnimationSettings != appliedAnimationSettings ||
         pendingNavAnimationSettings != appliedNavAnimationSettings ||
         pendingFontPath != fontPath ||
-        pendingLanguage != selectedLanguage
+        pendingLanguage != selectedLanguage ||
+        pendingMeasurementSystem != selectedMeasurementSystem
 
     Box(Modifier.fillMaxSize()) {
     androidx.compose.animation.AnimatedContent(
@@ -2063,6 +2108,14 @@ private fun SettingsPage(
                         subtitle = AppLanguages.firstOrNull { it.tag == selectedLanguage }?.nativeName ?: "Русский",
                         icon = Icons.Default.Functions,
                         onClick = { section = SettingsSection.LANGUAGE }
+                    )
+                }
+                Panel {
+                    SettingsEntry(
+                        title = measurementText("measurements", LocalLanguage.current),
+                        subtitle = measurementText("measurements_subtitle", LocalLanguage.current),
+                        icon = Icons.Default.Functions,
+                        onClick = { pendingMeasurementSystem = selectedMeasurementSystem; section = SettingsSection.MEASUREMENTS }
                     )
                 }
                 Panel {
@@ -2166,6 +2219,40 @@ private fun SettingsPage(
                 }
             }
 
+
+            SettingsSection.MEASUREMENTS -> PageColumn(measurementText("measurements", LocalLanguage.current)) {
+                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
+                Text(measurementText("units_note", LocalLanguage.current), color = p.muted, fontSize = 13.sp, lineHeight = 19.sp)
+                listOf("auto", "metric", "us").forEach { mode ->
+                    val selected = pendingMeasurementSystem == mode
+                    val title = when (mode) {
+                        "auto" -> measurementText("automatic", LocalLanguage.current)
+                        "metric" -> measurementText("metric", LocalLanguage.current)
+                        else -> measurementText("us_customary", LocalLanguage.current)
+                    }
+                    val description = when (mode) {
+                        "auto" -> measurementText("automatic_desc", LocalLanguage.current)
+                        "metric" -> measurementText("metric_desc", LocalLanguage.current)
+                        else -> measurementText("us_desc", LocalLanguage.current)
+                    }
+                    Panel {
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                                .background(if (selected) p.navActive else Color.Transparent)
+                                .mathFlowClickable { pendingMeasurementSystem = mode }
+                                .padding(13.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(title, color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text(description, color = p.muted, fontSize = 12.sp)
+                            }
+                            if (selected) Icon(Icons.Default.Check, contentDescription = null, tint = p.accent)
+                        }
+                    }
+                }
+            }
 
             SettingsSection.ANIMATIONS -> PageColumn(tx("animations")) {
                 MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
@@ -2570,6 +2657,7 @@ private fun SettingsPage(
                 fontMessage = fontApplySuccess
             }
             if (pendingLanguage != selectedLanguage) onLanguageSelected(pendingLanguage)
+            if (pendingMeasurementSystem != selectedMeasurementSystem) onMeasurementSystemSelected(pendingMeasurementSystem)
         }
     }
     }

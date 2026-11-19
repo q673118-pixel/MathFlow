@@ -81,7 +81,7 @@ internal object UnitConverter {
         )),
         UnitCategory("area", "Площадь", listOf(
             u("mm2","mm²","0.000001"), u("cm2","cm²","0.0001"), u("m2","m²"),
-            u("ha","ha","10000"), u("km2","km²","1000000"), u("acre","ac","4046.8564224")
+            u("ha","ha","10000"), u("km2","km²","1000000"), u("acre","ac","4046.8564224"), u("ft2","ft²","0.09290304")
         )),
         UnitCategory("volume", "Объём", listOf(
             u("ml","mL","0.001"), u("l","L"),
@@ -161,12 +161,20 @@ internal fun UnitConverterContent() {
     val p = LocalPalette.current
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val categories = UnitConverter.categories
+    val measurementSystem = LocalMeasurementSystem.current
+    val language = LocalLanguage.current
     var categoryId by rememberSaveable { mutableStateOf("length") }
     var input by rememberSaveable { mutableStateOf("1") }
-    var fromId by rememberSaveable { mutableStateOf("km") }
-    var toId by rememberSaveable { mutableStateOf("m") }
+    val initialUnits = remember { preferredUnits("length", measurementSystem) }
+    var fromId by rememberSaveable { mutableStateOf(initialUnits.first) }
+    var toId by rememberSaveable { mutableStateOf(initialUnits.second) }
     var selectorSide by remember { mutableStateOf<String?>(null) }
 
+    androidx.compose.runtime.LaunchedEffect(measurementSystem) {
+        val preferred = preferredUnits(categoryId, measurementSystem)
+        fromId = preferred.first
+        toId = preferred.second
+    }
     val category = categories.first { it.id == categoryId }
     val from = category.units.firstOrNull { it.id == fromId } ?: category.units.first()
     val to = category.units.firstOrNull { it.id == toId } ?: category.units.getOrElse(1) { category.units.first() }
@@ -205,8 +213,9 @@ internal fun UnitConverterContent() {
                     modifier = Modifier.mathFlowClickable {
                         if (!selected) {
                             categoryId = item.id
-                            fromId = item.units.first().id
-                            toId = item.units.getOrElse(1) { item.units.first() }.id
+                            val preferred = preferredUnits(item.id, measurementSystem)
+                            fromId = item.units.firstOrNull { it.id == preferred.first }?.id ?: item.units.first().id
+                            toId = item.units.firstOrNull { it.id == preferred.second }?.id ?: item.units.getOrElse(1) { item.units.first() }.id
                         }
                     },
                     shape = RoundedCornerShape(18.dp),
@@ -277,6 +286,7 @@ internal fun UnitConverterContent() {
             ConverterUnitButton(
                 label = tx("from"),
                 unit = from,
+                language = language,
                 modifier = Modifier.weight(1f),
                 onClick = { selectorSide = "from" }
             )
@@ -301,6 +311,7 @@ internal fun UnitConverterContent() {
             ConverterUnitButton(
                 label = tx("to"),
                 unit = to,
+                language = language,
                 modifier = Modifier.weight(1f),
                 onClick = { selectorSide = "to" }
             )
@@ -431,7 +442,7 @@ internal fun UnitConverterContent() {
                                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        unit.label,
+                                        "${unitDisplayName(unit.id, language)} · ${unit.label}",
                                         modifier = Modifier.weight(1f),
                                         color = if (active) p.accent else p.text,
                                         fontSize = 15.sp,
@@ -464,6 +475,7 @@ internal fun UnitConverterContent() {
 private fun ConverterUnitButton(
     label: String,
     unit: UnitDefinition,
+    language: String,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
@@ -480,7 +492,7 @@ private fun ConverterUnitButton(
             Text(label, color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Text(
-                    unit.label,
+                    "${unitDisplayName(unit.id, language)} · ${unit.label}",
                     modifier = Modifier.weight(1f),
                     color = p.text,
                     fontSize = 17.sp,
