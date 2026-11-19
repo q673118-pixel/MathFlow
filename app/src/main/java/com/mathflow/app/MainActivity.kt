@@ -445,7 +445,7 @@ private fun MathFlowApp() {
     val historyMutex = remember { Mutex() }
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
-    var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 2) }
+    var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     var splashFinished by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -804,7 +804,7 @@ private fun FirstLaunchWelcome(
                     ThemeOptions.chunked(2).forEach { rowThemes ->
                         Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             rowThemes.forEach { option ->
-                                val selected = themeId == option.id || (themeId == "black" && option.id == "vanilla")
+                                val selected = themeId == option.id
                                 Surface(
                                     modifier = Modifier.weight(1f).mathFlowClickable { onThemeSelected(option.id) },
                                     shape = RoundedCornerShape(16.dp),
