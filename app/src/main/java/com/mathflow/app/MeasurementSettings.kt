@@ -7,7 +7,7 @@ internal val LocalMeasurementSystem = staticCompositionLocalOf { "metric" }
 
 internal fun resolveMeasurementSystem(setting: String, locale: Locale = Locale.getDefault()): String {
     if (setting == "metric" || setting == "us") return setting
-    return if (locale.country.uppercase(Locale.ROOT) in setOf("US", "LR")) "us" else "metric"
+    return if (locale.country.uppercase(Locale.ROOT) in setOf("US")) "us" else "metric"
 }
 
 internal fun preferredUnits(categoryId: String, system: String): Pair<String, String> {
