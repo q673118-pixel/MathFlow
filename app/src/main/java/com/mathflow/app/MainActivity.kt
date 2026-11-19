@@ -650,6 +650,8 @@ private fun MathFlowApp() {
                                 language = appLanguage,
                                 measurementSystem = measurementSystem,
                                 themeId = themeId,
+                                fontPath = fontPath,
+                                fontScale = fontScale,
                                 onLanguageSelected = { tag ->
                                     appLanguage = tag
                                     prefs.edit().putString("app_language", tag).apply()
@@ -662,8 +664,16 @@ private fun MathFlowApp() {
                                     themeId = id
                                     prefs.edit().putString("app_theme", id).apply()
                                 },
+                                onFontSelected = { selected ->
+                                    fontPath = selected
+                                    prefs.edit().putString("font_path", selected).putBoolean("font_selection_initialized", true).apply()
+                                },
+                                onFontScaleSelected = { scale ->
+                                    fontScale = scale
+                                    prefs.edit().putFloat("font_scale", scale).apply()
+                                },
                                 onConfirm = {
-                                    prefs.edit().putBoolean("welcome_seen", true).putInt("welcome_version", 2).apply()
+                                    prefs.edit().putBoolean("welcome_seen", true).putInt("welcome_version", 3).apply()
                                     showWelcome = false
                                 }
                             )
@@ -685,59 +695,78 @@ private fun FirstLaunchWelcome(
     language: String,
     measurementSystem: String,
     themeId: String,
+    fontPath: String?,
+    fontScale: Float,
     onLanguageSelected: (String) -> Unit,
     onMeasurementSystemSelected: (String) -> Unit,
     onThemeSelected: (String) -> Unit,
+    onFontSelected: (String?) -> Unit,
+    onFontScaleSelected: (Float) -> Unit,
     onConfirm: () -> Unit
 ) {
-    var languageMenuExpanded by remember { mutableStateOf(false) }
+    var languagePickerOpen by remember { mutableStateOf(false) }
+    var languageQuery by rememberSaveable { mutableStateOf("") }
     val activeLanguage = AppLanguages.firstOrNull { it.tag == language } ?: AppLanguages.first()
     val p = palette
-    Dialog(onDismissRequest = {}) {
+    Dialog(
+        onDismissRequest = {},
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp).heightIn(max = 760.dp),
             shape = RoundedCornerShape(30.dp),
             color = p.surface,
             contentColor = p.text,
-            shadowElevation = 10.dp
+            shadowElevation = 14.dp
         ) {
-            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(p.key)) {
-                    Box(Modifier.fillMaxWidth(0.72f).height(5.dp).clip(CircleShape).background(p.accent))
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Image(painterResource(R.drawable.mark_black), null, Modifier.size(42.dp), colorFilter = ColorFilter.tint(p.accent))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(
+                Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(17.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = RoundedCornerShape(16.dp), color = p.key, modifier = Modifier.size(48.dp)) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Image(painterResource(R.drawable.mark_black), null, Modifier.size(29.dp), colorFilter = ColorFilter.tint(p.accent))
+                        }
+                    }
+                    Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text("MATHFLOW", color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                         Text(measurementText("welcome_title", language), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(measurementText("welcome_desc", language), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
                     }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(measurementText("language", language), color = p.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Box {
-                        Surface(Modifier.fillMaxWidth().mathFlowClickable { languageMenuExpanded = true }, shape = RoundedCornerShape(15.dp), color = p.key) {
-                            Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(activeLanguage.nativeName, Modifier.weight(1f), fontWeight = FontWeight.Medium)
-                                Icon(Icons.Default.ArrowDropDown, null, tint = p.accent)
+
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(measurementText("language", language), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text("01", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().mathFlowClickable { languagePickerOpen = true },
+                        shape = RoundedCornerShape(18.dp),
+                        color = p.key,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, p.accent.copy(alpha = 0.34f))
+                    ) {
+                        Row(Modifier.padding(horizontal = 15.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(shape = CircleShape, color = p.navActive, modifier = Modifier.size(38.dp)) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(activeLanguage.tag.uppercase(Locale.ROOT), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
-                        }
-                        androidx.compose.material3.DropdownMenu(
-                            expanded = languageMenuExpanded,
-                            onDismissRequest = { languageMenuExpanded = false },
-                            modifier = Modifier.heightIn(max = 340.dp)
-                        ) {
-                            AppLanguages.forEach { item ->
-                                androidx.compose.material3.DropdownMenuItem(
-                                    text = { Text(item.nativeName) },
-                                    onClick = { onLanguageSelected(item.tag); languageMenuExpanded = false },
-                                    trailingIcon = if (item.tag == language) ({ Icon(Icons.Default.Check, null, tint = p.accent) }) else null
-                                )
+                            Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(activeLanguage.nativeName, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                Text(activeLanguage.englishName, fontSize = 11.sp, color = p.muted)
                             }
+                            Icon(Icons.Default.ArrowDropDown, null, tint = p.accent)
                         }
                     }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(measurementText("measurements", language), color = p.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(measurementText("measurements", language), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text("02", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
                     listOf("auto", "metric", "us").forEach { mode ->
                         val selected = measurementSystem == mode
                         val title = when (mode) {
@@ -752,11 +781,11 @@ private fun FirstLaunchWelcome(
                         }
                         Surface(
                             Modifier.fillMaxWidth().mathFlowClickable { onMeasurementSystemSelected(mode) },
-                            shape = RoundedCornerShape(15.dp),
+                            shape = RoundedCornerShape(16.dp),
                             color = if (selected) p.navActive else p.key,
-                            border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                            border = androidx.compose.foundation.BorderStroke(if (selected) 1.4.dp else 1.dp, if (selected) p.accent else Color.Transparent)
                         ) {
-                            Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                     Text(description, fontSize = 10.sp, color = p.muted)
@@ -766,23 +795,151 @@ private fun FirstLaunchWelcome(
                         }
                     }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(measurementText("appearance", language), color = p.muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("vanilla" to "dark", "white" to "light").forEach { (id, key) ->
-                            val selected = themeId == id || (id == "vanilla" && themeId == "black")
-                            Surface(
-                                Modifier.weight(1f).mathFlowClickable { onThemeSelected(id) },
-                                shape = RoundedCornerShape(13.dp),
-                                color = if (selected) p.navActive else p.key,
-                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
-                            ) {
-                                Text(measurementText(key, language), Modifier.padding(vertical = 10.dp), textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(measurementText("appearance", language), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text("03", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    ThemeOptions.chunked(2).forEach { rowThemes ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            rowThemes.forEach { option ->
+                                val selected = themeId == option.id || (themeId == "black" && option.id == "vanilla")
+                                Surface(
+                                    modifier = Modifier.weight(1f).mathFlowClickable { onThemeSelected(option.id) },
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (selected) p.navActive else p.key,
+                                    border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                                ) {
+                                    Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            listOf(option.palette.background, option.palette.surface, option.palette.accent).forEach { swatch ->
+                                                Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(swatch))
+                                            }
+                                        }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(option.title, modifier = Modifier.weight(1f), color = p.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                            if (selected) Icon(Icons.Default.Check, null, tint = p.accent, modifier = Modifier.size(15.dp))
+                                        }
+                                    }
+                                }
                             }
+                            if (rowThemes.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
-                MathFlowTextButton(measurementText("continue", language), p.accent, Modifier.fillMaxWidth(), onConfirm)
+
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Text(tx("fonts"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        listOf(BUILTIN_ARTEGRA_FONT to "Artegra Soft Global", null to "System").forEach { (id, title) ->
+                            val selected = fontPath == id
+                            Surface(
+                                modifier = Modifier.weight(1f).mathFlowClickable { onFontSelected(id) },
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (selected) p.navActive else p.key,
+                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                            ) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text("Aa", fontSize = 23.sp, fontWeight = FontWeight.Bold, color = p.accent)
+                                    Text(title, fontSize = 11.sp, color = p.text, fontWeight = FontWeight.Medium)
+                                }
+                            }
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(tx("text_size"), color = p.muted, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        Text("${(fontScale * 100).toInt()}%", color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Slider(
+                        value = fontScale,
+                        onValueChange = { onFontScaleSelected((kotlin.math.round(it * 20f) / 20f).coerceIn(0.85f, 1.25f)) },
+                        valueRange = 0.85f..1.25f,
+                        steps = 7,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth().mathFlowClickable { onConfirm() },
+                    shape = RoundedCornerShape(18.dp),
+                    color = p.accent
+                ) {
+                    Row(Modifier.padding(horizontal = 18.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(measurementText("continue", language), modifier = Modifier.weight(1f), color = if (p.dark) Color(0xFF17131F) else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Check, null, tint = if (p.dark) Color(0xFF17131F) else Color.White)
+                    }
+                }
+            }
+        }
+    }
+
+    if (languagePickerOpen) {
+        Dialog(
+            onDismissRequest = { languagePickerOpen = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(max = 620.dp),
+                shape = RoundedCornerShape(26.dp),
+                color = p.surface,
+                contentColor = p.text
+            ) {
+                Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(measurementText("language", language), fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                            Text(measurementText("languages_available", language), color = p.muted, fontSize = 11.sp)
+                        }
+                        Text(activeLanguage.tag.uppercase(Locale.ROOT), color = p.accent, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    OutlinedTextField(
+                        value = languageQuery,
+                        onValueChange = { languageQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text(tx("search_languages")) },
+                        shape = RoundedCornerShape(15.dp)
+                    )
+                    val filtered = AppLanguages.filter {
+                        it.nativeName.contains(languageQuery, ignoreCase = true) ||
+                            it.englishName.contains(languageQuery, ignoreCase = true) ||
+                            it.tag.contains(languageQuery, ignoreCase = true)
+                    }
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f, fill = false)) {
+                        items(filtered) { item ->
+                            val selected = item.tag == language
+                            Surface(
+                                modifier = Modifier.fillMaxWidth().mathFlowClickable {
+                                    onLanguageSelected(item.tag)
+                                    languageQuery = ""
+                                    languagePickerOpen = false
+                                },
+                                shape = RoundedCornerShape(15.dp),
+                                color = if (selected) p.navActive else p.key,
+                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.3.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                            ) {
+                                Row(Modifier.padding(horizontal = 13.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Surface(shape = RoundedCornerShape(10.dp), color = p.surface, modifier = Modifier.size(38.dp)) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(item.tag.uppercase(Locale.ROOT), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                    Column(Modifier.weight(1f).padding(start = 11.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(item.nativeName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                        Text(item.englishName, fontSize = 11.sp, color = p.muted)
+                                    }
+                                    if (selected) Icon(Icons.Default.Check, null, tint = p.accent)
+                                }
+                            }
+                        }
+                    }
+                    if (filtered.isEmpty()) Text(tx("no_languages_found"), color = p.muted, fontSize = 13.sp)
+                    MathFlowTextButton(tx("cancel"), p.accent, Modifier.align(Alignment.End)) {
+                        languageQuery = ""
+                        languagePickerOpen = false
+                    }
+                }
             }
         }
     }
