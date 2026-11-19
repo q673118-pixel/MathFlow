@@ -121,3 +121,8 @@ internal fun unitDisplayName(unitId: String, language: String): String {
     val index = regionalTags.indexOf(language).takeIf { it >= 0 } ?: 1
     return localizedUnits[unitId]?.getOrNull(index) ?: unitId
 }
+
+internal fun hasLocalizedUnitName(unitId: String, language: String): Boolean {
+    val index = regionalTags.indexOf(language).takeIf { it >= 0 } ?: 1
+    return localizedUnits[unitId]?.getOrNull(index)?.isNotBlank() == true
+}
