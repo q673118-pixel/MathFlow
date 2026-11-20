@@ -119,6 +119,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.HazeInputScale
+import dev.chrisbanes.haze.LocalHazeStyle
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import androidx.compose.ui.window.Dialog
@@ -602,6 +603,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalPalette provides palette,
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalMathFlowHazeState provides hazeState,
+        LocalHazeStyle provides HazeStyle(backgroundColor = palette.background),
         LocalKeyAnimationSettings provides keyAnimationSettings,
         // Disable all global press indications: no ripple, droplets, particles, or color overlay.
         LocalIndication provides MathFlowNoIndication,
@@ -662,14 +664,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth()
-                                            .hazeSource(
-                                                state = hazeState,
-                                                style = HazeStyle(
-                                                    backgroundColor = palette.background,
-                                                    blurRadius = 18.dp,
-                                                    noiseFactor = 0.04f
-                                                )
-                                            )
+                                            .hazeSource(state = hazeState)
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
                                                 translationX = (1f - enterProgress.value) * 8.dp.toPx()
