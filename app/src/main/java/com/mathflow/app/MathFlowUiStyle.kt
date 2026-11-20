@@ -27,7 +27,7 @@ internal enum class MathFlowUiStyle(
     ),
     LIQUID_GLASS(
         "liquid_glass", "Liquid Glass",
-        "Многослойные полупрозрачные поверхности и световые границы.",
+        "Размытие фона, полупрозрачные поверхности и световые границы.",
         28, 19, 24, 0.78f, 0.42f, 2f, glassSurface = true
     ),
     FLUENT(
