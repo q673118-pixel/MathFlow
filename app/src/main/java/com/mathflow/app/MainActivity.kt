@@ -3221,14 +3221,19 @@ private fun SettingsPage(
                         animationSpec = tween(260, easing = FastOutSlowInEasing),
                         label = "ConfigCardBorder"
                     )
+                    val cardBackground by animateColorAsState(
+                        if (selected) p.navActive.copy(alpha = 0.45f) else Color.Transparent,
+                        animationSpec = tween(280, easing = FastOutSlowInEasing),
+                        label = "ConfigCardBackground"
+                    )
                     Column(
                         Modifier.fillMaxWidth().animateContentSize(tween(340, easing = FastOutSlowInEasing))
                     ) {
                     Panel(modifier = Modifier.border(if (selected) 1.5.dp else 1.dp, cardBorder, RoundedCornerShape(24.dp))) {
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp))
-                                .background(if (selected) p.navActive.copy(alpha = 0.45f) else Color.Transparent)
-                                .animateContentSize(tween(240, easing = FastOutSlowInEasing))
+                                .background(cardBackground)
+                                .animateContentSize(tween(300, easing = FastOutSlowInEasing))
                                 .mathFlowClickable { selectedConfigId = if (selected) "" else profile.id }
                                 .padding(vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically,
