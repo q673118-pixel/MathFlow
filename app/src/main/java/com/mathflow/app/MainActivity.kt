@@ -1075,7 +1075,7 @@ private fun FirstLaunchWelcome(
 
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(tx("fonts"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         listOf(BUILTIN_ARTEGRA_FONT to "Artegra Soft Global", null to "System").forEach { (id, title) ->
                             val selected = fontPath == id
                             val fontCardColor by animateColorAsState(
@@ -1089,7 +1089,7 @@ private fun FirstLaunchWelcome(
                                 label = "FontCardBorder"
                             )
                             Surface(
-                                modifier = Modifier.weight(1f).animateContentSize(tween(180))
+                                modifier = Modifier.fillMaxWidth().animateContentSize(tween(180))
                                     .mathFlowClickable { onFontSelected(id) },
                                 shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
                                 color = fontCardColor,
@@ -1239,6 +1239,7 @@ private fun BottomNav(
     Box(
         Modifier.fillMaxWidth()
             .then(if (preview) Modifier else Modifier.navigationBarsPadding())
+            .then(if (!preview && uiStyle.glassSurface) Modifier.offset(y = (-16).dp) else Modifier)
             .padding(horizontal = 28.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -3622,7 +3623,7 @@ private fun IconOptionCard(
         label = "IconCardBorder"
     )
     val cardContainer by animateColorAsState(
-        if (selected) p.navActive else p.surface,
+        (if (selected) p.navActive else p.surface).copy(alpha = uiStyle.surfaceAlpha),
         animationSpec = tween(190, easing = FastOutSlowInEasing),
         label = "IconCardContainer"
     )
@@ -3697,7 +3698,7 @@ private fun ThemeOptionCard(
     Column(
         modifier.graphicsLayer { scaleX = cardScale; scaleY = cardScale }
             .clip(shape)
-            .background(if (selected) p.navActive else p.surface)
+            .background((if (selected) p.navActive else p.surface).copy(alpha = uiStyle.surfaceAlpha))
             .border(if (selected) 1.8.dp else 1.dp, borderColor, shape)
             .mathFlowClickable(onClick = onClick)
             .padding(8.dp),
