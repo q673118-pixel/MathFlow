@@ -439,6 +439,23 @@ private fun MathFlowApp() {
             ).normalized()
         )
     }
+    var configProfiles by remember { mutableStateOf(MathFlowConfigProfiles.load(context)) }
+    var activeConfigId by remember {
+        mutableStateOf(prefs.getString("mathflow_active_config", null)?.takeIf { id -> configProfiles.any { it.id == id } })
+    }
+    LaunchedEffect(themeId, selectedIconId, fontScale, fontPath, appLanguage, measurementSystem,
+        keyAnimationSettings, bottomNavAnimationSettings, activeConfigId) {
+        val activeId = activeConfigId
+        if (activeId != null) {
+            val snapshot = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
+                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings)
+            configProfiles = configProfiles.map { profile ->
+                if (profile.id == activeId) profile.copy(settings = snapshot) else profile
+            }
+            MathFlowConfigProfiles.save(context, configProfiles)
+        }
+    }
+
     var page by remember { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(HistoryStore.load(context)) }
     val historyScope = rememberCoroutineScope()
