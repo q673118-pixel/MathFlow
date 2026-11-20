@@ -447,6 +447,8 @@ private fun MathFlowApp() {
     val palette = remember(themeId) { themeFor(themeId).palette }
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     var splashFinished by remember { mutableStateOf(false) }
+    // The first page must be fully laid out behind the intro; only later tab changes animate.
+    var initialPageRendered by remember { mutableStateOf(false) }
 
     val customFont: FontFamily? = remember(fontPath) {
         fontPath?.takeUnless { it == BUILTIN_ARTEGRA_FONT }?.let { path ->
@@ -530,10 +532,15 @@ private fun MathFlowApp() {
                                 pageStateHolder.SaveableStateProvider(page) {
                                     val enterProgress = remember { Animatable(0f) }
                                     LaunchedEffect(Unit) {
-                                        enterProgress.animateTo(
-                                            targetValue = 1f,
-                                            animationSpec = tween(PAGE_ENTER_DURATION_MS, easing = FastOutSlowInEasing)
-                                        )
+                                        if (!initialPageRendered) {
+                                            enterProgress.snapTo(1f)
+                                            initialPageRendered = true
+                                        } else {
+                                            enterProgress.animateTo(
+                                                targetValue = 1f,
+                                                animationSpec = tween(PAGE_ENTER_DURATION_MS, easing = FastOutSlowInEasing)
+                                            )
+                                        }
                                     }
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth().graphicsLayer {
