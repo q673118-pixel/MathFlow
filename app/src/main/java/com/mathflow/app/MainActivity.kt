@@ -661,9 +661,10 @@ private fun MathFlowApp() {
                                                 },
                                                 onImportConfig = { imported ->
                                                     val cfg = validateConfigSnapshot(imported.settings)
+                                                    val importedFontSetting = cfg.optString("fontPath")
+                                                    cfg.put("fontPath", if (importedFontSetting == BUILTIN_ARTEGRA_FONT) BUILTIN_ARTEGRA_FONT else JSONObject.NULL)
                                                     val installedPath = MathFlowConfigProfiles.installFont(context, imported.fontFileName, imported.fontBytes)
                                                     if (installedPath != null) cfg.put("fontPath", installedPath)
-                                                    else if (cfg.optString("fontPath").startsWith("/")) cfg.put("fontPath", JSONObject.NULL)
                                                     val profile = MathFlowConfigProfiles.create(imported.name, cfg)
                                                     configProfiles = configProfiles + profile
                                                     MathFlowConfigProfiles.save(context, configProfiles)
@@ -2332,6 +2333,7 @@ private fun makeConfigSnapshot(
     .put("navOpacity", nav.opacity.toDouble())
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
+    require(input.optInt("schemaVersion", -1) == 1) { "Unsupported settings schema" }
     val theme = input.optString("theme", "vanilla")
     val icon = input.optString("icon", "vanilla")
     require(ThemeOptions.any { it.id == theme }) { "Unknown theme" }
@@ -2342,8 +2344,12 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
     require(AppLanguages.any { it.tag == language }) { "Unsupported language" }
     val measurement = input.optString("measurement", "auto")
     require(measurement in setOf("auto", "metric", "us")) { "Invalid measurement system" }
+    val keyStyle = input.optString("keyStyle", "spring")
+    require(KeyAnimationStyle.values().any { it.id == keyStyle }) { "Unknown key animation style" }
+    val navStyle = input.optString("navStyle", "fluid_pill")
+    require(BottomNavAnimationStyle.values().any { it.id == navStyle }) { "Unknown navigation animation style" }
     val key = KeyAnimationSettings(
-        KeyAnimationStyle.fromId(input.optString("keyStyle", "spring")),
+        KeyAnimationStyle.fromId(keyStyle),
         input.optInt("keyDuration", 140),
         input.optDouble("keyOpacity", 0.72).toFloat(),
         input.optDouble("keyIntensity", 0.10).toFloat(),
@@ -2352,7 +2358,7 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
     ).normalized()
     val nav = BottomNavAnimationSettings(
         input.optBoolean("navEnabled", true),
-        BottomNavAnimationStyle.fromId(input.optString("navStyle", "fluid_pill")),
+        BottomNavAnimationStyle.fromId(navStyle),
         input.optInt("navDuration", 280),
         input.optDouble("navIntensity", 0.65).toFloat(),
         input.optDouble("navIconScale", 0.08).toFloat(),
