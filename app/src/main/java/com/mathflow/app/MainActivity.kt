@@ -930,14 +930,15 @@ private fun FirstLaunchWelcome(
     var pendingIconId by rememberSaveable { mutableStateOf(selectedIconId) }
     val activeLanguage = AppLanguages.firstOrNull { it.tag == language } ?: AppLanguages.first()
     val p = palette
+    val uiStyle = LocalMathFlowUiStyle.current
     Dialog(
         onDismissRequest = {},
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp).heightIn(max = 760.dp),
-            shape = RoundedCornerShape(30.dp),
-            color = p.surface,
+            shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
+            color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
             contentColor = p.text,
             shadowElevation = 14.dp
         ) {
@@ -1033,36 +1034,26 @@ private fun FirstLaunchWelcome(
                         Text(measurementText("appearance", language), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                         Text("03", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
-                    ThemeOptions.chunked(2).forEach { rowThemes ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            rowThemes.forEach { option ->
-                                ThemeOptionCard(
-                                    option = option,
-                                    selected = themeId == option.id,
-                                    applied = themeId == option.id,
-                                    modifier = Modifier.weight(1f)
-                                ) { onThemeSelected(option.id) }
-                            }
-                            if (rowThemes.size == 1) Spacer(Modifier.weight(1f))
-                        }
+                    ThemeOptions.forEach { option ->
+                        ThemeOptionCard(
+                            option = option,
+                            selected = themeId == option.id,
+                            applied = themeId == option.id,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { onThemeSelected(option.id) }
                     }
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(tx("app_icons"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                     Text(tx("icon_hint"), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
-                    AppIconOptions.chunked(2).forEach { rowIcons ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            rowIcons.forEach { option ->
-                                IconOptionCard(
-                                    option = option,
-                                    selected = pendingIconId == option.id,
-                                    applied = selectedIconId == option.id,
-                                    modifier = Modifier.weight(1f)
-                                ) { pendingIconId = option.id }
-                            }
-                            if (rowIcons.size == 1) Spacer(Modifier.weight(1f))
-                        }
+                    AppIconOptions.forEach { option ->
+                        IconOptionCard(
+                            option = option,
+                            selected = pendingIconId == option.id,
+                            applied = selectedIconId == option.id,
+                            modifier = Modifier.fillMaxWidth()
+                        ) { pendingIconId = option.id }
                     }
                 }
 
@@ -1450,6 +1441,7 @@ private fun CalculatorHome(
     onCalculationSaved: (String, String, List<String>) -> Unit
 ) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     val calculationScope = rememberCoroutineScope()
     var calculationJob by remember { mutableStateOf<Job?>(null) }
     var expression by rememberSaveable { mutableStateOf("") }
@@ -1565,7 +1557,7 @@ private fun CalculatorHome(
         Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Surface(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(28.dp), color = p.surface) {
+        Surface(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp), color = p.surface.copy(alpha = uiStyle.surfaceAlpha), shadowElevation = uiStyle.elevationDp.dp) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
                     Modifier.align(Alignment.TopStart),
@@ -1686,8 +1678,9 @@ private fun CalculatorHome(
 @Composable
 private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     Box(
-        Modifier.height(32.dp).clip(RoundedCornerShape(16.dp))
+        Modifier.height(32.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
             .background(if (active) p.navActive else p.key)
             .mathFlowClickable(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
