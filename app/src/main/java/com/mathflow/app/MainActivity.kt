@@ -441,6 +441,9 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var themeId by remember {
         mutableStateOf(prefs.getString("app_theme", if (prefs.getBoolean("dark_mode", true)) "vanilla" else "white") ?: "vanilla")
     }
+    var uiStyleId by remember {
+        mutableStateOf(MathFlowUiStyle.fromId(prefs.getString("ui_style", "material_you") ?: "material_you").id)
+    }
     var selectedIconId by remember { mutableStateOf(prefs.getString("app_icon", "vanilla") ?: "vanilla") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
     val initialFontPath = remember {
@@ -490,11 +493,11 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         mutableStateOf(prefs.getString("mathflow_active_config", null)?.takeIf { id -> configProfiles.any { it.id == id } })
     }
     LaunchedEffect(themeId, selectedIconId, fontScale, fontPath, appLanguage, measurementSystem,
-        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, activeConfigId) {
+        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, activeConfigId) {
         val activeId = activeConfigId
         if (activeId != null) {
             val snapshot = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat)
+                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId)
             configProfiles = configProfiles.map { profile ->
                 if (profile.id == activeId) profile.copy(settings = snapshot) else profile
             }
@@ -590,6 +593,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalMeasurementSystem provides resolveMeasurementSystem(measurementSystem),
         LocalDensity provides density,
         LocalPalette provides palette,
+        LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalKeyAnimationSettings provides keyAnimationSettings,
         // Disable all global press indications: no ripple, droplets, particles, or color overlay.
         LocalIndication provides MathFlowNoIndication,
@@ -690,7 +694,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                             }
                                             Page.SETTINGS -> SettingsPage(
                                                 currentConfig = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat),
+                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId),
                                                 configProfiles = configProfiles,
                                                 activeConfigId = activeConfigId,
                                                 onCreateConfig = { name ->
@@ -716,6 +720,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                 onApplyConfig = { profile ->
                                                     val cfg = validateConfigSnapshot(profile.settings)
                                                     themeId = cfg.getString("theme")
+                                                    uiStyleId = MathFlowUiStyle.fromId(cfg.optString("uiStyle", "material_you")).id
                                                     selectedIconId = cfg.getString("icon")
                                                     fontScale = cfg.getDouble("fontScale").toFloat()
                                                     appLanguage = cfg.getString("language")
@@ -734,7 +739,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         cfg.getDouble("navIconScale").toFloat(), cfg.getDouble("navOpacity").toFloat()
                                                     ).normalized()
                                                     prefs.edit()
-                                                        .putString("app_theme", themeId).putString("app_icon", selectedIconId)
+                                                        .putString("app_theme", themeId).putString("ui_style", uiStyleId)
+                                                        .putString("app_icon", selectedIconId)
                                                         .putFloat("font_scale", fontScale).putString("app_language", appLanguage)
                                                         .putString("measurement_system", measurementSystem)
                                                         .putString("font_path", fontPath)
@@ -777,6 +783,11 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                     MathFlowConfigProfiles.save(context, configProfiles)
                                                 },
                                                 selectedThemeId = themeId,
+                                                selectedUiStyleId = uiStyleId,
+                                                onUiStyleSelected = { id ->
+                                                    uiStyleId = MathFlowUiStyle.fromId(id).id
+                                                    prefs.edit().putString("ui_style", uiStyleId).apply()
+                                                },
                                                 selectedIconId = selectedIconId,
                                                 onThemeSelected = { id ->
                                                     themeId = id
@@ -2414,15 +2425,17 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
 
-private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS, CONFIGS }
+private enum class SettingsSection { MAIN, ICONS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS, CONFIGS }
 
 private fun makeConfigSnapshot(
     theme: String, icon: String, fontScale: Float, fontPath: String?, language: String,
     measurement: String, key: KeyAnimationSettings, nav: BottomNavAnimationSettings,
-    resultFormat: String
+    resultFormat: String,
+    uiStyle: String = MathFlowUiStyle.MATERIAL_YOU.id
 ): JSONObject = JSONObject()
-    .put("schemaVersion", 2)
+    .put("schemaVersion", 3)
     .put("theme", theme)
+    .put("uiStyle", MathFlowUiStyle.fromId(uiStyle).id)
     .put("icon", icon)
     .put("fontScale", fontScale.toDouble())
     .put("fontPath", fontPath ?: JSONObject.NULL)
@@ -2443,8 +2456,9 @@ private fun makeConfigSnapshot(
     .put("navOpacity", nav.opacity.toDouble())
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
-    require(input.optInt("schemaVersion", -1) in 1..2) { "Unsupported settings schema" }
+    require(input.optInt("schemaVersion", -1) in 1..3) { "Unsupported settings schema" }
     val theme = input.optString("theme", "vanilla")
+    val uiStyle = MathFlowUiStyle.fromId(input.optString("uiStyle", "material_you")).id
     val icon = input.optString("icon", "vanilla")
     require(ThemeOptions.any { it.id == theme }) { "Unknown theme" }
     require(AppIconOptions.any { it.id == icon }) { "Unknown icon" }
@@ -2477,7 +2491,7 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
         input.optDouble("navOpacity", 0.85).toFloat()
     ).normalized()
     return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
-        language, measurement, key, nav, resultFormat)
+        language, measurement, key, nav, resultFormat, uiStyle)
 }
 
 @Composable
@@ -2494,6 +2508,8 @@ private fun SettingsPage(
     onExternalConfigHandled: () -> Unit,
     onDuplicateConfig: (MathFlowConfigProfile) -> Unit,
     selectedThemeId: String,
+    selectedUiStyleId: String,
+    onUiStyleSelected: (String) -> Unit,
     selectedIconId: String,
     onThemeSelected: (String) -> Unit,
     onIconSelected: (String) -> Unit,
@@ -2525,6 +2541,7 @@ private fun SettingsPage(
     var section by rememberSaveable { mutableStateOf(SettingsSection.MAIN) }
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
+    var pendingUiStyleId by rememberSaveable(selectedUiStyleId) { mutableStateOf(selectedUiStyleId) }
     var pendingFontScale by remember(fontScale) { mutableFloatStateOf(fontScale) }
     var pendingLanguage by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
     var pendingMeasurementSystem by remember(selectedMeasurementSystem) { mutableStateOf(selectedMeasurementSystem) }
@@ -2686,6 +2703,7 @@ private fun SettingsPage(
         pendingFontScale != fontScale ||
         pendingIconId != selectedIconId ||
         pendingThemeId != selectedThemeId ||
+        pendingUiStyleId != selectedUiStyleId ||
         pendingAnimationSettings != appliedAnimationSettings ||
         pendingNavAnimationSettings != appliedNavAnimationSettings ||
         pendingFontPath != fontPath ||
@@ -2723,6 +2741,13 @@ private fun SettingsPage(
                         subtitle = tx("theme_entry_subtitle"),
                         icon = Icons.Default.Settings,
                         onClick = { pendingThemeId = selectedThemeId; section = SettingsSection.THEMES }
+                    )
+                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
+                    SettingsEntry(
+                        title = "Стиль интерфейса",
+                        subtitle = MathFlowUiStyle.fromId(selectedUiStyleId).title,
+                        icon = Icons.Default.Settings,
+                        onClick = { pendingUiStyleId = selectedUiStyleId; section = SettingsSection.STYLES }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
@@ -3344,6 +3369,65 @@ private fun SettingsPage(
                 Text(tx("languages_available"), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
             }
 
+            SettingsSection.STYLES -> PageColumn("Стиль интерфейса") {
+                Text("Выберите визуальное оформление всего приложения. Цветовая тема останется независимой.", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                MathFlowUiStyle.entries.forEach { style ->
+                    val selected = pendingUiStyleId == style.id
+                    val applied = selectedUiStyleId == style.id
+                    val shape = RoundedCornerShape(style.cardRadiusDp.dp)
+                    Panel {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(style.title, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                Text(style.description, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                            }
+                            if (selected) Icon(Icons.Default.Check, contentDescription = "Выбрано", tint = p.accent)
+                        }
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(style.cardRadiusDp.dp))
+                                .background(p.background).padding(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                Modifier.weight(1f).height(38.dp).clip(shape)
+                                    .background(p.surface.copy(alpha = style.surfaceAlpha))
+                                    .border(1.dp, p.text.copy(alpha = style.outlineAlpha.coerceAtMost(0.45f)), shape)
+                            )
+                            Box(
+                                Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(style.buttonRadiusDp.dp))
+                                    .background(p.keyEquals),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("123", color = p.onKeyEquals, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                        Text(
+                            when {
+                                applied -> "Применён"
+                                selected -> "Выбран"
+                                else -> "Нажмите, чтобы выбрать"
+                            },
+                            color = if (selected) p.accent else p.muted,
+                            fontSize = 11.sp
+                        )
+                        Box(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(style.buttonRadiusDp.dp))
+                                .background(if (selected) p.navActive else p.key)
+                                .mathFlowClickable { pendingUiStyleId = style.id }
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(if (selected) "Выбрано" else "Выбрать стиль", color = p.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
                 Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white") }
@@ -3402,6 +3486,7 @@ private fun SettingsPage(
             if (pendingFontScale != fontScale) onFontScale(pendingFontScale)
             if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
             if (pendingThemeId != selectedThemeId) onThemeSelected(pendingThemeId)
+            if (pendingUiStyleId != selectedUiStyleId) onUiStyleSelected(pendingUiStyleId)
             if (pendingAnimationSettings != appliedAnimationSettings) {
                 onAnimationSettingsApplied(pendingAnimationSettings.normalized())
             }
