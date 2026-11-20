@@ -612,7 +612,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalPalette provides palette,
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalMathFlowHazeState provides hazeState,
-        LocalHazeStyle provides HazeStyle(backgroundColor = palette.background),
+        LocalHazeStyle provides HazeStyle(backgroundColor = palette.background, tints = emptyList()),
         LocalKeyAnimationSettings provides keyAnimationSettings,
         // Disable all global press indications: no ripple, droplets, particles, or color overlay.
         LocalIndication provides MathFlowNoIndication,
