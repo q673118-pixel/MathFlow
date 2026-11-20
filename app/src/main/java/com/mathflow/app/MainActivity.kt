@@ -458,9 +458,17 @@ private fun MathFlowApp() {
     }
 
     var page by remember { mutableStateOf(Page.HOME) }
-    var history by remember { mutableStateOf(HistoryStore.load(context)) }
+    var history by remember { mutableStateOf(emptyList<HistoryEntry>()) }
     val historyScope = rememberCoroutineScope()
     val historyMutex = remember { Mutex() }
+    LaunchedEffect(context) {
+        historyMutex.lock()
+        try {
+            history = withContext(Dispatchers.IO) { HistoryStore.load(context) }
+        } finally {
+            historyMutex.unlock()
+        }
+    }
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
@@ -515,6 +523,14 @@ private fun MathFlowApp() {
         val controller = WindowCompat.getInsetsController(window, view)
         controller.isAppearanceLightStatusBars = !palette.dark
         controller.isAppearanceLightNavigationBars = !palette.dark
+        // Keep both system bars genuinely transparent; Android 10+ contrast scrims
+        // can otherwise make the edge-to-edge area look unexpectedly opaque.
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
     }
 
     CompositionLocalProvider(
