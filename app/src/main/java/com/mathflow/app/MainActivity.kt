@@ -2427,6 +2427,7 @@ private fun SettingsPage(
 ) {
     val p = LocalPalette.current
     val context = LocalContext.current
+    val ioScope = rememberCoroutineScope()
     val profileExportedMessage = tx("profile_exported")
     val profileExportFailedMessage = tx("profile_export_failed")
     val profileImportedMessage = tx("profile_imported")
@@ -2471,26 +2472,44 @@ private fun SettingsPage(
     }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         val profile = configProfiles.firstOrNull { it.id == selectedConfigId }
-        if (uri != null && profile != null) runCatching {
-            val path = profile.settings.optString("fontPath").takeIf { it.isNotBlank() && it != "null" && it != BUILTIN_ARTEGRA_FONT }
-            val font = path?.let { File(it).takeIf(File::isFile)?.readBytes() }
-            val fontName = if (font != null) File(path!!).name else null
-            context.contentResolver.openOutputStream(uri).use { output ->
-                requireNotNull(output) { "Cannot open export destination" }
-                MathFlowConfigArchive.write(output, profile.name, profile.settings, fontName, font)
+        if (uri != null && profile != null) {
+            ioScope.launch {
+                val exported = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val path = profile.settings.optString("fontPath").takeIf {
+                            it.isNotBlank() && it != "null" && it != BUILTIN_ARTEGRA_FONT
+                        }
+                        val font = path?.let { File(it).takeIf(File::isFile)?.readBytes() }
+                        val fontName = if (font != null) File(path!!).name else null
+                        context.contentResolver.openOutputStream(uri).use { output ->
+                            requireNotNull(output) { "Cannot open export destination" }
+                            MathFlowConfigArchive.write(output, profile.name, profile.settings, fontName, font)
+                        }
+                    }.isSuccess
+                }
+                configMessage = if (exported) profileExportedMessage else profileExportFailedMessage
             }
-            configMessage = profileExportedMessage
-        }.onFailure { configMessage = profileExportFailedMessage }
+        }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) runCatching {
-            val imported = context.contentResolver.openInputStream(uri).use { input ->
-                requireNotNull(input) { "Cannot open selected file" }
-                MathFlowConfigArchive.read(input)
+        if (uri != null) {
+            ioScope.launch {
+                val imported = withContext(Dispatchers.IO) {
+                    runCatching {
+                        context.contentResolver.openInputStream(uri).use { input ->
+                            requireNotNull(input) { "Cannot open selected file" }
+                            MathFlowConfigArchive.read(input)
+                        }
+                    }
+                }
+                imported.onSuccess {
+                    onImportConfig(it)
+                    configMessage = profileImportedMessage
+                }.onFailure {
+                    configMessage = profileImportFailedMessage
+                }
             }
-            onImportConfig(imported)
-            configMessage = profileImportedMessage
-        }.onFailure { configMessage = profileImportFailedMessage }
+        }
     }
     var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
@@ -2504,30 +2523,46 @@ private fun SettingsPage(
     }
     val fontPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         if (uri != null) {
-            var importedTarget: File? = null
-            runCatching {
-                val displayName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                    if (column >= 0 && cursor.moveToFirst()) cursor.getString(column) else null
-                } ?: "custom_font.ttf"
-                val extension = displayName.substringAfterLast('.', "").lowercase(Locale.ROOT)
-                require(extension == "ttf" || extension == "otf") { fontFileTypeError }
-                val fontDir = File(context.filesDir, "fonts").apply { mkdirs() }
-                val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
-                val target = File(fontDir, "mathflow_${System.currentTimeMillis()}_$safeName")
-                importedTarget = target
-                context.contentResolver.openInputStream(uri).use { input ->
-                    requireNotNull(input) { fontOpenError }
-                    target.outputStream().use { output -> input.copyTo(output) }
+            ioScope.launch {
+                var importedTarget: File? = null
+                val imported = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val displayName = context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                            val column = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            if (column >= 0 && cursor.moveToFirst()) cursor.getString(column) else null
+                        } ?: "custom_font.ttf"
+                        val extension = displayName.substringAfterLast('.', "").lowercase(Locale.ROOT)
+                        require(extension == "ttf" || extension == "otf") { fontFileTypeError }
+                        val fontDir = File(context.filesDir, "fonts").apply { mkdirs() }
+                        val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
+                        val target = File(fontDir, "mathflow_${System.currentTimeMillis()}_$safeName")
+                        importedTarget = target
+                        context.contentResolver.openInputStream(uri).use { input ->
+                            requireNotNull(input) { fontOpenError }
+                            target.outputStream().use { output ->
+                                val buffer = ByteArray(8192)
+                                var total = 0L
+                                while (true) {
+                                    val count = input.read(buffer)
+                                    if (count < 0) break
+                                    total += count
+                                    require(total <= 8L * 1024L * 1024L) { fontInstallError }
+                                    output.write(buffer, 0, count)
+                                }
+                            }
+                        }
+                        require(target.length() > 0L) { fontEmptyError }
+                        android.graphics.Typeface.createFromFile(target)
+                        target to displayName
+                    }.onFailure { importedTarget?.delete() }
                 }
-                require(target.length() > 0L) { fontEmptyError }
-                android.graphics.Typeface.createFromFile(target)
-                savedFonts = (savedFonts + (target.absolutePath to displayName)).distinctBy { it.first }
-                pendingFontPath = target.absolutePath
-                fontMessage = "$displayName — $fontAddApplyHint"
-            }.onFailure {
-                importedTarget?.delete()
-                fontMessage = fontInstallError
+                imported.onSuccess { (target, displayName) ->
+                    savedFonts = (savedFonts + (target.absolutePath to displayName)).distinctBy { it.first }
+                    pendingFontPath = target.absolutePath
+                    fontMessage = "$displayName — $fontAddApplyHint"
+                }.onFailure {
+                    fontMessage = fontInstallError
+                }
             }
         }
     }
