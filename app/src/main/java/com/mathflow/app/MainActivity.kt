@@ -476,12 +476,15 @@ private fun MathFlowApp() {
     // The first page must be fully laid out behind the intro; only later tab changes animate.
     var initialPageRendered by remember { mutableStateOf(false) }
 
-    val customFont: FontFamily? = remember(fontPath) {
-        fontPath?.takeUnless { it == BUILTIN_ARTEGRA_FONT }?.let { path ->
-            runCatching {
-                val file = File(path)
-                if (file.exists() && file.length() > 0L) FontFamily(Font(file, FontWeight.Normal)) else null
-            }.getOrNull()
+    var customFont by remember { mutableStateOf<FontFamily?>(null) }
+    LaunchedEffect(fontPath) {
+        customFont = fontPath?.takeUnless { it == BUILTIN_ARTEGRA_FONT }?.let { path ->
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    val file = File(path)
+                    if (file.exists() && file.length() > 0L) FontFamily(Font(file, FontWeight.Normal)) else null
+                }.getOrNull()
+            }
         }
     }
     val family = when (fontPath) {
