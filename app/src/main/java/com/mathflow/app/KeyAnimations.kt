@@ -231,7 +231,8 @@ internal fun MathFlowKeyButton(
         label = "MathFlowKeyOverlay"
     )
     val overlayColor = if (normalized.pressColorArgb != 0L) Color(normalized.pressColorArgb.toInt()) else palette.accent
-    val shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
+    // Calculator key geometry is deliberately not tied to generic control corners.
+    val shape = RoundedCornerShape(uiStyle.calculatorKeyRadiusDp.dp)
 
     Surface(
         modifier = modifier.graphicsLayer {
