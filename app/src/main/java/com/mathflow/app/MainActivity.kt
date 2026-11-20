@@ -414,7 +414,7 @@ private fun typographyFor(family: FontFamily): Typography {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MathFlowApp() {
+private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
     var themeId by remember {
@@ -496,6 +496,9 @@ private fun MathFlowApp() {
     val pageStateHolder = rememberSaveableStateHolder()
     val palette = remember(themeId) { themeFor(themeId).palette }
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
+    LaunchedEffect(externalConfigUri, showWelcome) {
+        if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
+    }
     var splashFinished by remember { mutableStateOf(false) }
     // The first page must be fully laid out behind the intro; only later tab changes animate.
     var initialPageRendered by remember { mutableStateOf(false) }
@@ -721,6 +724,14 @@ private fun MathFlowApp() {
                                                         MathFlowConfigProfiles.create(imported.name, cfg)
                                                     }
                                                     configProfiles = configProfiles + profile
+                                                    MathFlowConfigProfiles.save(context, configProfiles)
+                                                    profile
+                                                },
+                                                externalConfigUri = externalConfigUri.takeUnless { showWelcome },
+                                                onExternalConfigHandled = onExternalConfigHandled,
+                                                onDuplicateConfig = { source ->
+                                                    val duplicate = MathFlowConfigProfiles.create(source.name + " copy", source.settings)
+                                                    configProfiles = configProfiles + duplicate
                                                     MathFlowConfigProfiles.save(context, configProfiles)
                                                 },
                                                 selectedThemeId = themeId,
@@ -2436,7 +2447,10 @@ private fun SettingsPage(
     onRenameConfig: (String, String) -> Unit,
     onDeleteConfig: (String) -> Unit,
     onApplyConfig: (MathFlowConfigProfile) -> Unit,
-    onImportConfig: suspend (MathFlowConfigArchive.ImportedConfig) -> Unit,
+    onImportConfig: suspend (MathFlowConfigArchive.ImportedConfig) -> MathFlowConfigProfile,
+    externalConfigUri: Uri?,
+    onExternalConfigHandled: () -> Unit,
+    onDuplicateConfig: (MathFlowConfigProfile) -> Unit,
     selectedThemeId: String,
     selectedIconId: String,
     onThemeSelected: (String) -> Unit,
