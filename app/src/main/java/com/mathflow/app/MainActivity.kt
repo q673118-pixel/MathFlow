@@ -699,7 +699,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                 activeConfigId = activeConfigId,
                                                 onCreateConfig = { name ->
                                                     val profile = MathFlowConfigProfiles.create(name, makeConfigSnapshot(themeId, selectedIconId, fontScale,
-                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat))
+                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId))
                                                     configProfiles = configProfiles + profile
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
@@ -1218,6 +1218,7 @@ private fun BottomNav(
     onSelect: (Page) -> Unit
 ) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
     val springMotion = settings.enabled && style in setOf(
@@ -1234,7 +1235,11 @@ private fun BottomNav(
             .padding(horizontal = 28.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Surface(shape = RoundedCornerShape(26.dp), color = p.surface) {
+        Surface(
+            shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
+            color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            shadowElevation = uiStyle.elevationDp.dp
+        ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
@@ -1718,10 +1723,15 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 @Composable
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
+    val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
+    val outline = uiStyle.outlineAlpha
     Surface(
-        modifier.animateContentSize(tween(180)).fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = p.surface
+        modifier.animateContentSize(tween(180)).fillMaxWidth()
+            .then(if (outline > 0f) Modifier.border(1.dp, p.text.copy(alpha = outline), shape) else Modifier),
+        shape = shape,
+        color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        shadowElevation = uiStyle.elevationDp.dp
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
     }
@@ -1730,8 +1740,9 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
 @Composable
 private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     BoxWithConstraints(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(p.key).padding(3.dp)
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(p.key).padding(3.dp)
     ) {
         val itemWidth = maxWidth / options.size
         val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
@@ -1745,7 +1756,7 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
             Modifier.align(Alignment.CenterStart)
                 .graphicsLayer { translationX = indicatorOffset }
                 .size(width = itemWidth, height = 38.dp)
-                .clip(RoundedCornerShape(19.dp))
+                .clip(RoundedCornerShape(uiStyle.buttonRadiusDp.dp))
                 .background(p.keyEquals)
         )
         Row(Modifier.fillMaxWidth()) {
@@ -1772,13 +1783,14 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
 
 @Composable
 private fun Field(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, numeric: Boolean = true) {
+    val uiStyle = LocalMathFlowUiStyle.current
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
         label = { Text(displayText(label), maxLines = 1) },
         modifier = modifier,
         singleLine = true,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
         keyboardOptions = KeyboardOptions(keyboardType = if (numeric) KeyboardType.Decimal else KeyboardType.Text),
         textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp)
     )
@@ -1787,9 +1799,10 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
 @Composable
 private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     Surface(
         modifier = modifier.fillMaxWidth().height(50.dp).mathFlowClickable(onClick = onClick),
-        shape = RoundedCornerShape(25.dp),
+        shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp),
         color = p.keyEquals
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -1801,7 +1814,8 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
 @Composable
 private fun ResultBox(text: String, error: String?) {
     val p = LocalPalette.current
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = p.key) {
+    val uiStyle = LocalMathFlowUiStyle.current
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp), color = p.key) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = error != null,
@@ -2242,10 +2256,12 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
         } else {
             items(entries, key = { it.id }) { entry ->
                 var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
+                val uiStyle = LocalMathFlowUiStyle.current
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    color = p.surface
+                    shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
+                    color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+                    shadowElevation = uiStyle.elevationDp.dp
                 ) {
                     Column(
                         Modifier.fillMaxWidth()
@@ -3581,12 +3597,13 @@ private fun SettingsEntry(
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).mathFlowClickable(onClick = onClick).padding(vertical = 5.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).mathFlowClickable(onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(p.key), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(p.key), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -3606,7 +3623,8 @@ private fun IconOptionCard(
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(19.dp)
+    val uiStyle = LocalMathFlowUiStyle.current
+    val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
     val borderColor by animateColorAsState(
         if (selected) p.accent else p.key,
         animationSpec = tween(190, easing = FastOutSlowInEasing),
@@ -3673,7 +3691,8 @@ private fun ThemeOptionCard(
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(19.dp)
+    val uiStyle = LocalMathFlowUiStyle.current
+    val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
     val borderColor by animateColorAsState(
         if (selected) p.accent else p.key,
         animationSpec = tween(190, easing = FastOutSlowInEasing),
@@ -3744,7 +3763,8 @@ private fun ApplySelectionButton(text: String, enabled: Boolean, onClick: () -> 
 @Composable
 private fun SettingsApplyBar(onClick: () -> Unit) {
     val p = LocalPalette.current
-    val shape = RoundedCornerShape(28.dp)
+    val uiStyle = LocalMathFlowUiStyle.current
+    val shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp)
     Surface(
         modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp).clip(shape)
             .mathFlowClickable(onClick = onClick),
