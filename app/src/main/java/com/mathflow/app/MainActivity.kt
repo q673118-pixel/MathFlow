@@ -2845,25 +2845,15 @@ private fun SettingsPage(
                 val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    baseIcons.chunked(2).forEach { pair ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            pair.forEach { option ->
-                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
-                                    Modifier.weight(1f)) { pendingIconId = option.id }
-                            }
-                            if (pair.size == 1) Spacer(Modifier.weight(1f))
-                        }
+                    baseIcons.forEach { option ->
+                        IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                            Modifier.fillMaxWidth()) { pendingIconId = option.id }
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(displayText("ЦВЕТОВЫЕ ИКОНКИ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    colorIcons.chunked(2).forEach { pair ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            pair.forEach { option ->
-                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
-                                    Modifier.weight(1f)) { pendingIconId = option.id }
-                            }
-                            if (pair.size == 1) Spacer(Modifier.weight(1f))
-                        }
+                    colorIcons.forEach { option ->
+                        IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                            Modifier.fillMaxWidth()) { pendingIconId = option.id }
                     }
                 }
                 val selected = AppIconOptions.firstOrNull { it.id == pendingIconId } ?: AppIconOptions.first()
@@ -2923,28 +2913,20 @@ private fun SettingsPage(
 
             SettingsSection.ANIMATIONS -> PageColumn(tx("animations")) {
                 Text(tx("animation_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
-                KeyAnimationStyle.values().toList().chunked(2).forEach { pair ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        pair.forEach { style ->
-                            val selected = pendingAnimationSettings.style == style
-                            val shape = RoundedCornerShape(17.dp)
-                            Column(
-                                Modifier.weight(1f).clip(shape)
-                                    .background(if (selected) p.navActive else p.surface)
-                                    .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
-                                    .mathFlowClickable { pendingAnimationSettings = pendingAnimationSettings.copy(style = style) }
-                                    .padding(horizontal = 13.dp, vertical = 14.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Text(tx(style.titleKey), color = if (selected) p.accent else p.text,
-                                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    if (selected) tx("selected") else " ",
-                                    color = p.muted, fontSize = 10.sp, maxLines = 1
-                                )
-                            }
-                        }
-                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                KeyAnimationStyle.values().forEach { style ->
+                    val selected = pendingAnimationSettings.style == style
+                    val shape = RoundedCornerShape(LocalMathFlowUiStyle.current.cardRadiusDp.dp)
+                    Column(
+                        Modifier.fillMaxWidth().clip(shape)
+                            .background(if (selected) p.navActive else p.surface)
+                            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                            .mathFlowClickable { pendingAnimationSettings = pendingAnimationSettings.copy(style = style) }
+                            .padding(horizontal = 15.dp, vertical = 13.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(tx(style.titleKey), color = if (selected) p.accent else p.text,
+                            fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (selected) tx("selected") else " ", color = p.muted, fontSize = 10.sp, maxLines = 1)
                     }
                 }
                 Panel {
@@ -3085,26 +3067,22 @@ private fun SettingsPage(
                             onCheckedChange = null
                         )
                     }
-                    BottomNavAnimationStyle.values().toList().chunked(2).forEach { pair ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            pair.forEach { style ->
-                                val selected = pendingNavAnimationSettings.style == style
-                                val shape = RoundedCornerShape(15.dp)
-                                Column(
-                                    Modifier.weight(1f).clip(shape)
-                                        .background(if (selected) p.navActive else p.surface)
-                                        .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
-                                        .mathFlowClickable {
-                                            pendingNavAnimationSettings = pendingNavAnimationSettings.copy(style = style)
-                                        }
-                                        .padding(horizontal = 11.dp, vertical = 11.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text(style.title, color = if (selected) p.accent else p.text,
-                                        fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                    Text(tx(style.descriptionKey), color = p.muted, fontSize = 10.sp, lineHeight = 13.sp)
+                    BottomNavAnimationStyle.values().forEach { style ->
+                        val selected = pendingNavAnimationSettings.style == style
+                        val shape = RoundedCornerShape(LocalMathFlowUiStyle.current.cardRadiusDp.dp)
+                        Column(
+                            Modifier.fillMaxWidth().clip(shape)
+                                .background(if (selected) p.navActive else p.surface)
+                                .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                                .mathFlowClickable {
+                                    pendingNavAnimationSettings = pendingNavAnimationSettings.copy(style = style)
                                 }
-                            }
+                                .padding(horizontal = 14.dp, vertical = 13.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(style.title, color = if (selected) p.accent else p.text,
+                                fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(tx(style.descriptionKey), color = p.muted, fontSize = 11.sp, lineHeight = 15.sp)
                         }
                     }
                     Panel {
@@ -3450,25 +3428,15 @@ private fun SettingsPage(
                 val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    baseThemes.chunked(2).forEach { pair ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            pair.forEach { option ->
-                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
-                                    Modifier.weight(1f)) { pendingThemeId = option.id }
-                            }
-                            if (pair.size == 1) Spacer(Modifier.weight(1f))
-                        }
+                    baseThemes.forEach { option ->
+                        ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                            Modifier.fillMaxWidth()) { pendingThemeId = option.id }
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(displayText("ЦВЕТОВЫЕ ТЕМЫ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    colorThemes.chunked(2).forEach { pair ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            pair.forEach { option ->
-                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
-                                    Modifier.weight(1f)) { pendingThemeId = option.id }
-                            }
-                            if (pair.size == 1) Spacer(Modifier.weight(1f))
-                        }
+                    colorThemes.forEach { option ->
+                        ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                            Modifier.fillMaxWidth()) { pendingThemeId = option.id }
                     }
                 }
                 val selected = themeFor(pendingThemeId)
