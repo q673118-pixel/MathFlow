@@ -7,6 +7,7 @@ import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -2508,6 +2509,16 @@ private fun SettingsPage(
     var selectedConfigId by rememberSaveable { mutableStateOf(activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty()) }
     var configMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var pendingImportedProfile by remember { mutableStateOf<MathFlowConfigProfile?>(null) }
+
+    // Android system Back navigates settings subpages; in the configuration manager
+    // it first collapses the currently expanded profile.
+    BackHandler(enabled = section != SettingsSection.MAIN) {
+        if (section == SettingsSection.CONFIGS && selectedConfigId.isNotEmpty()) {
+            selectedConfigId = ""
+        } else {
+            section = SettingsSection.MAIN
+        }
+    }
     LaunchedEffect(configProfiles, activeConfigId) {
         if (activeConfigId != null && configProfiles.any { it.id == activeConfigId }) {
             selectedConfigId = activeConfigId
@@ -2749,7 +2760,6 @@ private fun SettingsPage(
             }
 
             SettingsSection.ICONS -> PageColumn(tx("app_icons")) {
-                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tx("icon_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 }
@@ -2801,7 +2811,6 @@ private fun SettingsPage(
 
 
             SettingsSection.MEASUREMENTS -> PageColumn(measurementText("measurements", LocalLanguage.current)) {
-                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(measurementText("units_note", LocalLanguage.current), color = p.muted, fontSize = 13.sp, lineHeight = 19.sp)
                 listOf("auto", "metric", "us").forEach { mode ->
                     val selected = pendingMeasurementSystem == mode
@@ -2835,7 +2844,6 @@ private fun SettingsPage(
             }
 
             SettingsSection.ANIMATIONS -> PageColumn(tx("animations")) {
-                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("animation_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 KeyAnimationStyle.values().toList().chunked(2).forEach { pair ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -3061,7 +3069,6 @@ private fun SettingsPage(
                 }
             }
             SettingsSection.FONTS -> PageColumn(tx("fonts")) {
-                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("font_library_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Panel {
                     ActionButton(tx("choose_font")) {
@@ -3128,7 +3135,6 @@ private fun SettingsPage(
             }
 
             SettingsSection.CONFIGS -> PageColumn(tx("configurations")) {
-                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("configurations_description"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -3166,11 +3172,15 @@ private fun SettingsPage(
                     val profileTheme = cfg?.optString("theme", "vanilla") ?: "vanilla"
                     val profileIcon = cfg?.optString("icon", "vanilla") ?: "vanilla"
                     val themeOption = ThemeOptions.firstOrNull { it.id == profileTheme } ?: ThemeOptions.first()
+                    Column(
+                        Modifier.fillMaxWidth().animateContentSize(tween(260, easing = FastOutSlowInEasing))
+                    ) {
                     Panel {
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp))
                                 .background(if (selected) p.navActive.copy(alpha = 0.45f) else Color.Transparent)
-                                .mathFlowClickable { selectedConfigId = profile.id }
+                                .animateContentSize(tween(240, easing = FastOutSlowInEasing))
+                                .mathFlowClickable { selectedConfigId = if (selected) "" else profile.id }
                                 .padding(vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(11.dp)
@@ -3228,12 +3238,12 @@ private fun SettingsPage(
                             }
                         }
                     }
+                    }
                 }
                 configMessage?.let { Text(it, color = p.accent, fontSize = 12.sp) }
             }
 
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
-                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("language_hint"), color = p.muted, fontSize = 13.sp)
                 OutlinedTextField(
                     value = languageQuery,
@@ -3273,7 +3283,6 @@ private fun SettingsPage(
             }
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
-                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white") }
                 val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
