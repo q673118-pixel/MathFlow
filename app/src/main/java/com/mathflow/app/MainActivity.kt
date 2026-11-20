@@ -144,11 +144,35 @@ import kotlinx.coroutines.sync.Mutex
 import kotlin.math.abs
 
 class MainActivity : ComponentActivity() {
+    private val pendingConfigUri = mutableStateOf<Uri?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        pendingConfigUri.value = extractConfigUri(intent)
         enableEdgeToEdge()
-        setContent { MathFlowApp() }
+        setContent {
+            MathFlowApp(
+                externalConfigUri = pendingConfigUri.value,
+                onExternalConfigHandled = { pendingConfigUri.value = null }
+            )
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        pendingConfigUri.value = extractConfigUri(intent)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun extractConfigUri(source: android.content.Intent?): Uri? {
+        if (source == null) return null
+        return source.data ?: if (android.os.Build.VERSION.SDK_INT >= 33) {
+            source.getParcelableExtra(android.content.Intent.EXTRA_STREAM, Uri::class.java)
+        } else {
+            source.getParcelableExtra(android.content.Intent.EXTRA_STREAM) as? Uri
+        }
     }
 }
 
