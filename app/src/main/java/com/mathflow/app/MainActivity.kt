@@ -415,6 +415,7 @@ private fun MathFlowApp() {
     var fontPath by remember { mutableStateOf(initialFontPath) }
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
     var measurementSystem by remember { mutableStateOf(prefs.getString("measurement_system", "auto") ?: "auto") }
+    var calculatorResultFormat by remember { mutableStateOf(prefs.getString("calculator_result_format", "fraction") ?: "fraction") }
     var keyAnimationSettings by remember {
         mutableStateOf(
             KeyAnimationSettings(
@@ -444,11 +445,11 @@ private fun MathFlowApp() {
         mutableStateOf(prefs.getString("mathflow_active_config", null)?.takeIf { id -> configProfiles.any { it.id == id } })
     }
     LaunchedEffect(themeId, selectedIconId, fontScale, fontPath, appLanguage, measurementSystem,
-        keyAnimationSettings, bottomNavAnimationSettings, activeConfigId) {
+        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, activeConfigId) {
         val activeId = activeConfigId
         if (activeId != null) {
             val snapshot = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings)
+                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat)
             configProfiles = configProfiles.map { profile ->
                 if (profile.id == activeId) profile.copy(settings = snapshot) else profile
             }
@@ -566,7 +567,13 @@ private fun MathFlowApp() {
                                         }
                                     ) {
                                         when (page) {
-                                            Page.HOME -> CalculatorHome { expression, result, steps ->
+                                            Page.HOME -> CalculatorHome(
+                                                resultFormat = calculatorResultFormat,
+                                                onResultFormatChange = { format ->
+                                                    calculatorResultFormat = format
+                                                    prefs.edit().putString("calculator_result_format", format).apply()
+                                                }
+                                            ) { expression, result, steps ->
                                                 historyScope.launch {
                                                     historyMutex.lock()
                                                     try {
@@ -595,12 +602,12 @@ private fun MathFlowApp() {
                                             }
                                             Page.SETTINGS -> SettingsPage(
                                                 currentConfig = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings),
+                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat),
                                                 configProfiles = configProfiles,
                                                 activeConfigId = activeConfigId,
                                                 onCreateConfig = { name ->
                                                     val profile = MathFlowConfigProfiles.create(name, makeConfigSnapshot(themeId, selectedIconId, fontScale,
-                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings))
+                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat))
                                                     configProfiles = configProfiles + profile
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
@@ -625,6 +632,7 @@ private fun MathFlowApp() {
                                                     fontScale = cfg.getDouble("fontScale").toFloat()
                                                     appLanguage = cfg.getString("language")
                                                     measurementSystem = cfg.getString("measurement")
+                                                    calculatorResultFormat = cfg.getString("resultFormat")
                                                     val importedFontPath = cfg.optString("fontPath").takeIf { it.isNotBlank() && it != "null" }
                                                     fontPath = importedFontPath
                                                     keyAnimationSettings = KeyAnimationSettings(
@@ -654,7 +662,8 @@ private fun MathFlowApp() {
                                                         .putInt("nav_animation_duration", bottomNavAnimationSettings.durationMs)
                                                         .putFloat("nav_animation_intensity", bottomNavAnimationSettings.intensity)
                                                         .putFloat("nav_animation_icon_scale", bottomNavAnimationSettings.iconScale)
-                                                        .putFloat("nav_animation_opacity", bottomNavAnimationSettings.opacity).apply()
+                                                        .putFloat("nav_animation_opacity", bottomNavAnimationSettings.opacity)
+                                                        .putString("calculator_result_format", calculatorResultFormat).apply()
                                                     runCatching { setLauncherIcon(context, selectedIconId) }
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
@@ -1321,17 +1330,18 @@ private val CALCULATOR_SCIENTIFIC_ROWS = listOf(
 ) + CALCULATOR_MAIN_ROWS
 
 @Composable
-private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) -> Unit) {
+private fun CalculatorHome(
+    resultFormat: String,
+    onResultFormatChange: (String) -> Unit,
+    onCalculationSaved: (String, String, List<String>) -> Unit
+) {
     val p = LocalPalette.current
-    val context = LocalContext.current
-    val prefs = remember(context) { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
     val calculationScope = rememberCoroutineScope()
     var calculationJob by remember { mutableStateOf<Job?>(null) }
     var expression by rememberSaveable { mutableStateOf("") }
     var result by rememberSaveable { mutableStateOf("0") }
     var decimalResult by rememberSaveable { mutableStateOf("0") }
     var fractionResult by rememberSaveable { mutableStateOf("0") }
-    var resultFormat by rememberSaveable { mutableStateOf(prefs.getString("calculator_result_format", "fraction") ?: "fraction") }
     var message by rememberSaveable { mutableStateOf<String?>(null) }
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var showSteps by rememberSaveable { mutableStateOf(true) }
@@ -1470,8 +1480,7 @@ private fun CalculatorHome(onCalculationSaved: (String, String, List<String>) ->
                         listOf(decimalFormatLabel, fractionFormatLabel),
                         if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
                     ) { selected ->
-                        resultFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
-                        prefs.edit().putString("calculator_result_format", resultFormat).apply()
+                        onResultFormatChange(if (selected == decimalFormatLabel) "decimal" else "fraction")
                         result = if (resultFormat == "decimal") decimalResult else fractionResult
                     }
                 }
@@ -2310,15 +2319,17 @@ private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, MEASUREMENTS
 
 private fun makeConfigSnapshot(
     theme: String, icon: String, fontScale: Float, fontPath: String?, language: String,
-    measurement: String, key: KeyAnimationSettings, nav: BottomNavAnimationSettings
+    measurement: String, key: KeyAnimationSettings, nav: BottomNavAnimationSettings,
+    resultFormat: String
 ): JSONObject = JSONObject()
-    .put("schemaVersion", 1)
+    .put("schemaVersion", 2)
     .put("theme", theme)
     .put("icon", icon)
     .put("fontScale", fontScale.toDouble())
     .put("fontPath", fontPath ?: JSONObject.NULL)
     .put("language", language)
     .put("measurement", measurement)
+    .put("resultFormat", resultFormat)
     .put("keyStyle", key.style.id)
     .put("keyDuration", key.durationMs)
     .put("keyOpacity", key.opacity.toDouble())
@@ -2333,7 +2344,7 @@ private fun makeConfigSnapshot(
     .put("navOpacity", nav.opacity.toDouble())
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
-    require(input.optInt("schemaVersion", -1) == 1) { "Unsupported settings schema" }
+    require(input.optInt("schemaVersion", -1) in 1..2) { "Unsupported settings schema" }
     val theme = input.optString("theme", "vanilla")
     val icon = input.optString("icon", "vanilla")
     require(ThemeOptions.any { it.id == theme }) { "Unknown theme" }
@@ -2344,6 +2355,8 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
     require(AppLanguages.any { it.tag == language }) { "Unsupported language" }
     val measurement = input.optString("measurement", "auto")
     require(measurement in setOf("auto", "metric", "us")) { "Invalid measurement system" }
+    val resultFormat = input.optString("resultFormat", "fraction")
+    require(resultFormat in setOf("fraction", "decimal")) { "Invalid calculator result format" }
     val keyStyle = input.optString("keyStyle", "spring")
     require(KeyAnimationStyle.values().any { it.id == keyStyle }) { "Unknown key animation style" }
     val navStyle = input.optString("navStyle", "fluid_pill")
@@ -2365,7 +2378,7 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
         input.optDouble("navOpacity", 0.85).toFloat()
     ).normalized()
     return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
-        language, measurement, key, nav)
+        language, measurement, key, nav, resultFormat)
 }
 
 @Composable
@@ -2421,7 +2434,7 @@ private fun SettingsPage(
         )
     }
     var pendingFontPath by remember(fontPath) { mutableStateOf(fontPath) }
-    var configName by rememberSaveable { mutableStateOf("My configuration") }
+    var configName by rememberSaveable { mutableStateOf("") }
     var renameValue by rememberSaveable { mutableStateOf("") }
     var selectedConfigId by rememberSaveable { mutableStateOf(activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty()) }
     var configMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -2442,8 +2455,8 @@ private fun SettingsPage(
                 requireNotNull(output) { "Cannot open export destination" }
                 MathFlowConfigArchive.write(output, profile.name, profile.settings, fontName, font)
             }
-            configMessage = "Configuration exported"
-        }.onFailure { configMessage = it.message ?: "Export failed" }
+            configMessage = tx("profile_exported")
+        }.onFailure { configMessage = tx("profile_export_failed") }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) runCatching {
@@ -2452,8 +2465,8 @@ private fun SettingsPage(
                 MathFlowConfigArchive.read(input)
             }
             onImportConfig(imported)
-            configMessage = "Configuration imported"
-        }.onFailure { configMessage = it.message ?: "Import failed" }
+            configMessage = tx("profile_imported")
+        }.onFailure { configMessage = tx("profile_import_failed") }
     }
     var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
@@ -2571,8 +2584,8 @@ private fun SettingsPage(
                 }
                 Panel {
                     SettingsEntry(
-                        title = "Configurations",
-                        subtitle = "Create, import, export and apply .mf profiles",
+                        title = tx("configurations"),
+                        subtitle = tx("configurations_subtitle"),
                         icon = Icons.Default.Build,
                         onClick = { selectedConfigId = activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty(); section = SettingsSection.CONFIGS }
                     )
@@ -2994,15 +3007,15 @@ private fun SettingsPage(
                 }
             }
 
-            SettingsSection.CONFIGS -> PageColumn("Configurations") {
+            SettingsSection.CONFIGS -> PageColumn(tx("configurations")) {
                 MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
-                Text("Profiles contain app settings only. Calculation history is never included.", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                Text(tx("configurations_description"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Field(configName, { configName = it.take(48) }, "New profile name", Modifier.weight(1f), numeric = false)
-                    ActionButton("Create", Modifier.width(104.dp)) { if (configName.isNotBlank()) { onCreateConfig(configName); configMessage = "Profile created" } }
+                    Field(configName, { configName = it.take(48) }, tx("profile_name_placeholder"), Modifier.weight(1f), numeric = false)
+                    ActionButton(tx("create_profile"), Modifier.width(104.dp)) { if (configName.isNotBlank()) { onCreateConfig(configName); configMessage = tx("profile_created") } }
                 }
                 if (configProfiles.isEmpty()) {
-                    Panel { Text("No profiles yet. Create one from the current app settings.", color = p.muted, fontSize = 13.sp) }
+                    Panel { Text(tx("no_profiles_hint"), color = p.muted, fontSize = 13.sp) }
                 }
                 configProfiles.forEach { profile ->
                     val selected = selectedConfigId == profile.id
@@ -3011,28 +3024,28 @@ private fun SettingsPage(
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text(profile.name, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                                Text(if (activeConfigId == profile.id) "Active profile" else "Saved profile",
+                                Text(if (activeConfigId == profile.id) tx("active_profile") else tx("saved_profile"),
                                     color = p.muted, fontSize = 12.sp)
                             }
                             if (selected) Icon(Icons.Default.Check, contentDescription = null, tint = p.accent)
                         }
                         if (selected) {
-                            Field(renameValue.ifBlank { profile.name }, { renameValue = it.take(48) }, "Rename", numeric = false)
+                            Field(renameValue.ifBlank { profile.name }, { renameValue = it.take(48) }, tx("profile_name_placeholder"), numeric = false)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ActionButton("Apply", Modifier.weight(1f)) { onApplyConfig(profile); configMessage = "Profile applied" }
-                                ActionButton("Export .mf", Modifier.weight(1f)) { exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf") }
+                                ActionButton(tx("apply_profile"), Modifier.weight(1f)) { onApplyConfig(profile); configMessage = tx("profile_applied") }
+                                ActionButton(tx("export_profile"), Modifier.weight(1f)) { exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf") }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ActionButton("Rename", Modifier.weight(1f)) {
+                                ActionButton(tx("rename_profile"), Modifier.weight(1f)) {
                                     val name = renameValue.trim()
-                                    if (name.isNotEmpty()) { onRenameConfig(profile.id, name); renameValue = ""; configMessage = "Profile renamed" }
+                                    if (name.isNotEmpty()) { onRenameConfig(profile.id, name); renameValue = ""; configMessage = tx("profile_renamed") }
                                 }
-                                ActionButton("Delete", Modifier.weight(1f)) { onDeleteConfig(profile.id); configMessage = "Profile deleted" }
+                                ActionButton(tx("delete_profile"), Modifier.weight(1f)) { onDeleteConfig(profile.id); configMessage = tx("profile_deleted") }
                             }
                         }
                     }
                 }
-                ActionButton("Import .mf") { importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
+                ActionButton(tx("import_profile")) { importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
                 configMessage?.let { Text(it, color = p.accent, fontSize = 12.sp) }
             }
 
