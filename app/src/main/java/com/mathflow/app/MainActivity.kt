@@ -388,6 +388,26 @@ private val ThemeOptions = listOf(
 private fun themeFor(id: String): ThemeOption =
     ThemeOptions.firstOrNull { it.id == id } ?: ThemeOptions.first()
 
+@Composable
+private fun animatePalette(target: Palette): Palette {
+    val spec = tween<Color>(durationMillis = 520, easing = FastOutSlowInEasing)
+    val background by animateColorAsState(target.background, spec, label = "ThemeBackground")
+    val surface by animateColorAsState(target.surface, spec, label = "ThemeSurface")
+    val key by animateColorAsState(target.key, spec, label = "ThemeKey")
+    val keyAccent by animateColorAsState(target.keyAccent, spec, label = "ThemeKeyAccent")
+    val keyEquals by animateColorAsState(target.keyEquals, spec, label = "ThemeEquals")
+    val onKeyEquals by animateColorAsState(target.onKeyEquals, spec, label = "ThemeOnEquals")
+    val text by animateColorAsState(target.text, spec, label = "ThemeText")
+    val muted by animateColorAsState(target.muted, spec, label = "ThemeMuted")
+    val accent by animateColorAsState(target.accent, spec, label = "ThemeAccent")
+    val navActive by animateColorAsState(target.navActive, spec, label = "ThemeNavActive")
+    val error by animateColorAsState(target.error, spec, label = "ThemeError")
+    return remember(target.dark, background, surface, key, keyAccent, keyEquals, onKeyEquals,
+        text, muted, accent, navActive, error) {
+        Palette(background, surface, key, keyAccent, keyEquals, onKeyEquals, text, muted, accent, navActive, error, target.dark)
+    }
+}
+
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 
 private fun typographyFor(family: FontFamily): Typography {
@@ -495,7 +515,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         }
     }
     val pageStateHolder = rememberSaveableStateHolder()
-    val palette = remember(themeId) { themeFor(themeId).palette }
+    val targetPalette = themeFor(themeId).palette
+    val palette = animatePalette(targetPalette)
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
@@ -3164,7 +3185,14 @@ private fun SettingsPage(
                 if (configProfiles.isEmpty()) {
                     Panel { Text(tx("no_profiles_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp) }
                 } else {
-                    Text(tx("my_configurations"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        Modifier.fillMaxWidth().padding(top = 3.dp, bottom = 1.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(tx("my_configurations"), color = p.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                        Text(configProfiles.size.toString(), color = p.muted, fontSize = 12.sp)
+                    }
                 }
                 configProfiles.forEach { profile ->
                     val selected = selectedConfigId == profile.id
@@ -3172,10 +3200,15 @@ private fun SettingsPage(
                     val profileTheme = cfg?.optString("theme", "vanilla") ?: "vanilla"
                     val profileIcon = cfg?.optString("icon", "vanilla") ?: "vanilla"
                     val themeOption = ThemeOptions.firstOrNull { it.id == profileTheme } ?: ThemeOptions.first()
+                    val cardBorder by animateColorAsState(
+                        if (selected) p.accent.copy(alpha = 0.72f) else p.key.copy(alpha = 0.72f),
+                        animationSpec = tween(260, easing = FastOutSlowInEasing),
+                        label = "ConfigCardBorder"
+                    )
                     Column(
-                        Modifier.fillMaxWidth().animateContentSize(tween(260, easing = FastOutSlowInEasing))
+                        Modifier.fillMaxWidth().animateContentSize(tween(340, easing = FastOutSlowInEasing))
                     ) {
-                    Panel {
+                    Panel(modifier = Modifier.border(if (selected) 1.5.dp else 1.dp, cardBorder, RoundedCornerShape(24.dp))) {
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp))
                                 .background(if (selected) p.navActive.copy(alpha = 0.45f) else Color.Transparent)
@@ -3206,35 +3239,43 @@ private fun SettingsPage(
                                 Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = p.accent)
                             }
                         }
-                        if (selected) {
-                            HorizontalDivider(color = p.key)
-                            Field(renameValue.ifBlank { profile.name }, { renameValue = it.take(48) }, tx("profile_name_placeholder"), numeric = false)
-                            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                ActionButton(tx("apply_profile"), Modifier.weight(1f)) {
-                                    onApplyConfig(profile)
-                                    configMessage = profileAppliedMessage
-                                }
-                                ActionButton(tx("export_profile"), Modifier.weight(1f)) {
-                                    exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf")
-                                }
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                ActionButton(tx("duplicate_profile"), Modifier.weight(1f)) {
-                                    onDuplicateConfig(profile)
-                                    configMessage = profileCreatedMessage
-                                }
-                                ActionButton(tx("rename_profile"), Modifier.weight(1f)) {
-                                    val name = renameValue.trim()
-                                    if (name.isNotEmpty()) {
-                                        onRenameConfig(profile.id, name)
-                                        renameValue = ""
-                                        configMessage = profileRenamedMessage
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = selected,
+                            enter = androidx.compose.animation.fadeIn(tween(220, delayMillis = 35)) +
+                                androidx.compose.animation.expandVertically(tween(300, easing = FastOutSlowInEasing), expandFrom = Alignment.Top),
+                            exit = androidx.compose.animation.fadeOut(tween(130)) +
+                                androidx.compose.animation.shrinkVertically(tween(240, easing = FastOutSlowInEasing), shrinkTowards = Alignment.Top)
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                HorizontalDivider(color = p.key.copy(alpha = 0.8f))
+                                Field(renameValue.ifBlank { profile.name }, { renameValue = it.take(48) }, tx("profile_name_placeholder"), numeric = false)
+                                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    ActionButton(tx("apply_profile"), Modifier.weight(1f)) {
+                                        onApplyConfig(profile)
+                                        configMessage = profileAppliedMessage
+                                    }
+                                    ActionButton(tx("export_profile"), Modifier.weight(1f)) {
+                                        exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf")
                                     }
                                 }
-                            }
-                            ActionButton(tx("delete_profile")) {
-                                onDeleteConfig(profile.id)
-                                configMessage = profileDeletedMessage
+                                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    ActionButton(tx("duplicate_profile"), Modifier.weight(1f)) {
+                                        onDuplicateConfig(profile)
+                                        configMessage = profileCreatedMessage
+                                    }
+                                    ActionButton(tx("rename_profile"), Modifier.weight(1f)) {
+                                        val name = renameValue.trim()
+                                        if (name.isNotEmpty()) {
+                                            onRenameConfig(profile.id, name)
+                                            renameValue = ""
+                                            configMessage = profileRenamedMessage
+                                        }
+                                    }
+                                }
+                                ActionButton(tx("delete_profile")) {
+                                    onDeleteConfig(profile.id)
+                                    configMessage = profileDeletedMessage
+                                }
                             }
                         }
                     }
