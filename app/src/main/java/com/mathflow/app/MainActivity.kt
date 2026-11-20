@@ -1247,7 +1247,6 @@ private fun BottomNav(
                     shape = { RoundedCornerShape(35.dp) },
                     effects = {
                         // Blur first, then refract: reversing this order washes out the lens detail.
-                        vibrancy()
                         blur(26.dp.toPx())
                         lens(34.dp.toPx(), 34.dp.toPx())
                     },
@@ -1372,9 +1371,9 @@ private fun BottomNav(
                                 shape = { RoundedCornerShape(percent = 50) },
                                 effects = {
                                     blur(2.dp.toPx())
-                                    lens(12.dp.toPx(), 22.dp.toPx(), chromaticAberration = true)
+                                    lens(12.dp.toPx(), 22.dp.toPx())
                                 },
-                                highlight = { Highlight.Default.copy(alpha = 0.88f) },
+                                highlight = { Highlight(width = 0.9.dp) },
                                 onDrawSurface = {
                                     drawRect(p.accent.copy(alpha = 0.12f))
                                 }
