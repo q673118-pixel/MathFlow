@@ -2425,6 +2425,13 @@ private fun SettingsPage(
     var renameValue by rememberSaveable { mutableStateOf("") }
     var selectedConfigId by rememberSaveable { mutableStateOf(activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty()) }
     var configMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(configProfiles, activeConfigId) {
+        if (activeConfigId != null && configProfiles.any { it.id == activeConfigId }) {
+            selectedConfigId = activeConfigId
+        } else if (configProfiles.none { it.id == selectedConfigId }) {
+            selectedConfigId = configProfiles.firstOrNull()?.id.orEmpty()
+        }
+    }
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         val profile = configProfiles.firstOrNull { it.id == selectedConfigId }
         if (uri != null && profile != null) runCatching {
