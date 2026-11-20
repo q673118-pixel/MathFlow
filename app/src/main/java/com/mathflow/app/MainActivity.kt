@@ -947,7 +947,7 @@ private fun FirstLaunchWelcome(
                 verticalArrangement = Arrangement.spacedBy(17.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(16.dp), color = p.key, modifier = Modifier.size(48.dp)) {
+                    Surface(shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp), color = p.key, modifier = Modifier.size(48.dp)) {
                         Box(contentAlignment = Alignment.Center) {
                             Image(painterResource(R.drawable.mark_black), null, Modifier.size(29.dp), colorFilter = ColorFilter.tint(p.accent))
                         }
@@ -966,7 +966,7 @@ private fun FirstLaunchWelcome(
                     }
                     Surface(
                         modifier = Modifier.fillMaxWidth().mathFlowClickable { languagePickerOpen = true },
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
                         color = p.key,
                         border = androidx.compose.foundation.BorderStroke(1.dp, p.accent.copy(alpha = 0.34f))
                     ) {
@@ -1014,7 +1014,7 @@ private fun FirstLaunchWelcome(
                         }
                         Surface(
                             Modifier.fillMaxWidth().mathFlowClickable { onMeasurementSystemSelected(mode) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
                             color = optionBackground,
                             border = androidx.compose.foundation.BorderStroke(if (selected) 1.4.dp else 1.dp, optionBorder)
                         ) {
@@ -1075,7 +1075,7 @@ private fun FirstLaunchWelcome(
                             Surface(
                                 modifier = Modifier.weight(1f).animateContentSize(tween(180))
                                     .mathFlowClickable { onFontSelected(id) },
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
                                 color = fontCardColor,
                                 border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, fontBorderColor)
                             ) {
@@ -1104,7 +1104,7 @@ private fun FirstLaunchWelcome(
                         if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
                         onConfirm()
                     },
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
                     color = p.accent
                 ) {
                     Row(Modifier.padding(horizontal = 18.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1123,7 +1123,7 @@ private fun FirstLaunchWelcome(
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(max = 620.dp),
-                shape = RoundedCornerShape(26.dp),
+                shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
                 color = p.surface,
                 contentColor = p.text
             ) {
@@ -1141,7 +1141,7 @@ private fun FirstLaunchWelcome(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         label = { Text(tx("search_languages")) },
-                        shape = RoundedCornerShape(15.dp)
+                        shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
                     )
                     val filtered = AppLanguages.filter {
                         it.nativeName.contains(languageQuery, ignoreCase = true) ||
@@ -1168,12 +1168,12 @@ private fun FirstLaunchWelcome(
                                     languageQuery = ""
                                     languagePickerOpen = false
                                 },
-                                shape = RoundedCornerShape(15.dp),
+                                shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
                                 color = languageCardColor,
                                 border = androidx.compose.foundation.BorderStroke(if (selected) 1.3.dp else 1.dp, languageBorderColor)
                             ) {
                                 Row(Modifier.padding(horizontal = 13.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(shape = RoundedCornerShape(10.dp), color = p.surface, modifier = Modifier.size(38.dp)) {
+                                    Surface(shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp), color = p.surface, modifier = Modifier.size(38.dp)) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Text(item.tag.uppercase(Locale.ROOT), color = p.accent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         }
@@ -2539,6 +2539,7 @@ private fun SettingsPage(
     onNavAnimationSettingsApplied: (BottomNavAnimationSettings) -> Unit
 ) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     val context = LocalContext.current
     val ioScope = rememberCoroutineScope()
     val profileExportedMessage = tx("profile_exported")
@@ -2889,7 +2890,7 @@ private fun SettingsPage(
                     }
                     Panel {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                                 .background(if (selected) p.navActive else Color.Transparent)
                                 .mathFlowClickable { pendingMeasurementSystem = mode }
                                 .padding(13.dp),
@@ -3137,7 +3138,7 @@ private fun SettingsPage(
                         val active = fontPath == path
                         Panel {
                             Row(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                                     .background(if (selected) p.navActive else Color.Transparent)
                                     .mathFlowClickable { pendingFontPath = path }
                                     .padding(12.dp),
@@ -3159,7 +3160,7 @@ private fun SettingsPage(
                 }
                 Panel {
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                             .mathFlowClickable { pendingFontPath = null }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -3189,7 +3190,7 @@ private fun SettingsPage(
                 Text(tx("configurations_description"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(p.navActive), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(p.navActive), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Build, null, tint = p.accent, modifier = Modifier.size(22.dp))
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -3243,9 +3244,9 @@ private fun SettingsPage(
                     Column(
                         Modifier.fillMaxWidth().animateContentSize(tween(340, easing = FastOutSlowInEasing))
                     ) {
-                    Panel(modifier = Modifier.border(if (selected) 1.5.dp else 1.dp, cardBorder, RoundedCornerShape(24.dp))) {
+                    Panel(modifier = Modifier.border(if (selected) 1.5.dp else 1.dp, cardBorder, RoundedCornerShape(uiStyle.cardRadiusDp.dp))) {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp))
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                                 .background(cardBackground)
                                 .animateContentSize(tween(300, easing = FastOutSlowInEasing))
                                 .mathFlowClickable { selectedConfigId = if (selected) "" else profile.id }
@@ -3253,8 +3254,8 @@ private fun SettingsPage(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(11.dp)
                         ) {
-                            Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(themeOption.palette.background)
-                                .border(1.dp, themeOption.palette.accent.copy(alpha = 0.55f), RoundedCornerShape(14.dp)),
+                            Box(Modifier.size(46.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(themeOption.palette.background)
+                                .border(1.dp, themeOption.palette.accent.copy(alpha = 0.55f), RoundedCornerShape(uiStyle.controlRadiusDp.dp)),
                                 contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.Settings, null, tint = themeOption.palette.accent, modifier = Modifier.size(22.dp))
                             }
@@ -3327,7 +3328,7 @@ private fun SettingsPage(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text(tx("search_languages")) },
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
                 )
                 val visibleLanguages = AppLanguages.filter { language ->
                     language.nativeName.contains(languageQuery, ignoreCase = true) ||
@@ -3336,7 +3337,7 @@ private fun SettingsPage(
                 if (visibleLanguages.isEmpty()) Text(tx("no_languages_found"), color = p.muted, fontSize = 13.sp)
                 visibleLanguages.forEach { language ->
                     val selected = pendingLanguage == language.tag
-                    val shape = RoundedCornerShape(18.dp)
+                    val shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
                     Row(
                         Modifier.fillMaxWidth().clip(shape)
                             .background(if (selected) p.navActive else p.surface)
@@ -3437,7 +3438,7 @@ private fun SettingsPage(
                 val selected = themeFor(pendingThemeId)
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(Modifier.size(54.dp).clip(RoundedCornerShape(16.dp)).background(selected.palette.background).border(1.dp, p.key, RoundedCornerShape(16.dp)))
+                        Box(Modifier.size(54.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(selected.palette.background).border(1.dp, p.key, RoundedCornerShape(uiStyle.controlRadiusDp.dp)))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
                             Text(tx("theme_option_description"), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
@@ -3489,13 +3490,13 @@ private fun SettingsPage(
         Dialog(onDismissRequest = { pendingImportedProfile = null }) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(26.dp),
+                shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
                 color = p.surface,
                 contentColor = p.text
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(previewThemeOption.palette.background),
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(previewThemeOption.palette.background),
                             contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Settings, null, tint = previewThemeOption.palette.accent)
                         }
