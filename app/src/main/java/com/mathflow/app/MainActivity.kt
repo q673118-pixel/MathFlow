@@ -1331,7 +1331,7 @@ private fun BottomNav(
                     }
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity) {
+                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface) {
                     if (settings.enabled && (uiStyle.glassSurface || style in setOf(BottomNavAnimationStyle.FLUID_PILL, BottomNavAnimationStyle.ELASTIC_SLIDE))) {
                         travelStretch.snapTo(
                             1f + settings.intensity * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.28f else 0.38f
