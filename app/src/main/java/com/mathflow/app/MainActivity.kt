@@ -1605,7 +1605,7 @@ private fun CalculatorHome(
                     if (steps.isNotEmpty()) Chip(tx("steps"), showSteps) { showSteps = !showSteps }
                 }
                 Box(
-                    Modifier.align(Alignment.TopEnd).size(40.dp).clip(RoundedCornerShape(20.dp))
+                    Modifier.align(Alignment.TopEnd).size(40.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                         .mathFlowClickable { press("⌫") },
                     contentAlignment = Alignment.Center
                 ) {
@@ -2034,6 +2034,7 @@ private data class GraphSample(val x: Double, val y: Double?)
 @Composable
 private fun GraphFunctionContent() {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     var expression by rememberSaveable { mutableStateOf("x^2") }
     var range by rememberSaveable { mutableStateOf(5) }
     var samples by remember { mutableStateOf(emptyList<GraphSample>()) }
@@ -2078,7 +2079,7 @@ private fun GraphFunctionContent() {
         range = it.removePrefix("±").toIntOrNull() ?: 5
     }
     Canvas(
-        Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(20.dp)).background(p.key)
+        Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp)).background(p.key)
             .pointerInput(samples, range) {
                 detectTapGestures { tap ->
                     val fraction = tap.x.toDouble() / size.width.coerceAtLeast(1).toDouble()
@@ -3648,14 +3649,14 @@ private fun IconOptionCard(
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Box(
-            Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(13.dp))
+            Modifier.fillMaxWidth().height(62.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                 .background(option.previewBackground.copy(alpha = 0.14f)),
             contentAlignment = Alignment.Center
         ) {
             LauncherIconPreview(
                 drawable = option.drawable,
                 contentDescription = option.title,
-                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp))
+                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
             )
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -3710,12 +3711,12 @@ private fun ThemeOptionCard(
     ) {
         // Tiny interface preview communicates the actual palette more clearly than swatches alone.
         Row(
-            Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(10.dp))
+            Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                 .background(option.palette.background).padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.weight(0.34f).fillMaxSize().clip(RoundedCornerShape(7.dp)).background(option.palette.surface)) {
+            Box(Modifier.weight(0.34f).fillMaxSize().clip(RoundedCornerShape((uiStyle.controlRadiusDp / 2).dp)).background(option.palette.surface)) {
                 Column(Modifier.fillMaxSize().padding(5.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Box(Modifier.fillMaxWidth(0.72f).height(4.dp).clip(CircleShape).background(option.palette.text.copy(alpha = 0.8f)))
                     Box(Modifier.fillMaxWidth(0.48f).height(3.dp).clip(CircleShape).background(option.palette.muted.copy(alpha = 0.8f)))
@@ -3727,7 +3728,7 @@ private fun ThemeOptionCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Box(Modifier.fillMaxWidth(0.52f).height(4.dp).clip(CircleShape).background(option.palette.text.copy(alpha = 0.8f)))
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Box(Modifier.weight(1f).height(13.dp).clip(RoundedCornerShape(5.dp)).background(option.palette.key))
+                        Box(Modifier.weight(1f).height(13.dp).clip(RoundedCornerShape((uiStyle.controlRadiusDp / 3).dp)).background(option.palette.key))
                         Box(Modifier.weight(1f).height(18.dp).clip(RoundedCornerShape(5.dp)).background(option.palette.keyEquals))
                     }
                 }
