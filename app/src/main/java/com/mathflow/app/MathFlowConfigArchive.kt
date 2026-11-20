@@ -18,7 +18,7 @@ import java.util.zip.ZipOutputStream
  * The settings object is deliberately separate from calculation history.
  */
 internal object MathFlowConfigArchive {
-    private const val FORMAT_VERSION = 1
+    private const val FORMAT_VERSION = 2
     private const val APP_ID = "com.mathflow.app"
     private const val MANIFEST_ENTRY = "manifest.json"
     private const val FONT_PREFIX = "fonts/"
@@ -112,7 +112,7 @@ internal object MathFlowConfigArchive {
         val manifest = JSONObject(manifestBytes.toString(Charsets.UTF_8))
         require(manifest.optString("format") == "MathFlow") { "Not a MathFlow configuration" }
         require(manifest.optString("appId") == APP_ID) { "Configuration belongs to another app" }
-        require(manifest.optInt("formatVersion", -1) == FORMAT_VERSION) { "Unsupported configuration version" }
+        require(manifest.optInt("formatVersion", -1) in 1..FORMAT_VERSION) { "Unsupported configuration version" }
 
         val name = manifest.optString("name").trim()
         require(name.isNotEmpty() && name.length <= 48) { "Invalid configuration name" }
