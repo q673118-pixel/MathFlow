@@ -2482,6 +2482,7 @@ private fun SettingsPage(
                             it.isNotBlank() && it != "null" && it != BUILTIN_ARTEGRA_FONT
                         }
                         val fontFile = path?.let { File(it).takeIf(File::isFile) }
+                        require(path == null || fontFile != null) { "The selected custom font is missing" }
                         require(fontFile == null || fontFile.length() <= 8L * 1024L * 1024L)
                         val font = fontFile?.readBytes()
                         val fontName = if (font != null) fontFile!!.name else null
