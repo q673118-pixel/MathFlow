@@ -56,6 +56,21 @@ internal enum class MathFlowUiStyle(
         12, 9, 12, 1f, 0.38f, 0f, compact = true
     );
 
+    /**
+     * Calculator keys retain generous rounding in every visual system.
+     * This token is intentionally independent from generic control geometry.
+     */
+    val calculatorKeyRadiusDp: Int
+        get() = when (this) {
+            MATERIAL_YOU -> 22
+            LIQUID_GLASS -> 25
+            FLUENT -> 20
+            ONE_UI -> 25
+            MINIMAL -> 19
+            SOFT_UI -> 25
+            PIXEL -> 18
+        }
+
     companion object {
         fun fromId(id: String): MathFlowUiStyle =
             entries.firstOrNull { it.id == id } ?: MATERIAL_YOU
