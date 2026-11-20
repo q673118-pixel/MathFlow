@@ -577,6 +577,80 @@ private fun MathFlowApp() {
                                                 }
                                             }
                                             Page.SETTINGS -> SettingsPage(
+                                                currentConfig = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
+                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings),
+                                                configProfiles = configProfiles,
+                                                activeConfigId = activeConfigId,
+                                                onCreateConfig = { name ->
+                                                    val profile = MathFlowConfigProfiles.create(name, makeConfigSnapshot(themeId, selectedIconId, fontScale,
+                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings))
+                                                    configProfiles = configProfiles + profile
+                                                    activeConfigId = profile.id
+                                                    prefs.edit().putString("mathflow_active_config", profile.id).apply()
+                                                    MathFlowConfigProfiles.save(context, configProfiles)
+                                                },
+                                                onRenameConfig = { id, name ->
+                                                    configProfiles = configProfiles.map { if (it.id == id) it.copy(name = name.trim().take(48)) else it }
+                                                    MathFlowConfigProfiles.save(context, configProfiles)
+                                                },
+                                                onDeleteConfig = { id ->
+                                                    configProfiles = configProfiles.filterNot { it.id == id }
+                                                    if (activeConfigId == id) {
+                                                        activeConfigId = null
+                                                        prefs.edit().remove("mathflow_active_config").apply()
+                                                    }
+                                                    MathFlowConfigProfiles.save(context, configProfiles)
+                                                },
+                                                onApplyConfig = { profile ->
+                                                    val cfg = validateConfigSnapshot(profile.settings)
+                                                    themeId = cfg.getString("theme")
+                                                    selectedIconId = cfg.getString("icon")
+                                                    fontScale = cfg.getDouble("fontScale").toFloat()
+                                                    appLanguage = cfg.getString("language")
+                                                    measurementSystem = cfg.getString("measurement")
+                                                    val importedFontPath = cfg.optString("fontPath").takeIf { it.isNotBlank() && it != "null" }
+                                                    fontPath = importedFontPath
+                                                    keyAnimationSettings = KeyAnimationSettings(
+                                                        KeyAnimationStyle.fromId(cfg.getString("keyStyle")), cfg.getInt("keyDuration"),
+                                                        cfg.getDouble("keyOpacity").toFloat(), cfg.getDouble("keyIntensity").toFloat(),
+                                                        cfg.getBoolean("keyColorEnabled"), cfg.getLong("keyPressColor")
+                                                    ).normalized()
+                                                    bottomNavAnimationSettings = BottomNavAnimationSettings(
+                                                        cfg.getBoolean("navEnabled"), BottomNavAnimationStyle.fromId(cfg.getString("navStyle")),
+                                                        cfg.getInt("navDuration"), cfg.getDouble("navIntensity").toFloat(),
+                                                        cfg.getDouble("navIconScale").toFloat(), cfg.getDouble("navOpacity").toFloat()
+                                                    ).normalized()
+                                                    prefs.edit()
+                                                        .putString("app_theme", themeId).putString("app_icon", selectedIconId)
+                                                        .putFloat("font_scale", fontScale).putString("app_language", appLanguage)
+                                                        .putString("measurement_system", measurementSystem)
+                                                        .putString("font_path", fontPath)
+                                                        .putBoolean("font_selection_initialized", true)
+                                                        .putString("key_animation_style", keyAnimationSettings.style.id)
+                                                        .putInt("key_animation_duration", keyAnimationSettings.durationMs)
+                                                        .putFloat("key_animation_opacity", keyAnimationSettings.opacity)
+                                                        .putFloat("key_animation_intensity", keyAnimationSettings.intensity)
+                                                        .putBoolean("key_animation_color_enabled", keyAnimationSettings.colorEffectEnabled)
+                                                        .putLong("key_animation_press_color", keyAnimationSettings.pressColorArgb)
+                                                        .putBoolean("nav_animation_enabled", bottomNavAnimationSettings.enabled)
+                                                        .putString("nav_animation_style", bottomNavAnimationSettings.style.id)
+                                                        .putInt("nav_animation_duration", bottomNavAnimationSettings.durationMs)
+                                                        .putFloat("nav_animation_intensity", bottomNavAnimationSettings.intensity)
+                                                        .putFloat("nav_animation_icon_scale", bottomNavAnimationSettings.iconScale)
+                                                        .putFloat("nav_animation_opacity", bottomNavAnimationSettings.opacity).apply()
+                                                    runCatching { setLauncherIcon(context, selectedIconId) }
+                                                    activeConfigId = profile.id
+                                                    prefs.edit().putString("mathflow_active_config", profile.id).apply()
+                                                },
+                                                onImportConfig = { imported ->
+                                                    val cfg = validateConfigSnapshot(imported.settings)
+                                                    val installedPath = MathFlowConfigProfiles.installFont(context, imported.fontFileName, imported.fontBytes)
+                                                    if (installedPath != null) cfg.put("fontPath", installedPath)
+                                                    else if (cfg.optString("fontPath").startsWith("/")) cfg.put("fontPath", JSONObject.NULL)
+                                                    val profile = MathFlowConfigProfiles.create(imported.name, cfg)
+                                                    configProfiles = configProfiles + profile
+                                                    MathFlowConfigProfiles.save(context, configProfiles)
+                                                },
                                                 selectedThemeId = themeId,
                                                 selectedIconId = selectedIconId,
                                                 onThemeSelected = { id ->
@@ -2214,10 +2288,73 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
 
-private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS }
+private enum class SettingsSection { MAIN, ICONS, THEMES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS, CONFIGS }
+
+private fun makeConfigSnapshot(
+    theme: String, icon: String, fontScale: Float, fontPath: String?, language: String,
+    measurement: String, key: KeyAnimationSettings, nav: BottomNavAnimationSettings
+): JSONObject = JSONObject()
+    .put("schemaVersion", 1)
+    .put("theme", theme)
+    .put("icon", icon)
+    .put("fontScale", fontScale.toDouble())
+    .put("fontPath", fontPath ?: JSONObject.NULL)
+    .put("language", language)
+    .put("measurement", measurement)
+    .put("keyStyle", key.style.id)
+    .put("keyDuration", key.durationMs)
+    .put("keyOpacity", key.opacity.toDouble())
+    .put("keyIntensity", key.intensity.toDouble())
+    .put("keyColorEnabled", key.colorEffectEnabled)
+    .put("keyPressColor", key.pressColorArgb)
+    .put("navEnabled", nav.enabled)
+    .put("navStyle", nav.style.id)
+    .put("navDuration", nav.durationMs)
+    .put("navIntensity", nav.intensity.toDouble())
+    .put("navIconScale", nav.iconScale.toDouble())
+    .put("navOpacity", nav.opacity.toDouble())
+
+private fun validateConfigSnapshot(input: JSONObject): JSONObject {
+    val theme = input.optString("theme", "vanilla")
+    val icon = input.optString("icon", "vanilla")
+    require(ThemeOptions.any { it.id == theme }) { "Unknown theme" }
+    require(AppIconOptions.any { it.id == icon }) { "Unknown icon" }
+    val fontScale = input.optDouble("fontScale", 1.0).toFloat()
+    require(fontScale in 0.85f..1.25f) { "Invalid font scale" }
+    val language = input.optString("language", "ru")
+    require(AppLanguages.any { it.tag == language }) { "Unsupported language" }
+    val measurement = input.optString("measurement", "auto")
+    require(measurement in setOf("auto", "metric", "us")) { "Invalid measurement system" }
+    val key = KeyAnimationSettings(
+        KeyAnimationStyle.fromId(input.optString("keyStyle", "spring")),
+        input.optInt("keyDuration", 140),
+        input.optDouble("keyOpacity", 0.72).toFloat(),
+        input.optDouble("keyIntensity", 0.10).toFloat(),
+        input.optBoolean("keyColorEnabled", false),
+        input.optLong("keyPressColor", 0L)
+    ).normalized()
+    val nav = BottomNavAnimationSettings(
+        input.optBoolean("navEnabled", true),
+        BottomNavAnimationStyle.fromId(input.optString("navStyle", "fluid_pill")),
+        input.optInt("navDuration", 280),
+        input.optDouble("navIntensity", 0.65).toFloat(),
+        input.optDouble("navIconScale", 0.08).toFloat(),
+        input.optDouble("navOpacity", 0.85).toFloat()
+    ).normalized()
+    return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
+        language, measurement, key, nav)
+}
 
 @Composable
 private fun SettingsPage(
+    currentConfig: JSONObject,
+    configProfiles: List<MathFlowConfigProfile>,
+    activeConfigId: String?,
+    onCreateConfig: (String) -> Unit,
+    onRenameConfig: (String, String) -> Unit,
+    onDeleteConfig: (String) -> Unit,
+    onApplyConfig: (MathFlowConfigProfile) -> Unit,
+    onImportConfig: (MathFlowConfigArchive.ImportedConfig) -> Unit,
     selectedThemeId: String,
     selectedIconId: String,
     onThemeSelected: (String) -> Unit,
@@ -2261,6 +2398,33 @@ private fun SettingsPage(
         )
     }
     var pendingFontPath by remember(fontPath) { mutableStateOf(fontPath) }
+    var configName by rememberSaveable { mutableStateOf("My configuration") }
+    var renameValue by rememberSaveable { mutableStateOf("") }
+    var selectedConfigId by rememberSaveable { mutableStateOf(activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty()) }
+    var configMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        val profile = configProfiles.firstOrNull { it.id == selectedConfigId }
+        if (uri != null && profile != null) runCatching {
+            val path = profile.settings.optString("fontPath").takeIf { it.isNotBlank() && it != "null" && it != BUILTIN_ARTEGRA_FONT }
+            val font = path?.let { File(it).takeIf(File::isFile)?.readBytes() }
+            val fontName = if (font != null) File(path!!).name else null
+            context.contentResolver.openOutputStream(uri).use { output ->
+                requireNotNull(output) { "Cannot open export destination" }
+                MathFlowConfigArchive.write(output, profile.name, profile.settings, fontName, font)
+            }
+            configMessage = "Configuration exported"
+        }.onFailure { configMessage = it.message ?: "Export failed" }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching {
+            val imported = context.contentResolver.openInputStream(uri).use { input ->
+                requireNotNull(input) { "Cannot open selected file" }
+                MathFlowConfigArchive.read(input)
+            }
+            onImportConfig(imported)
+            configMessage = "Configuration imported"
+        }.onFailure { configMessage = it.message ?: "Import failed" }
+    }
     var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
     val fontOpenError = tx("font_open_error")
@@ -2373,6 +2537,14 @@ private fun SettingsPage(
                             pendingNavAnimationSettings = appliedNavAnimationSettings
                             section = SettingsSection.ANIMATIONS
                         }
+                    )
+                }
+                Panel {
+                    SettingsEntry(
+                        title = "Configurations",
+                        subtitle = "Create, import, export and apply .mf profiles",
+                        icon = Icons.Default.Build,
+                        onClick = { selectedConfigId = activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty(); section = SettingsSection.CONFIGS }
                     )
                 }
                 Panel {
@@ -2790,6 +2962,48 @@ private fun SettingsPage(
                         }
                     )
                 }
+            }
+
+            SettingsSection.CONFIGS -> PageColumn("Configurations") {
+                MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
+                Text("Profiles contain app settings only. Calculation history is never included.", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Field(configName, { configName = it.take(48) }, "New profile name", Modifier.weight(1f), numeric = false)
+                    ActionButton("Create", Modifier.width(104.dp)) { if (configName.isNotBlank()) { onCreateConfig(configName); configMessage = "Profile created" } }
+                }
+                if (configProfiles.isEmpty()) {
+                    Panel { Text("No profiles yet. Create one from the current app settings.", color = p.muted, fontSize = 13.sp) }
+                }
+                configProfiles.forEach { profile ->
+                    val selected = selectedConfigId == profile.id
+                    Panel {
+                        Row(Modifier.fillMaxWidth().mathFlowClickable { selectedConfigId = profile.id },
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(profile.name, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                                Text(if (activeConfigId == profile.id) "Active profile" else "Saved profile",
+                                    color = p.muted, fontSize = 12.sp)
+                            }
+                            if (selected) Icon(Icons.Default.Check, contentDescription = null, tint = p.accent)
+                        }
+                        if (selected) {
+                            Field(renameValue.ifBlank { profile.name }, { renameValue = it.take(48) }, "Rename", numeric = false)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ActionButton("Apply", Modifier.weight(1f)) { onApplyConfig(profile); configMessage = "Profile applied" }
+                                ActionButton("Export .mf", Modifier.weight(1f)) { exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf") }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ActionButton("Rename", Modifier.weight(1f)) {
+                                    val name = renameValue.trim()
+                                    if (name.isNotEmpty()) { onRenameConfig(profile.id, name); renameValue = ""; configMessage = "Profile renamed" }
+                                }
+                                ActionButton("Delete", Modifier.weight(1f)) { onDeleteConfig(profile.id); configMessage = "Profile deleted" }
+                            }
+                        }
+                    }
+                }
+                ActionButton("Import .mf") { importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
+                configMessage?.let { Text(it, color = p.accent, fontSize = 12.sp) }
             }
 
             SettingsSection.LANGUAGE -> PageColumn(tx("app_language")) {
