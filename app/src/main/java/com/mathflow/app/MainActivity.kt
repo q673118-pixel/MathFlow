@@ -2427,6 +2427,14 @@ private fun SettingsPage(
 ) {
     val p = LocalPalette.current
     val context = LocalContext.current
+    val profileExportedMessage = tx("profile_exported")
+    val profileExportFailedMessage = tx("profile_export_failed")
+    val profileImportedMessage = tx("profile_imported")
+    val profileImportFailedMessage = tx("profile_import_failed")
+    val profileCreatedMessage = tx("profile_created")
+    val profileAppliedMessage = tx("profile_applied")
+    val profileRenamedMessage = tx("profile_renamed")
+    val profileDeletedMessage = tx("profile_deleted")
     var section by rememberSaveable { mutableStateOf(SettingsSection.MAIN) }
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
@@ -2471,8 +2479,8 @@ private fun SettingsPage(
                 requireNotNull(output) { "Cannot open export destination" }
                 MathFlowConfigArchive.write(output, profile.name, profile.settings, fontName, font)
             }
-            configMessage = tx("profile_exported")
-        }.onFailure { configMessage = tx("profile_export_failed") }
+            configMessage = profileExportedMessage
+        }.onFailure { configMessage = profileExportFailedMessage }
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) runCatching {
@@ -2481,8 +2489,8 @@ private fun SettingsPage(
                 MathFlowConfigArchive.read(input)
             }
             onImportConfig(imported)
-            configMessage = tx("profile_imported")
-        }.onFailure { configMessage = tx("profile_import_failed") }
+            configMessage = profileImportedMessage
+        }.onFailure { configMessage = profileImportFailedMessage }
     }
     var languageQuery by rememberSaveable { mutableStateOf("") }
     val fontFileTypeError = tx("font_file_type")
@@ -3028,7 +3036,7 @@ private fun SettingsPage(
                 Text(tx("configurations_description"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Field(configName, { configName = it.take(48) }, tx("profile_name_placeholder"), Modifier.weight(1f), numeric = false)
-                    ActionButton(tx("create_profile"), Modifier.width(104.dp)) { if (configName.isNotBlank()) { onCreateConfig(configName); configMessage = tx("profile_created") } }
+                    ActionButton(tx("create_profile"), Modifier.width(104.dp)) { if (configName.isNotBlank()) { onCreateConfig(configName); configMessage = profileCreatedMessage } }
                 }
                 if (configProfiles.isEmpty()) {
                     Panel { Text(tx("no_profiles_hint"), color = p.muted, fontSize = 13.sp) }
@@ -3048,15 +3056,15 @@ private fun SettingsPage(
                         if (selected) {
                             Field(renameValue.ifBlank { profile.name }, { renameValue = it.take(48) }, tx("profile_name_placeholder"), numeric = false)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ActionButton(tx("apply_profile"), Modifier.weight(1f)) { onApplyConfig(profile); configMessage = tx("profile_applied") }
+                                ActionButton(tx("apply_profile"), Modifier.weight(1f)) { onApplyConfig(profile); configMessage = profileAppliedMessage }
                                 ActionButton(tx("export_profile"), Modifier.weight(1f)) { exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf") }
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 ActionButton(tx("rename_profile"), Modifier.weight(1f)) {
                                     val name = renameValue.trim()
-                                    if (name.isNotEmpty()) { onRenameConfig(profile.id, name); renameValue = ""; configMessage = tx("profile_renamed") }
+                                    if (name.isNotEmpty()) { onRenameConfig(profile.id, name); renameValue = ""; configMessage = profileRenamedMessage }
                                 }
-                                ActionButton(tx("delete_profile"), Modifier.weight(1f)) { onDeleteConfig(profile.id); configMessage = tx("profile_deleted") }
+                                ActionButton(tx("delete_profile"), Modifier.weight(1f)) { onDeleteConfig(profile.id); configMessage = profileDeletedMessage }
                             }
                         }
                     }
