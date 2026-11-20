@@ -147,6 +147,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        // Apply a previously selected launcher alias during startup, not while
+        // the user is interacting with the UI. Some OEM launchers background
+        // the task while refreshing launcher components.
+        getSharedPreferences("mathflow_settings", MODE_PRIVATE)
+            .getString("app_icon", null)
+            ?.let { iconId -> runCatching { setLauncherIcon(this, iconId) } }
         enableEdgeToEdge()
         setContent { MathFlowApp() }
     }
@@ -583,7 +589,6 @@ private fun MathFlowApp() {
                                                 onIconSelected = { id ->
                                                     selectedIconId = id
                                                     prefs.edit().putString("app_icon", id).apply()
-                                                    setLauncherIcon(context, id)
                                                 },
                                                 fontScale = fontScale,
                                                 fontPath = fontPath,
@@ -668,7 +673,6 @@ private fun MathFlowApp() {
                                 onIconSelected = { id ->
                                     selectedIconId = id
                                     prefs.edit().putString("app_icon", id).apply()
-                                    setLauncherIcon(context, id)
                                 },
                                 onFontSelected = { selected ->
                                     fontPath = selected
@@ -714,6 +718,7 @@ private fun FirstLaunchWelcome(
 ) {
     var languagePickerOpen by remember { mutableStateOf(false) }
     var languageQuery by rememberSaveable { mutableStateOf("") }
+    var pendingIconId by rememberSaveable { mutableStateOf(selectedIconId) }
     val activeLanguage = AppLanguages.firstOrNull { it.tag == language } ?: AppLanguages.first()
     val p = palette
     Dialog(
@@ -810,27 +815,14 @@ private fun FirstLaunchWelcome(
                         Text("03", color = p.accent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     ThemeOptions.chunked(2).forEach { rowThemes ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             rowThemes.forEach { option ->
-                                val selected = themeId == option.id
-                                Surface(
-                                    modifier = Modifier.weight(1f).mathFlowClickable { onThemeSelected(option.id) },
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (selected) p.navActive else p.key,
-                                    border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
-                                ) {
-                                    Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            listOf(option.palette.background, option.palette.surface, option.palette.accent).forEach { swatch ->
-                                                Box(Modifier.weight(1f).height(8.dp).clip(CircleShape).background(swatch))
-                                            }
-                                        }
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(option.title, modifier = Modifier.weight(1f), color = p.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                            if (selected) Icon(Icons.Default.Check, null, tint = p.accent, modifier = Modifier.size(15.dp))
-                                        }
-                                    }
-                                }
+                                ThemeOptionCard(
+                                    option = option,
+                                    selected = themeId == option.id,
+                                    applied = themeId == option.id,
+                                    modifier = Modifier.weight(1f)
+                                ) { onThemeSelected(option.id) }
                             }
                             if (rowThemes.size == 1) Spacer(Modifier.weight(1f))
                         }
@@ -839,22 +831,18 @@ private fun FirstLaunchWelcome(
 
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(tx("app_icons"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    AppIconOptions.chunked(5).forEach { rowIcons ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(tx("icon_hint"), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                    AppIconOptions.chunked(2).forEach { rowIcons ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             rowIcons.forEach { option ->
-                                val selected = selectedIconId == option.id
-                                Surface(
-                                    modifier = Modifier.weight(1f).mathFlowClickable { onIconSelected(option.id) },
-                                    shape = RoundedCornerShape(15.dp),
-                                    color = if (selected) p.navActive else p.key,
-                                    border = androidx.compose.foundation.BorderStroke(if (selected) 1.4.dp else 1.dp, if (selected) p.accent else Color.Transparent)
-                                ) {
-                                    Column(Modifier.padding(vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        LauncherIconPreview(option.drawable, option.title, Modifier.size(34.dp))
-                                        Text(option.title, color = p.text, fontSize = 9.sp, maxLines = 1)
-                                    }
-                                }
+                                IconOptionCard(
+                                    option = option,
+                                    selected = pendingIconId == option.id,
+                                    applied = selectedIconId == option.id,
+                                    modifier = Modifier.weight(1f)
+                                ) { pendingIconId = option.id }
                             }
+                            if (rowIcons.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
@@ -891,7 +879,10 @@ private fun FirstLaunchWelcome(
                 }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth().mathFlowClickable { onConfirm() },
+                    modifier = Modifier.fillMaxWidth().mathFlowClickable {
+                        if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
+                        onConfirm()
+                    },
                     shape = RoundedCornerShape(18.dp),
                     color = p.accent
                 ) {
@@ -2138,20 +2129,24 @@ private val AppIconOptions = listOf(
 private fun setLauncherIcon(context: Context, iconId: String) {
     val packageManager = context.packageManager
     val selected = AppIconOptions.firstOrNull { it.id == iconId } ?: AppIconOptions.first()
-    val aliases = AppIconOptions
-    val selectedComponent = android.content.ComponentName(context, "${context.packageName}.Launcher${selected.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}")
-    packageManager.setComponentEnabledSetting(
-        selectedComponent,
-        android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-        android.content.pm.PackageManager.DONT_KILL_APP
-    )
-    aliases.filterNot { it.id == selected.id }.forEach { option ->
-        val component = android.content.ComponentName(context, "${context.packageName}.Launcher${option.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}")
-        packageManager.setComponentEnabledSetting(
-            component,
-            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-            android.content.pm.PackageManager.DONT_KILL_APP
+    AppIconOptions.forEach { option ->
+        val component = android.content.ComponentName(
+            context,
+            "${context.packageName}.Launcher${option.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}"
         )
+        val desiredState = if (option.id == selected.id) {
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } else {
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        }
+        val currentState = packageManager.getComponentEnabledSetting(component)
+        if (currentState != desiredState) {
+            packageManager.setComponentEnabledSetting(
+                component,
+                desiredState,
+                android.content.pm.PackageManager.DONT_KILL_APP
+            )
+        }
     }
 }
 
@@ -2914,6 +2909,11 @@ private fun IconOptionCard(
         animationSpec = tween(190, easing = FastOutSlowInEasing),
         label = "IconCardBorder"
     )
+    val cardContainer by animateColorAsState(
+        if (selected) p.navActive else p.surface,
+        animationSpec = tween(190, easing = FastOutSlowInEasing),
+        label = "IconCardContainer"
+    )
     val cardScale by animateFloatAsState(
         if (selected) 1f else 0.985f,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 520f),
@@ -2921,8 +2921,9 @@ private fun IconOptionCard(
     )
     Column(
         modifier.graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+            .animateContentSize(tween(200, easing = FastOutSlowInEasing))
             .clip(shape)
-            .background(if (selected) p.navActive else p.surface)
+            .background(cardContainer)
             .border(if (selected) 1.8.dp else 1.dp, borderColor, shape)
             .mathFlowClickable(onClick = onClick)
             .padding(8.dp),
@@ -2937,7 +2938,7 @@ private fun IconOptionCard(
             LauncherIconPreview(
                 drawable = option.drawable,
                 contentDescription = option.title,
-                modifier = Modifier.size(50.dp)
+                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(14.dp))
             )
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
