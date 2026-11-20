@@ -76,8 +76,9 @@ internal fun MathFlowTextButton(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+    val uiStyle = LocalMathFlowUiStyle.current
     Box(
-        modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(14.dp))
+        modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
             .mathFlowClickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
