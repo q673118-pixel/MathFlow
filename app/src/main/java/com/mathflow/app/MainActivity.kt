@@ -3371,7 +3371,7 @@ private fun SettingsPage(
                     }
                     Text(tx("profile_saved_before_apply"), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
                     HorizontalDivider(color = p.key)
-                    Text(tx("themes") + ": " + previewThemeOption.title, fontSize = 13.sp)
+                    Text(tx("theme_hint") + ": " + previewThemeOption.title, fontSize = 13.sp)
                     Text(tx("app_icons") + ": " + (AppIconOptions.firstOrNull { it.id == (previewConfig?.optString("icon") ?: "") }?.title ?: "—"), fontSize = 13.sp)
                     Text(tx("app_language") + ": " + (previewConfig?.optString("language") ?: "—").uppercase(Locale.ROOT), fontSize = 13.sp)
                     Text(tx("animations") + ": " + (previewConfig?.optString("keyStyle") ?: "—") + " / " + (previewConfig?.optString("navStyle") ?: "—"), fontSize = 13.sp)
