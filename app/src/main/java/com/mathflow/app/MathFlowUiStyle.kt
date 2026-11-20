@@ -61,15 +61,7 @@ internal enum class MathFlowUiStyle(
      * This token is intentionally independent from generic control geometry.
      */
     val calculatorKeyRadiusDp: Int
-        get() = when (this) {
-            MATERIAL_YOU -> 22
-            LIQUID_GLASS -> 25
-            FLUENT -> 20
-            ONE_UI -> 25
-            MINIMAL -> 19
-            SOFT_UI -> 25
-            PIXEL -> 18
-        }
+        get() = 28
 
     companion object {
         fun fromId(id: String): MathFlowUiStyle =
