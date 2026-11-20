@@ -1498,8 +1498,9 @@ private fun CalculatorHome(
                         listOf(decimalFormatLabel, fractionFormatLabel),
                         if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
                     ) { selected ->
-                        onResultFormatChange(if (selected == decimalFormatLabel) "decimal" else "fraction")
-                        result = if (resultFormat == "decimal") decimalResult else fractionResult
+                        val selectedFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
+                        onResultFormatChange(selectedFormat)
+                        result = if (selectedFormat == "decimal") decimalResult else fractionResult
                     }
                 }
                 Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
