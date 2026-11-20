@@ -115,13 +115,14 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.HazeInputScale
-import dev.chrisbanes.haze.LocalHazeStyle
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
+import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.highlight.Highlight
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -445,7 +446,7 @@ private fun typographyFor(family: FontFamily): Typography {
 private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
-    val hazeState = remember { HazeState() }
+    val backdrop = rememberLayerBackdrop()
     var themeId by remember {
         mutableStateOf(prefs.getString("app_theme", if (prefs.getBoolean("dark_mode", true)) "vanilla" else "white") ?: "vanilla")
     }
@@ -601,8 +602,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
-        LocalMathFlowHazeState provides hazeState,
-        LocalHazeStyle provides HazeStyle(backgroundColor = palette.background, tints = emptyList()),
         LocalKeyAnimationSettings provides keyAnimationSettings,
         // Disable all global press indications: no ripple, droplets, particles, or color overlay.
         LocalIndication provides MathFlowNoIndication,
@@ -663,7 +662,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth()
-                                            .hazeSource(state = hazeState)
+                                            .layerBackdrop(backdrop)
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
                                                 translationX = (1f - enterProgress.value) * 8.dp.toPx()
@@ -866,7 +865,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                 }
                             }
-                            BottomNav(page, bottomNavAnimationSettings) { page = it }
+                            BottomNav(page, bottomNavAnimationSettings, backdrop = backdrop) { page = it }
                         }
                         if (showWelcome && splashFinished) {
                             FirstLaunchWelcome(
@@ -1216,6 +1215,7 @@ private const val PAGE_ENTER_DURATION_MS = 260
 private fun BottomNav(
     current: Page,
     settings: BottomNavAnimationSettings,
+    backdrop: Backdrop? = null,
     preview: Boolean = false,
     onSelect: (Page) -> Unit
 ) {
@@ -1241,23 +1241,25 @@ private fun BottomNav(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = if (uiStyle.glassSurface) {
-                Modifier.hazeEffect(
-                    state = LocalMathFlowHazeState.current,
-                    style = HazeStyle(
-                        backgroundColor = p.surface,
-                        tints = listOf(HazeTint(p.accent.copy(alpha = 0.08f))),
-                        blurRadius = 16.dp,
-                        noiseFactor = 0.04f
-                    )
-                ) {
-                    // Downsample captured pixels to reduce GPU bandwidth on mid-range phones.
-                    inputScale = HazeInputScale.Fixed(0.66f)
-                }
+            modifier = if (uiStyle.glassSurface && backdrop != null) {
+                Modifier.drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { RoundedCornerShape(35.dp) },
+                    effects = {
+                        // Blur first, then refract: reversing this order washes out the lens detail.
+                        vibrancy()
+                        blur(26.dp.toPx())
+                        lens(34.dp.toPx(), 34.dp.toPx())
+                    },
+                    highlight = { Highlight(width = 1.2.dp) },
+                    onDrawSurface = {
+                        drawRect(p.surface.copy(alpha = 0.22f))
+                    }
+                )
             } else Modifier,
-            shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-            color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = uiStyle.elevationDp.dp
+            shape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp),
+            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
@@ -1291,10 +1293,17 @@ private fun BottomNav(
                 }
                 // The indicator always follows the duration slider. Spring-like character
                 // is retained by the stretch and icon-scale effects below.
-                val offsetSpec = tween<Float>(
-                    durationMillis = duration,
-                    easing = FastOutSlowInEasing
-                )
+                val offsetSpec = if (uiStyle.glassSurface && settings.enabled) {
+                    spring<Float>(
+                        dampingRatio = 0.76f,
+                        stiffness = springStiffness * 0.92f
+                    )
+                } else {
+                    tween<Float>(
+                        durationMillis = duration,
+                        easing = FastOutSlowInEasing
+                    )
+                }
                 val indicatorOffset by animateFloatAsState(
                     targetValue = targetOffset,
                     animationSpec = offsetSpec,
@@ -1347,60 +1356,31 @@ private fun BottomNav(
                         travelStretch.snapTo(1f)
                     }
                 }
-                if (uiStyle.glassSurface) {
-                    // Liquid Glass uses a moving water-drop indicator rather than a static pill.
-                    Canvas(
+                if (uiStyle.glassSurface && backdrop != null) {
+                    // The active item is itself a small refractive glass lens.
+                    // Its shape stays capsule-like; the spring stretch supplies the liquid motion.
+                    Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 translationX = indicatorOffset
                                 scaleX = indicatorScaleX * travelStretch.value
-                                scaleY = 2f - travelStretch.value
+                                scaleY = 1f / (1f + (travelStretch.value - 1f) * 0.42f)
                                 alpha = indicatorAlpha
                             }
-                            .size(width = indicatorWidth, height = indicatorHeight)
-                    ) {
-                        val w = size.width
-                        val h = size.height
-                        val drop = androidx.compose.ui.graphics.Path().apply {
-                            moveTo(w * 0.32f, 0f)
-                            lineTo(w * 0.68f, 0f)
-                            cubicTo(w * 0.86f, 0f, w, h * 0.16f, w, h * 0.34f)
-                            lineTo(w, h * 0.62f)
-                            cubicTo(w, h * 0.81f, w * 0.82f, h * 0.88f, w * 0.67f, h * 0.88f)
-                            cubicTo(w * 0.59f, h * 0.89f, w * 0.54f, h * 0.96f, w * 0.5f, h)
-                            cubicTo(w * 0.46f, h * 0.96f, w * 0.41f, h * 0.89f, w * 0.33f, h * 0.88f)
-                            cubicTo(w * 0.18f, h * 0.88f, 0f, h * 0.81f, 0f, h * 0.62f)
-                            lineTo(0f, h * 0.34f)
-                            cubicTo(0f, h * 0.16f, w * 0.14f, 0f, w * 0.32f, 0f)
-                            close()
-                        }
-                        drawPath(
-                            drop,
-                            brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                                colors = listOf(
-                                    p.accent.copy(alpha = 0.98f),
-                                    p.navActive.copy(alpha = 0.96f),
-                                    p.accent.copy(alpha = 0.90f)
-                                ),
-                                start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                                end = androidx.compose.ui.geometry.Offset(w, h)
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(percent = 50) },
+                                effects = {
+                                    blur(2.dp.toPx())
+                                    lens(12.dp.toPx(), 22.dp.toPx(), chromaticAberration = true)
+                                },
+                                highlight = { Highlight.Default.copy(alpha = 0.88f) },
+                                onDrawSurface = {
+                                    drawRect(p.accent.copy(alpha = 0.12f))
+                                }
                             )
-                        )
-                        drawPath(
-                            drop,
-                            color = Color.White.copy(alpha = 0.20f),
-                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
-                        )
-                        drawOval(
-                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                                colors = listOf(Color.White.copy(alpha = 0.24f), Color.Transparent),
-                                center = androidx.compose.ui.geometry.Offset(w * 0.34f, h * 0.20f),
-                                radius = w * 0.34f
-                            ),
-                            topLeft = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.08f),
-                            size = androidx.compose.ui.geometry.Size(w * 0.52f, h * 0.28f)
-                        )
-                    }
+                            .size(width = indicatorWidth, height = indicatorHeight)
+                    )
                 } else if (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled) {
                     Box(
                         Modifier.align(Alignment.CenterStart)
