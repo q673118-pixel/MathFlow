@@ -118,6 +118,7 @@ import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -1264,6 +1265,28 @@ private fun BottomNav(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
                 val itemWidth = maxWidth / Page.values().size
+                // Record the tab glyphs separately so the moving lens refracts both
+                // the page beneath the bar and the navigation material itself.
+                val tabsBackdrop = if (uiStyle.glassSurface && backdrop != null) {
+                    rememberLayerBackdrop()
+                } else null
+                val indicatorBackdrop = if (tabsBackdrop != null && backdrop != null) {
+                    rememberCombinedBackdrop(backdrop, tabsBackdrop)
+                } else backdrop
+                if (tabsBackdrop != null) {
+                    Row(
+                        Modifier.fillMaxWidth().height(48.dp)
+                            .graphicsLayer { alpha = 0f }
+                            .layerBackdrop(tabsBackdrop),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Page.values().forEach { item ->
+                            Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Icon(item.icon, contentDescription = null, tint = p.muted, modifier = Modifier.size(26.dp))
+                            }
+                        }
+                    }
+                }
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
@@ -1367,7 +1390,7 @@ private fun BottomNav(
                                 alpha = indicatorAlpha
                             }
                             .drawBackdrop(
-                                backdrop = backdrop,
+                                backdrop = indicatorBackdrop ?: backdrop!!,
                                 shape = { RoundedCornerShape(percent = 50) },
                                 effects = {
                                     blur(2.dp.toPx())
