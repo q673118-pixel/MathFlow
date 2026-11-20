@@ -147,12 +147,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
-        // Apply a previously selected launcher alias during startup, not while
-        // the user is interacting with the UI. Some OEM launchers background
-        // the task while refreshing launcher components.
-        getSharedPreferences("mathflow_settings", MODE_PRIVATE)
-            .getString("app_icon", null)
-            ?.let { iconId -> runCatching { setLauncherIcon(this, iconId) } }
         enableEdgeToEdge()
         setContent { MathFlowApp() }
     }
@@ -454,10 +448,6 @@ private fun MathFlowApp() {
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     var splashFinished by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        setLauncherIcon(context, selectedIconId)
-    }
-
     val customFont: FontFamily? = remember(fontPath) {
         fontPath?.takeUnless { it == BUILTIN_ARTEGRA_FONT }?.let { path ->
             runCatching {
@@ -587,6 +577,7 @@ private fun MathFlowApp() {
                                                     prefs.edit().putString("app_theme", id).apply()
                                                 },
                                                 onIconSelected = { id ->
+                                                    runCatching { setLauncherIcon(context, id) }
                                                     selectedIconId = id
                                                     prefs.edit().putString("app_icon", id).apply()
                                                 },
@@ -671,6 +662,7 @@ private fun MathFlowApp() {
                                     prefs.edit().putString("app_theme", id).apply()
                                 },
                                 onIconSelected = { id ->
+                                    runCatching { setLauncherIcon(context, id) }
                                     selectedIconId = id
                                     prefs.edit().putString("app_icon", id).apply()
                                 },
@@ -2161,7 +2153,7 @@ private val AppIconOptions = listOf(
 private fun setLauncherIcon(context: Context, iconId: String) {
     val packageManager = context.packageManager
     val selected = AppIconOptions.firstOrNull { it.id == iconId } ?: AppIconOptions.first()
-    AppIconOptions.forEach { option ->
+    val changes = AppIconOptions.mapNotNull { option ->
         val component = android.content.ComponentName(
             context,
             "${context.packageName}.Launcher${option.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}"
@@ -2171,14 +2163,45 @@ private fun setLauncherIcon(context: Context, iconId: String) {
         } else {
             android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
         }
-        val currentState = packageManager.getComponentEnabledSetting(component)
-        if (currentState != desiredState) {
-            packageManager.setComponentEnabledSetting(
+        if (packageManager.getComponentEnabledSetting(component) == desiredState) {
+            null
+        } else {
+            component to desiredState
+        }
+    }
+
+    if (changes.isEmpty()) return
+
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        // Android 13+: apply the alias changes as one package-manager operation.
+        // This avoids the intermediate state where no launcher alias is enabled.
+        val settings = changes.map { (component, state) ->
+            android.content.pm.PackageManager.ComponentEnabledSetting(
                 component,
-                desiredState,
+                state,
                 android.content.pm.PackageManager.DONT_KILL_APP
             )
         }
+        packageManager.setComponentEnabledSettings(settings)
+    } else {
+        // Older Android versions have no atomic batch API. Enable the new entry
+        // point first, then disable the remaining aliases.
+        changes.firstOrNull { it.second == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED }
+            ?.let { (component, state) ->
+                packageManager.setComponentEnabledSetting(
+                    component,
+                    state,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+            }
+        changes.filter { it.second == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED }
+            .forEach { (component, state) ->
+                packageManager.setComponentEnabledSetting(
+                    component,
+                    state,
+                    android.content.pm.PackageManager.DONT_KILL_APP
+                )
+            }
     }
 }
 
