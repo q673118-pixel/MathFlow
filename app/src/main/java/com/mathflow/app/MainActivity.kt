@@ -3130,42 +3130,105 @@ private fun SettingsPage(
             SettingsSection.CONFIGS -> PageColumn(tx("configurations")) {
                 MathFlowTextButton("← ${tx("settings")}", p.accent) { section = SettingsSection.MAIN }
                 Text(tx("configurations_description"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Field(configName, { configName = it.take(48) }, tx("profile_name_placeholder"), Modifier.weight(1f), numeric = false)
-                    ActionButton(tx("create_profile"), Modifier.width(104.dp)) { if (configName.isNotBlank()) { onCreateConfig(configName); configMessage = profileCreatedMessage } }
+                Panel {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(p.navActive), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Build, null, tint = p.accent, modifier = Modifier.size(22.dp))
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(tx("profile_manager_title"), color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                            Text(tx("profile_manager_subtitle"), color = p.muted, fontSize = 11.sp)
+                        }
+                        Text(configProfiles.size.toString(), color = p.accent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Field(configName, { configName = it.take(48) }, tx("profile_name_placeholder"), Modifier.weight(1f), numeric = false)
+                        ActionButton(tx("create_profile"), Modifier.width(104.dp)) {
+                            if (configName.isNotBlank()) {
+                                onCreateConfig(configName)
+                                configName = ""
+                                configMessage = profileCreatedMessage
+                            }
+                        }
+                    }
+                    ActionButton(tx("import_profile")) {
+                        importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                    }
                 }
                 if (configProfiles.isEmpty()) {
-                    Panel { Text(tx("no_profiles_hint"), color = p.muted, fontSize = 13.sp) }
+                    Panel { Text(tx("no_profiles_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp) }
+                } else {
+                    Text(tx("my_configurations"), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 }
                 configProfiles.forEach { profile ->
                     val selected = selectedConfigId == profile.id
+                    val cfg = runCatching { validateConfigSnapshot(profile.settings) }.getOrNull()
+                    val profileTheme = cfg?.optString("theme", "vanilla") ?: "vanilla"
+                    val profileIcon = cfg?.optString("icon", "vanilla") ?: "vanilla"
+                    val themeOption = ThemeOptions.firstOrNull { it.id == profileTheme } ?: ThemeOptions.first()
                     Panel {
-                        Row(Modifier.fillMaxWidth().mathFlowClickable { selectedConfigId = profile.id },
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text(profile.name, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                                Text(if (activeConfigId == profile.id) tx("active_profile") else tx("saved_profile"),
-                                    color = p.muted, fontSize = 12.sp)
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp))
+                                .background(if (selected) p.navActive.copy(alpha = 0.45f) else Color.Transparent)
+                                .mathFlowClickable { selectedConfigId = profile.id }
+                                .padding(vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(11.dp)
+                        ) {
+                            Box(Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(themeOption.palette.background)
+                                .border(1.dp, themeOption.palette.accent.copy(alpha = 0.55f), RoundedCornerShape(14.dp)),
+                                contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Settings, null, tint = themeOption.palette.accent, modifier = Modifier.size(22.dp))
                             }
-                            if (selected) Icon(Icons.Default.Check, contentDescription = null, tint = p.accent)
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(profile.name, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
+                                Text(
+                                    (ThemeOptions.firstOrNull { it.id == profileTheme }?.title ?: profileTheme) +
+                                        " · " + (AppIconOptions.firstOrNull { it.id == profileIcon }?.title ?: profileIcon),
+                                    color = p.muted, fontSize = 11.sp
+                                )
+                                Text(if (activeConfigId == profile.id) tx("active_profile") else tx("saved_profile"),
+                                    color = if (activeConfigId == profile.id) p.accent else p.muted, fontSize = 11.sp)
+                            }
+                            if (activeConfigId == profile.id) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = p.accent)
+                            } else if (selected) {
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = p.accent)
+                            }
                         }
                         if (selected) {
+                            HorizontalDivider(color = p.key)
                             Field(renameValue.ifBlank { profile.name }, { renameValue = it.take(48) }, tx("profile_name_placeholder"), numeric = false)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ActionButton(tx("apply_profile"), Modifier.weight(1f)) { onApplyConfig(profile); configMessage = profileAppliedMessage }
-                                ActionButton(tx("export_profile"), Modifier.weight(1f)) { exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf") }
+                            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                ActionButton(tx("apply_profile"), Modifier.weight(1f)) {
+                                    onApplyConfig(profile)
+                                    configMessage = profileAppliedMessage
+                                }
+                                ActionButton(tx("export_profile"), Modifier.weight(1f)) {
+                                    exportLauncher.launch(profile.name.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".mf")
+                                }
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                ActionButton(tx("duplicate_profile"), Modifier.weight(1f)) {
+                                    onDuplicateConfig(profile)
+                                    configMessage = profileCreatedMessage
+                                }
                                 ActionButton(tx("rename_profile"), Modifier.weight(1f)) {
                                     val name = renameValue.trim()
-                                    if (name.isNotEmpty()) { onRenameConfig(profile.id, name); renameValue = ""; configMessage = profileRenamedMessage }
+                                    if (name.isNotEmpty()) {
+                                        onRenameConfig(profile.id, name)
+                                        renameValue = ""
+                                        configMessage = profileRenamedMessage
+                                    }
                                 }
-                                ActionButton(tx("delete_profile"), Modifier.weight(1f)) { onDeleteConfig(profile.id); configMessage = profileDeletedMessage }
+                            }
+                            ActionButton(tx("delete_profile")) {
+                                onDeleteConfig(profile.id)
+                                configMessage = profileDeletedMessage
                             }
                         }
                     }
                 }
-                ActionButton(tx("import_profile")) { importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
                 configMessage?.let { Text(it, color = p.accent, fontSize = 12.sp) }
             }
 
