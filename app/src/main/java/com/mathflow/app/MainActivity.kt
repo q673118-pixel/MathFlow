@@ -118,6 +118,7 @@ import androidx.compose.ui.res.painterResource
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import androidx.compose.ui.window.Dialog
@@ -1250,10 +1251,13 @@ private fun BottomNav(
                     style = HazeStyle(
                         backgroundColor = p.surface,
                         tints = listOf(HazeTint(p.accent.copy(alpha = 0.08f))),
-                        blurRadius = 18.dp,
+                        blurRadius = 16.dp,
                         noiseFactor = 0.04f
                     )
-                )
+                ) {
+                    // Downsample captured pixels to reduce GPU bandwidth on mid-range phones.
+                    inputScale = HazeInputScale.Fixed(0.66f)
+                }
             } else Modifier,
             shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
             color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
