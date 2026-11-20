@@ -611,7 +611,27 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                 androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = family)
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
+                    val themeBloom = remember { Animatable(1f) }
+                    LaunchedEffect(themeId) {
+                        themeBloom.snapTo(0f)
+                        themeBloom.animateTo(1f, animationSpec = tween(680, easing = FastOutSlowInEasing))
+                    }
                     Box(Modifier.fillMaxSize()) {
+                        Canvas(Modifier.fillMaxSize()) {
+                            val progress = themeBloom.value
+                            if (progress < 1f) {
+                                val radius = size.maxDimension * (0.18f + progress * 0.92f)
+                                drawCircle(
+                                    brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                        colors = listOf(palette.accent.copy(alpha = 0.10f * (1f - progress)), Color.Transparent),
+                                        center = center,
+                                        radius = radius
+                                    ),
+                                    radius = radius,
+                                    center = center
+                                )
+                            }
+                        }
                         Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
                             // Keep only one full page tree composed on low-memory devices.
                             key(page) {
@@ -2697,13 +2717,23 @@ private fun SettingsPage(
                         icon = Icons.Default.Build,
                         onClick = { pendingIconId = selectedIconId; section = SettingsSection.ICONS }
                     )
-                }
-                Panel {
+                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = tx("themes"),
                         subtitle = tx("theme_entry_subtitle"),
                         icon = Icons.Default.Settings,
                         onClick = { pendingThemeId = selectedThemeId; section = SettingsSection.THEMES }
+                    )
+                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
+                    SettingsEntry(
+                        title = tx("fonts"),
+                        subtitle = tx("font_library_hint"),
+                        icon = Icons.Default.Functions,
+                        onClick = {
+                            pendingFontPath = fontPath
+                            fontMessage = null
+                            section = SettingsSection.FONTS
+                        }
                     )
                 }
                 Panel {
@@ -2713,8 +2743,7 @@ private fun SettingsPage(
                         icon = Icons.Default.Functions,
                         onClick = { section = SettingsSection.LANGUAGE }
                     )
-                }
-                Panel {
+                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = measurementText("measurements", LocalLanguage.current),
                         subtitle = measurementText("measurements_subtitle", LocalLanguage.current),
@@ -2733,25 +2762,12 @@ private fun SettingsPage(
                             section = SettingsSection.ANIMATIONS
                         }
                     )
-                }
-                Panel {
+                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = tx("configurations"),
                         subtitle = tx("configurations_subtitle"),
                         icon = Icons.Default.Build,
                         onClick = { selectedConfigId = activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty(); section = SettingsSection.CONFIGS }
-                    )
-                }
-                Panel {
-                    SettingsEntry(
-                        title = tx("fonts"),
-                        subtitle = tx("font_library_hint"),
-                        icon = Icons.Default.Functions,
-                        onClick = {
-                            pendingFontPath = fontPath
-                            fontMessage = null
-                            section = SettingsSection.FONTS
-                        }
                     )
                 }
                 Panel {
