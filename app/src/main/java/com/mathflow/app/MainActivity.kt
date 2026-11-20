@@ -2507,6 +2507,7 @@ private fun SettingsPage(
     var renameValue by rememberSaveable { mutableStateOf("") }
     var selectedConfigId by rememberSaveable { mutableStateOf(activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty()) }
     var configMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingImportedProfile by remember { mutableStateOf<MathFlowConfigProfile?>(null) }
     LaunchedEffect(configProfiles, activeConfigId) {
         if (activeConfigId != null && configProfiles.any { it.id == activeConfigId }) {
             selectedConfigId = activeConfigId
@@ -2538,28 +2539,37 @@ private fun SettingsPage(
             }
         }
     }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            ioScope.launch {
-                val imported = withContext(Dispatchers.IO) {
-                    runCatching {
-                        context.contentResolver.openInputStream(uri).use { input ->
-                            requireNotNull(input) { "Cannot open selected file" }
-                            MathFlowConfigArchive.read(input)
-                        }
+    val importFromUri: (Uri) -> Unit = { uri ->
+        ioScope.launch {
+            val imported = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri).use { input ->
+                        requireNotNull(input) { "Cannot open selected file" }
+                        MathFlowConfigArchive.read(input)
                     }
-                }
-                if (imported.isSuccess) {
-                    try {
-                        onImportConfig(imported.getOrThrow())
-                        configMessage = profileImportedMessage
-                    } catch (_: Exception) {
-                        configMessage = profileImportFailedMessage
-                    }
-                } else {
-                    configMessage = profileImportFailedMessage
                 }
             }
+            if (imported.isSuccess) {
+                try {
+                    val profile = onImportConfig(imported.getOrThrow())
+                    pendingImportedProfile = profile
+                    selectedConfigId = profile.id
+                    configMessage = profileImportedMessage
+                } catch (_: Exception) {
+                    configMessage = profileImportFailedMessage
+                }
+            } else {
+                configMessage = profileImportFailedMessage
+            }
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) importFromUri(uri)
+    }
+    LaunchedEffect(externalConfigUri) {
+        externalConfigUri?.let { uri ->
+            importFromUri(uri)
+            onExternalConfigHandled()
         }
     }
     var languageQuery by rememberSaveable { mutableStateOf("") }
