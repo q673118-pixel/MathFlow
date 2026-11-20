@@ -685,12 +685,14 @@ private fun MathFlowApp() {
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
                                                 },
                                                 onImportConfig = { imported ->
-                                                    val cfg = validateConfigSnapshot(imported.settings)
-                                                    val importedFontSetting = cfg.optString("fontPath")
-                                                    cfg.put("fontPath", if (importedFontSetting == BUILTIN_ARTEGRA_FONT) BUILTIN_ARTEGRA_FONT else JSONObject.NULL)
-                                                    val installedPath = MathFlowConfigProfiles.installFont(context, imported.fontFileName, imported.fontBytes)
-                                                    if (installedPath != null) cfg.put("fontPath", installedPath)
-                                                    val profile = MathFlowConfigProfiles.create(imported.name, cfg)
+                                                    val profile = withContext(Dispatchers.IO) {
+                                                        val cfg = validateConfigSnapshot(imported.settings)
+                                                        val importedFontSetting = cfg.optString("fontPath")
+                                                        cfg.put("fontPath", if (importedFontSetting == BUILTIN_ARTEGRA_FONT) BUILTIN_ARTEGRA_FONT else JSONObject.NULL)
+                                                        val installedPath = MathFlowConfigProfiles.installFont(context, imported.fontFileName, imported.fontBytes)
+                                                        if (installedPath != null) cfg.put("fontPath", installedPath)
+                                                        MathFlowConfigProfiles.create(imported.name, cfg)
+                                                    }
                                                     configProfiles = configProfiles + profile
                                                     MathFlowConfigProfiles.save(context, configProfiles)
                                                 },
@@ -2406,7 +2408,7 @@ private fun SettingsPage(
     onRenameConfig: (String, String) -> Unit,
     onDeleteConfig: (String) -> Unit,
     onApplyConfig: (MathFlowConfigProfile) -> Unit,
-    onImportConfig: (MathFlowConfigArchive.ImportedConfig) -> Unit,
+    onImportConfig: suspend (MathFlowConfigArchive.ImportedConfig) -> Unit,
     selectedThemeId: String,
     selectedIconId: String,
     onThemeSelected: (String) -> Unit,
@@ -2479,8 +2481,10 @@ private fun SettingsPage(
                         val path = profile.settings.optString("fontPath").takeIf {
                             it.isNotBlank() && it != "null" && it != BUILTIN_ARTEGRA_FONT
                         }
-                        val font = path?.let { File(it).takeIf(File::isFile)?.readBytes() }
-                        val fontName = if (font != null) File(path!!).name else null
+                        val fontFile = path?.let { File(it).takeIf(File::isFile) }
+                        require(fontFile == null || fontFile.length() <= 8L * 1024L * 1024L)
+                        val font = fontFile?.readBytes()
+                        val fontName = if (font != null) fontFile!!.name else null
                         context.contentResolver.openOutputStream(uri).use { output ->
                             requireNotNull(output) { "Cannot open export destination" }
                             MathFlowConfigArchive.write(output, profile.name, profile.settings, fontName, font)
@@ -2502,10 +2506,14 @@ private fun SettingsPage(
                         }
                     }
                 }
-                imported.onSuccess {
-                    onImportConfig(it)
-                    configMessage = profileImportedMessage
-                }.onFailure {
+                if (imported.isSuccess) {
+                    try {
+                        onImportConfig(imported.getOrThrow())
+                        configMessage = profileImportedMessage
+                    } catch (_: Exception) {
+                        configMessage = profileImportFailedMessage
+                    }
+                } else {
                     configMessage = profileImportFailedMessage
                 }
             }
