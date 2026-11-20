@@ -1658,7 +1658,7 @@ private fun CalculatorHome(
             exit = androidx.compose.animation.fadeOut(tween(110)) +
                 androidx.compose.animation.shrinkVertically(tween(110))
         ) {
-            Surface(Modifier.fillMaxWidth().heightIn(max = 96.dp), shape = RoundedCornerShape(20.dp), color = p.surface) {
+            Surface(Modifier.fillMaxWidth().heightIn(max = 96.dp), shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp), color = p.surface.copy(alpha = uiStyle.surfaceAlpha)) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
                     steps.forEachIndexed { index, step ->
                         Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
@@ -1711,9 +1711,10 @@ private fun CalcKey(key: String, modifier: Modifier, compact: Boolean, onClick: 
 @Composable
 private fun PageColumn(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 12.dp)
     ) {
         Text(displayText(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
         content()
@@ -1733,7 +1734,8 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
         shadowElevation = uiStyle.elevationDp.dp
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) { content() }
+        Column(Modifier.padding(if (uiStyle.compact) 12.dp else 15.dp),
+            verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)) { content() }
     }
 }
 
@@ -1801,7 +1803,7 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     Surface(
-        modifier = modifier.fillMaxWidth().height(50.dp).mathFlowClickable(onClick = onClick),
+        modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp).mathFlowClickable(onClick = onClick),
         shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp),
         color = p.keyEquals
     ) {
