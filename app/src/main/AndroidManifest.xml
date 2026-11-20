@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@drawable/launcher_vanilla"
         android:roundIcon="@drawable/launcher_vanilla"
         android:label="MathFlow"
