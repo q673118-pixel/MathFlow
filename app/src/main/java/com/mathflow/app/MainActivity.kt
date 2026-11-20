@@ -76,6 +76,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -579,6 +580,14 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     }
 
     val typography = remember(family) { typographyFor(family) }
+    val activeUiStyle = MathFlowUiStyle.fromId(uiStyleId)
+    val shapeTokens = remember(activeUiStyle) {
+        Shapes(
+            small = RoundedCornerShape(activeUiStyle.controlRadiusDp.dp),
+            medium = RoundedCornerShape(activeUiStyle.controlRadiusDp.dp),
+            large = RoundedCornerShape(activeUiStyle.cardRadiusDp.dp)
+        )
+    }
 
     val view = LocalView.current
     SideEffect {
@@ -618,7 +627,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         ),
         LocalLayoutDirection provides if (appLanguage == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
-        MaterialTheme(colorScheme = colors, typography = typography) {
+        MaterialTheme(colorScheme = colors, typography = typography, shapes = shapeTokens) {
             // Text() reads LocalTextStyle, not the theme typography, so the custom
             // family has to be provided here too for it to reach every label.
             CompositionLocalProvider(
