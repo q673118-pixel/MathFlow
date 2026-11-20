@@ -169,6 +169,7 @@ internal fun MathFlowKeyButton(
     onClick: () -> Unit
 ) {
     val palette = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
     val normalized = settings.normalized()
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -230,7 +231,7 @@ internal fun MathFlowKeyButton(
         label = "MathFlowKeyOverlay"
     )
     val overlayColor = if (normalized.pressColorArgb != 0L) Color(normalized.pressColorArgb.toInt()) else palette.accent
-    val shape = RoundedCornerShape(50)
+    val shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
 
     Surface(
         modifier = modifier.graphicsLayer {
