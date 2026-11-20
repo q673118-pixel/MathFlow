@@ -782,6 +782,16 @@ private fun FirstLaunchWelcome(
                     }
                     listOf("auto", "metric", "us").forEach { mode ->
                         val selected = measurementSystem == mode
+                        val optionBackground by animateColorAsState(
+                            if (selected) p.navActive else p.key,
+                            animationSpec = tween(190, easing = FastOutSlowInEasing),
+                            label = "MeasurementOptionBackground"
+                        )
+                        val optionBorder by animateColorAsState(
+                            if (selected) p.accent else Color.Transparent,
+                            animationSpec = tween(190, easing = FastOutSlowInEasing),
+                            label = "MeasurementOptionBorder"
+                        )
                         val title = when (mode) {
                             "auto" -> measurementText("automatic", language)
                             "metric" -> measurementText("metric", language)
@@ -795,8 +805,8 @@ private fun FirstLaunchWelcome(
                         Surface(
                             Modifier.fillMaxWidth().mathFlowClickable { onMeasurementSystemSelected(mode) },
                             shape = RoundedCornerShape(16.dp),
-                            color = if (selected) p.navActive else p.key,
-                            border = androidx.compose.foundation.BorderStroke(if (selected) 1.4.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                            color = optionBackground,
+                            border = androidx.compose.foundation.BorderStroke(if (selected) 1.4.dp else 1.dp, optionBorder)
                         ) {
                             Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -852,11 +862,22 @@ private fun FirstLaunchWelcome(
                     Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         listOf(BUILTIN_ARTEGRA_FONT to "Artegra Soft Global", null to "System").forEach { (id, title) ->
                             val selected = fontPath == id
+                            val fontCardColor by animateColorAsState(
+                                if (selected) p.navActive else p.key,
+                                animationSpec = tween(190, easing = FastOutSlowInEasing),
+                                label = "FontCardColor"
+                            )
+                            val fontBorderColor by animateColorAsState(
+                                if (selected) p.accent else Color.Transparent,
+                                animationSpec = tween(190, easing = FastOutSlowInEasing),
+                                label = "FontCardBorder"
+                            )
                             Surface(
-                                modifier = Modifier.weight(1f).mathFlowClickable { onFontSelected(id) },
+                                modifier = Modifier.weight(1f).animateContentSize(tween(180))
+                                    .mathFlowClickable { onFontSelected(id) },
                                 shape = RoundedCornerShape(16.dp),
-                                color = if (selected) p.navActive else p.key,
-                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                                color = fontCardColor,
+                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.5.dp else 1.dp, fontBorderColor)
                             ) {
                                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Text("Aa", fontSize = 23.sp, fontWeight = FontWeight.Bold, color = p.accent)
@@ -930,15 +951,26 @@ private fun FirstLaunchWelcome(
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f, fill = false)) {
                         items(filtered) { item ->
                             val selected = item.tag == language
+                            val languageCardColor by animateColorAsState(
+                                if (selected) p.navActive else p.key,
+                                animationSpec = tween(180, easing = FastOutSlowInEasing),
+                                label = "LanguageCardColor"
+                            )
+                            val languageBorderColor by animateColorAsState(
+                                if (selected) p.accent else Color.Transparent,
+                                animationSpec = tween(180, easing = FastOutSlowInEasing),
+                                label = "LanguageCardBorder"
+                            )
                             Surface(
-                                modifier = Modifier.fillMaxWidth().mathFlowClickable {
+                                modifier = Modifier.fillMaxWidth().animateContentSize(tween(180))
+                                    .mathFlowClickable {
                                     onLanguageSelected(item.tag)
                                     languageQuery = ""
                                     languagePickerOpen = false
                                 },
                                 shape = RoundedCornerShape(15.dp),
-                                color = if (selected) p.navActive else p.key,
-                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.3.dp else 1.dp, if (selected) p.accent else Color.Transparent)
+                                color = languageCardColor,
+                                border = androidx.compose.foundation.BorderStroke(if (selected) 1.3.dp else 1.dp, languageBorderColor)
                             ) {
                                 Row(Modifier.padding(horizontal = 13.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Surface(shape = RoundedCornerShape(10.dp), color = p.surface, modifier = Modifier.size(38.dp)) {
