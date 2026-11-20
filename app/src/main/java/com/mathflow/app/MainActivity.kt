@@ -1223,10 +1223,12 @@ private fun BottomNav(
     val uiStyle = LocalMathFlowUiStyle.current
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
-    val springMotion = settings.enabled && style in setOf(
-        BottomNavAnimationStyle.FLUID_PILL,
-        BottomNavAnimationStyle.SPRING_MOTION,
-        BottomNavAnimationStyle.ELASTIC_SLIDE
+    val springMotion = settings.enabled && (
+        uiStyle.glassSurface || style in setOf(
+            BottomNavAnimationStyle.FLUID_PILL,
+            BottomNavAnimationStyle.SPRING_MOTION,
+            BottomNavAnimationStyle.ELASTIC_SLIDE
+        )
     )
     // Compose springs do not have a fixed duration. Map the duration control to
     // spring stiffness so slower settings remain visibly slower in spring styles.
@@ -1267,19 +1269,21 @@ private fun BottomNav(
                     Page.values().lastIndex - current.ordinal
                 } else current.ordinal
                 val indicatorWidth = minOf(
-                    when (style) {
-                        BottomNavAnimationStyle.LIGHT_TRAIL -> 38.dp
-                        BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
-                        BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
+                    when {
+                        uiStyle.glassSurface -> 66.dp
+                        style == BottomNavAnimationStyle.LIGHT_TRAIL -> 38.dp
+                        style == BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
+                        style == BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
                         else -> 72.dp
                     },
-                    itemWidth * 0.92f
+                    itemWidth * if (uiStyle.glassSurface) 0.84f else 0.92f
                 )
                 val trailWidth = minOf(62.dp, itemWidth * 0.96f)
-                val indicatorHeight = when (style) {
-                    BottomNavAnimationStyle.LIGHT_TRAIL -> 4.dp
-                    BottomNavAnimationStyle.MORPH -> 38.dp
-                    BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
+                val indicatorHeight = when {
+                    uiStyle.glassSurface -> 44.dp
+                    style == BottomNavAnimationStyle.LIGHT_TRAIL -> 4.dp
+                    style == BottomNavAnimationStyle.MORPH -> 38.dp
+                    style == BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
                     else -> 42.dp
                 }
                 val targetOffset = with(density) {
@@ -1328,7 +1332,7 @@ private fun BottomNav(
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
                 LaunchedEffect(current, style, settings.enabled, duration, settings.intensity) {
-                    if (settings.enabled && style in setOf(BottomNavAnimationStyle.FLUID_PILL, BottomNavAnimationStyle.ELASTIC_SLIDE)) {
+                    if (settings.enabled && (uiStyle.glassSurface || style in setOf(BottomNavAnimationStyle.FLUID_PILL, BottomNavAnimationStyle.ELASTIC_SLIDE))) {
                         travelStretch.snapTo(
                             1f + settings.intensity * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.28f else 0.38f
                         )
@@ -1343,7 +1347,61 @@ private fun BottomNav(
                         travelStretch.snapTo(1f)
                     }
                 }
-                if (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled) {
+                if (uiStyle.glassSurface) {
+                    // Liquid Glass uses a moving water-drop indicator rather than a static pill.
+                    Canvas(
+                        Modifier.align(Alignment.CenterStart)
+                            .graphicsLayer {
+                                translationX = indicatorOffset
+                                scaleX = indicatorScaleX * travelStretch.value
+                                scaleY = 2f - travelStretch.value
+                                alpha = indicatorAlpha
+                            }
+                            .size(width = indicatorWidth, height = indicatorHeight)
+                    ) {
+                        val w = size.width
+                        val h = size.height
+                        val drop = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(w * 0.32f, 0f)
+                            lineTo(w * 0.68f, 0f)
+                            cubicTo(w * 0.86f, 0f, w, h * 0.16f, w, h * 0.34f)
+                            lineTo(w, h * 0.62f)
+                            cubicTo(w, h * 0.81f, w * 0.82f, h * 0.88f, w * 0.67f, h * 0.88f)
+                            cubicTo(w * 0.59f, h * 0.89f, w * 0.54f, h * 0.96f, w * 0.5f, h)
+                            cubicTo(w * 0.46f, h * 0.96f, w * 0.41f, h * 0.89f, w * 0.33f, h * 0.88f)
+                            cubicTo(w * 0.18f, h * 0.88f, 0f, h * 0.81f, 0f, h * 0.62f)
+                            lineTo(0f, h * 0.34f)
+                            cubicTo(0f, h * 0.16f, w * 0.14f, 0f, w * 0.32f, 0f)
+                            close()
+                        }
+                        drawPath(
+                            drop,
+                            brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                colors = listOf(
+                                    p.accent.copy(alpha = 0.98f),
+                                    p.navActive.copy(alpha = 0.96f),
+                                    p.accent.copy(alpha = 0.90f)
+                                ),
+                                start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                end = androidx.compose.ui.geometry.Offset(w, h)
+                            )
+                        )
+                        drawPath(
+                            drop,
+                            color = Color.White.copy(alpha = 0.20f),
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
+                        )
+                        drawOval(
+                            brush = androidx.compose.ui.graphics.Brush.radialGradient(
+                                colors = listOf(Color.White.copy(alpha = 0.24f), Color.Transparent),
+                                center = androidx.compose.ui.geometry.Offset(w * 0.34f, h * 0.20f),
+                                radius = w * 0.34f
+                            ),
+                            topLeft = androidx.compose.ui.geometry.Offset(w * 0.12f, h * 0.08f),
+                            size = androidx.compose.ui.geometry.Size(w * 0.52f, h * 0.28f)
+                        )
+                    }
+                } else if (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled) {
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
