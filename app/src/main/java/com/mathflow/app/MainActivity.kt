@@ -115,6 +115,11 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -438,6 +443,7 @@ private fun typographyFor(family: FontFamily): Typography {
 private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
+    val hazeState = remember { HazeState() }
     var themeId by remember {
         mutableStateOf(prefs.getString("app_theme", if (prefs.getBoolean("dark_mode", true)) "vanilla" else "white") ?: "vanilla")
     }
@@ -594,6 +600,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
+        LocalMathFlowHazeState provides hazeState,
         LocalKeyAnimationSettings provides keyAnimationSettings,
         // Disable all global press indications: no ripple, droplets, particles, or color overlay.
         LocalIndication provides MathFlowNoIndication,
@@ -653,10 +660,19 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                         }
                                     }
                                     Box(
-                                        Modifier.weight(1f).fillMaxWidth().graphicsLayer {
-                                            alpha = enterProgress.value
-                                            translationX = (1f - enterProgress.value) * 8.dp.toPx()
-                                        }
+                                        Modifier.weight(1f).fillMaxWidth()
+                                            .hazeSource(
+                                                state = hazeState,
+                                                style = HazeStyle(
+                                                    backgroundColor = palette.background,
+                                                    blurRadius = 18.dp,
+                                                    noiseFactor = 0.04f
+                                                )
+                                            )
+                                            .graphicsLayer {
+                                                alpha = enterProgress.value
+                                                translationX = (1f - enterProgress.value) * 8.dp.toPx()
+                                            }
                                     ) {
                                         when (page) {
                                             Page.HOME -> CalculatorHome(
@@ -1227,6 +1243,17 @@ private fun BottomNav(
         contentAlignment = Alignment.Center
     ) {
         Surface(
+            modifier = if (uiStyle.glassSurface) {
+                Modifier.hazeEffect(
+                    state = LocalMathFlowHazeState.current,
+                    style = HazeStyle(
+                        backgroundColor = p.surface,
+                        tints = listOf(HazeTint(p.accent.copy(alpha = 0.08f))),
+                        blurRadius = 18.dp,
+                        noiseFactor = 0.04f
+                    )
+                )
+            } else Modifier,
             shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
             color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
             shadowElevation = uiStyle.elevationDp.dp
