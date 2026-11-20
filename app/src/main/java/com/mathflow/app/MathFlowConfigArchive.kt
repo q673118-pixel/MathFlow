@@ -87,7 +87,7 @@ internal object MathFlowConfigArchive {
                 require(name == MANIFEST_ENTRY || (name.startsWith(FONT_PREFIX) && name.count { it == '/' } == 1)) {
                     "Unexpected archive entry"
                 }
-                require(!name.contains("..") && !name.startsWith("/") && !name.contains('\\\\')) {
+                require(!name.contains("..") && !name.startsWith("/") && !name.contains('\\')) {
                     "Unsafe archive path"
                 }
                 require(!entries.containsKey(name)) { "Duplicate archive entry" }
