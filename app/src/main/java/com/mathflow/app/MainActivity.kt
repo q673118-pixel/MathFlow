@@ -3346,6 +3346,51 @@ private fun SettingsPage(
         }
     }
     }
+    val previewProfile = pendingImportedProfile
+    if (previewProfile != null) {
+        val previewConfig = runCatching { validateConfigSnapshot(previewProfile.settings) }.getOrNull()
+        val previewTheme = previewConfig?.optString("theme", "vanilla") ?: "vanilla"
+        val previewThemeOption = ThemeOptions.firstOrNull { it.id == previewTheme } ?: ThemeOptions.first()
+        Dialog(onDismissRequest = { pendingImportedProfile = null }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(26.dp),
+                color = p.surface,
+                contentColor = p.text
+            ) {
+                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(14.dp)).background(previewThemeOption.palette.background),
+                            contentAlignment = Alignment.Center) {
+                            Icon(Icons.Default.Settings, null, tint = previewThemeOption.palette.accent)
+                        }
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(tx("profile_preview"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                            Text(previewProfile.name, color = p.muted, fontSize = 12.sp)
+                        }
+                    }
+                    Text(tx("profile_saved_before_apply"), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                    HorizontalDivider(color = p.key)
+                    Text(tx("themes") + ": " + previewThemeOption.title, fontSize = 13.sp)
+                    Text(tx("app_icons") + ": " + (AppIconOptions.firstOrNull { it.id == (previewConfig?.optString("icon") ?: "") }?.title ?: "—"), fontSize = 13.sp)
+                    Text(tx("app_language") + ": " + (previewConfig?.optString("language") ?: "—").uppercase(Locale.ROOT), fontSize = 13.sp)
+                    Text(tx("animations") + ": " + (previewConfig?.optString("keyStyle") ?: "—") + " / " + (previewConfig?.optString("navStyle") ?: "—"), fontSize = 13.sp)
+                    Text(tx("font") + ": " + if (previewConfig?.optString("fontPath")?.takeIf { it.isNotBlank() && it != "null" } != null) tx("custom_font") else tx("system_font"), fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ActionButton(tx("save_for_later"), Modifier.weight(1f)) {
+                            pendingImportedProfile = null
+                            configMessage = profileImportedMessage
+                        }
+                        ActionButton(tx("apply_now"), Modifier.weight(1f)) {
+                            onApplyConfig(previewProfile)
+                            pendingImportedProfile = null
+                            configMessage = profileAppliedMessage
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
