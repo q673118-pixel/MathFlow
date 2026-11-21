@@ -79,6 +79,15 @@ internal enum class BottomNavAnimationStyle(val id: String, val title: String, v
     }
 }
 
+internal enum class BottomNavSurfaceMaterial(val id: String, val title: String, val description: String) {
+    FROSTED("frosted", "Матовое стекло", "Рассеянное стекло без оптического преломления панели."),
+    LIQUID("liquid", "Жидкое стекло", "Размытие, вибрация и стеклянная оптика панели.");
+
+    companion object {
+        fun fromId(id: String) = entries.firstOrNull { it.id == id } ?: FROSTED
+    }
+}
+
 internal data class BottomNavAnimationSettings(
     val enabled: Boolean = true,
     val style: BottomNavAnimationStyle = BottomNavAnimationStyle.FLUID_PILL,
@@ -91,7 +100,13 @@ internal data class BottomNavAnimationSettings(
     val glassBlur: Float = 8f,
     val glassDepth: Float = 0.70f,
     val highlightStrength: Float = 0.90f,
-    val shadowStrength: Float = 0.42f
+    val shadowStrength: Float = 0.42f,
+    val surfaceMaterial: BottomNavSurfaceMaterial = BottomNavSurfaceMaterial.FROSTED,
+    val matteOpacity: Float = 0.72f,
+    val matteBlur: Float = 12f,
+    val matteDepth: Float = 0.38f,
+    val matteHighlight: Float = 0.58f,
+    val matteShadow: Float = 0.32f
 ) {
     fun normalized() = copy(
         durationMs = durationMs.coerceIn(100, 1000),
@@ -103,7 +118,12 @@ internal data class BottomNavAnimationSettings(
         glassBlur = glassBlur.coerceIn(0f, 20f),
         glassDepth = glassDepth.coerceIn(0f, 1f),
         highlightStrength = highlightStrength.coerceIn(0f, 1f),
-        shadowStrength = shadowStrength.coerceIn(0f, 1f)
+        shadowStrength = shadowStrength.coerceIn(0f, 1f),
+        matteOpacity = matteOpacity.coerceIn(0.25f, 0.96f),
+        matteBlur = matteBlur.coerceIn(0f, 24f),
+        matteDepth = matteDepth.coerceIn(0f, 1f),
+        matteHighlight = matteHighlight.coerceIn(0f, 1f),
+        matteShadow = matteShadow.coerceIn(0f, 1f)
     )
 }
 
