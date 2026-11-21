@@ -463,7 +463,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var uiStyleId by remember {
         mutableStateOf(MathFlowUiStyle.fromId(prefs.getString("ui_style", "material_you") ?: "material_you").id)
     }
-    var settingsCornerRadiusDp by remember { mutableStateOf(prefs.getInt("settings_corner_radius_dp", 18).coerceIn(0, 32)) }
+    var settingsCornerRadiusDp by remember { mutableStateOf(prefs.getInt("settings_corner_radius_dp", 18).coerceIn(0, 40)) }
     var selectedIconId by remember { mutableStateOf(prefs.getString("app_icon", "vanilla") ?: "vanilla") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
     val initialFontPath = remember {
@@ -811,7 +811,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                 selectedUiStyleId = uiStyleId,
                                                 settingsCornerRadiusDp = settingsCornerRadiusDp,
                                                 onSettingsCornerRadiusChange = { radius ->
-                                                    settingsCornerRadiusDp = radius.coerceIn(0, 32)
+                                                    settingsCornerRadiusDp = radius.coerceIn(0, 40)
                                                     prefs.edit().putInt("settings_corner_radius_dp", settingsCornerRadiusDp).apply()
                                                 },
                                                 onUiStyleSelected = { id ->
@@ -1509,7 +1509,7 @@ private fun BottomNav(
                             Icon(
                                 imageVector = item.icon,
                                 contentDescription = displayText(item.title),
-                                tint = tint,
+                                tint = if (uiStyle.glassSurface && backdrop != null && selected) Color.Transparent else tint,
                                 modifier = Modifier.size(26.dp).graphicsLayer {
                                     scaleX = iconScale
                                     scaleY = iconScale * morphY
@@ -1535,7 +1535,7 @@ private fun BottomNav(
                                 effects = {
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
-                                    lens(10.dp.toPx(), 14.dp.toPx(), chromaticAberration = false)
+                                    lens(16.dp.toPx(), 22.dp.toPx(), chromaticAberration = false)
                                 },
                                 highlight = {
                                     val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
@@ -1546,11 +1546,6 @@ private fun BottomNav(
                                     val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
                                         .coerceIn(0.2f, 1f)
                                     Shadow(radius = 16.dp, alpha = 0.48f * energy)
-                                },
-                                innerShadow = {
-                                    val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
-                                        .coerceIn(0.2f, 1f)
-                                    InnerShadow(radius = 8.dp, alpha = 0.62f * energy)
                                 },
                                 onDrawSurface = {
                                     drawRect(p.accent.copy(alpha = 0.075f))
@@ -2913,9 +2908,9 @@ private fun SettingsPage(
                         }
                         Slider(
                             value = settingsCornerRadiusDp.toFloat(),
-                            onValueChange = { onSettingsCornerRadiusChange(it.toInt().coerceIn(0, 32)) },
-                            valueRange = 0f..32f,
-                            steps = 15,
+                            onValueChange = { onSettingsCornerRadiusChange(it.toInt().coerceIn(0, 40)) },
+                            valueRange = 0f..40f,
+                            steps = 19,
                             colors = SliderDefaults.colors(
                                 thumbColor = p.accent, activeTrackColor = p.accent,
                                 inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
@@ -2924,7 +2919,7 @@ private fun SettingsPage(
                         )
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("0 · Острые углы", fontSize = 11.sp, color = p.muted)
-                            Text("32 · Сильное скругление", fontSize = 11.sp, color = p.muted)
+                            Text("40 · Сильное скругление", fontSize = 11.sp, color = p.muted)
                         }
                     }
                 }
