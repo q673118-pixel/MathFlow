@@ -1473,9 +1473,11 @@ private fun BottomNav(
                             label = "MathFlowNavigationIconTint"
                         )
                         val iconScale by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && !uiStyle.glassSurface) {
-                                1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
-                            } else 1f,
+                            targetValue = when {
+                                uiStyle.glassSurface && backdrop != null && selected -> 1.12f
+                                settings.enabled && selected -> 1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
+                                else -> 1f
+                            },
                             animationSpec = if (springMotion) spring(
                                 dampingRatio = 0.88f - settings.intensity * 0.38f,
                                 stiffness = springStiffness
@@ -1539,25 +1541,29 @@ private fun BottomNav(
                                 effects = {
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
-                                    lens(5.dp.toPx(), 7.dp.toPx(), chromaticAberration = false)
+                                    lens(
+                                        (8.dp + (settings.iconScale * 30f).dp).toPx(),
+                                        (11.dp + (settings.iconScale * 35f).dp).toPx(),
+                                        chromaticAberration = false
+                                    )
                                 },
                                 highlight = {
-                                    val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
-                                        .coerceIn(0.2f, 1f)
+                                    val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
+                                        .coerceIn(0.55f, 1f)
                                     Highlight.Default.copy(alpha = energy)
                                 },
                                 shadow = {
-                                    val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
-                                        .coerceIn(0.2f, 1f)
-                                    Shadow(radius = 16.dp, alpha = 0.48f * energy)
+                                    val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
+                                        .coerceIn(0.55f, 1f)
+                                    Shadow(radius = 18.dp, alpha = 0.42f * energy)
                                 },
                                 innerShadow = {
-                                    val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
-                                        .coerceIn(0.2f, 1f)
-                                    InnerShadow(radius = 5.dp, alpha = 0.12f * energy)
+                                    val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
+                                        .coerceIn(0.55f, 1f)
+                                    InnerShadow(radius = 7.dp, alpha = 0.16f * energy)
                                 },
                                 onDrawSurface = {
-                                    drawRect(p.accent.copy(alpha = 0.075f))
+                                    drawRect(p.accent.copy(alpha = 0.035f))
                                 }
                             )
                             .size(width = indicatorWidth, height = indicatorHeight)
@@ -3297,21 +3303,21 @@ private fun SettingsPage(
                         valueRange = 100f..1000f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("${tx("animation_intensity")}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${if (uiStyle.glassSurface) "Эластичность капли" else tx("animation_intensity")}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.intensity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(intensity = it) },
                         valueRange = 0f..1f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("${tx("nav_icon_scale")}: ${(pendingNavAnimationSettings.iconScale * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${if (uiStyle.glassSurface) "Сила преломления" else tx("nav_icon_scale")}: ${(pendingNavAnimationSettings.iconScale * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.iconScale,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(iconScale = it) },
                         valueRange = 0f..0.20f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("${tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${if (uiStyle.glassSurface) "Прозрачность стекла" else tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.opacity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(opacity = it) },
