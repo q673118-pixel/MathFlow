@@ -426,7 +426,7 @@ private fun animatePalette(target: Palette): Palette {
 
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 private val LocalMathFlowBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
-private val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
+internal val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
