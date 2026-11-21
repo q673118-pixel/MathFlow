@@ -68,7 +68,6 @@ internal data class KeyAnimationSettings(
 internal enum class BottomNavAnimationStyle(val id: String, val title: String, val descriptionKey: String) {
     FLUID_PILL("fluid_pill", "Fluid Pill", "nav_style_fluid_desc"),
     SPRING_MOTION("spring_motion", "Spring Motion", "nav_style_spring_desc"),
-    LIGHT_TRAIL("light_trail", "Light Trail", "nav_style_trail_desc"),
     MORPH("morph", "Morph", "nav_style_morph_desc"),
     EXPAND("expand", "Expand", "nav_style_expand_desc"),
     SOFT_FOCUS("soft_focus", "Soft Focus", "nav_style_focus_desc"),
