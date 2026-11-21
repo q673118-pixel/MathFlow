@@ -1562,7 +1562,7 @@ private fun BottomNav(
                             AppIcon(
                                 glyph = item.glyph,
                                 contentDescription = displayText(item.title),
-                                tint = if (uiStyle.glassSurface && backdrop != null && selected) Color.Transparent else tint,
+                                tint = tint,
                                 modifier = Modifier.size(26.dp).graphicsLayer {
                                     scaleX = iconScale
                                     scaleY = iconScale * morphY
