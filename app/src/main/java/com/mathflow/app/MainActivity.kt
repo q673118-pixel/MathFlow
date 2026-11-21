@@ -1649,7 +1649,27 @@ private fun CalculatorHome(
         Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Surface(Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp), color = p.surface.copy(alpha = uiStyle.surfaceAlpha), shadowElevation = uiStyle.elevationDp.dp) {
+        val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
+        val displayBackdrop = LocalMathFlowBackdrop.current
+        val displayGlass = if (uiStyle.glassSurface && displayBackdrop != null) {
+            Modifier.drawBackdrop(
+                backdrop = displayBackdrop,
+                shape = { displayShape },
+                effects = {
+                    blur(24.dp.toPx())
+                    lens(16.dp.toPx(), 22.dp.toPx())
+                    vibrancy()
+                },
+                highlight = { Highlight(width = 1.2.dp) },
+                onDrawSurface = { drawRect(p.surface.copy(alpha = 0.28f)) }
+            )
+        } else Modifier
+        Surface(
+            Modifier.fillMaxWidth().weight(1f).then(displayGlass),
+            shape = displayShape,
+            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
+        ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
                     Modifier.align(Alignment.TopStart),
