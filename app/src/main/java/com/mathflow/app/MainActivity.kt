@@ -2081,7 +2081,17 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
 private fun ResultBox(text: String, error: String?) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp), color = p.key) {
+    val glass = LocalBottomNavGlassSettings.current
+    val resultShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
+    Surface(
+        Modifier.fillMaxWidth().then(
+            if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.20f), resultShape)
+            else Modifier
+        ),
+        shape = resultShape,
+        color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key,
+        shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f).dp else 0.dp
+    ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             androidx.compose.animation.AnimatedVisibility(
                 visible = error != null,
@@ -4186,13 +4196,15 @@ private fun ApplySelectionButton(text: String, enabled: Boolean, onClick: () -> 
 private fun SettingsApplyBar(onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp)
     Surface(
-        modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp).clip(shape)
-            .mathFlowClickable(onClick = onClick),
+        modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp)
+            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), shape) else Modifier)
+            .clip(shape).mathFlowClickable(onClick = onClick),
         shape = shape,
-        color = p.keyEquals,
-        shadowElevation = 10.dp
+        color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.keyEquals,
+        shadowElevation = if (uiStyle.glassSurface) (4f + glass.matteDepth * 6f).dp else 10.dp
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 22.dp),
