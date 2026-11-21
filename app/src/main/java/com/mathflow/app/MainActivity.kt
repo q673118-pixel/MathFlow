@@ -1914,9 +1914,12 @@ private fun CalculatorHome(
 private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
+    val chipShape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
     Box(
-        Modifier.height(32.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
-            .background(if (active) p.navActive else p.key)
+        Modifier.height(32.dp).clip(chipShape)
+            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.16f), chipShape) else Modifier)
+            .background(if (active) p.navActive.copy(alpha = if (uiStyle.glassSurface) glass.matteOpacity else 1f) else if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key)
             .mathFlowClickable(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -2016,8 +2019,12 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
 private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
+    val segmentShape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
     BoxWithConstraints(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(p.key).padding(3.dp)
+        Modifier.fillMaxWidth().clip(segmentShape)
+            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), segmentShape) else Modifier)
+            .background(if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key).padding(3.dp)
     ) {
         val itemWidth = maxWidth / options.size
         val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
@@ -2032,13 +2039,13 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
                 .graphicsLayer { translationX = indicatorOffset }
                 .size(width = itemWidth, height = 38.dp)
                 .clip(RoundedCornerShape(uiStyle.buttonRadiusDp.dp))
-                .background(p.keyEquals)
+                .background(if (uiStyle.glassSurface) p.surface.copy(alpha = (glass.matteOpacity + 0.14f).coerceAtMost(1f)) else p.keyEquals)
         )
         Row(Modifier.fillMaxWidth()) {
             options.forEach { option ->
                 val active = option == selected
                 val tint by animateColorAsState(
-                    targetValue = if (active) p.onKeyEquals else p.muted,
+                    targetValue = if (active) (if (uiStyle.glassSurface) p.accent else p.onKeyEquals) else p.muted,
                     animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
                     label = "SegmentedLabelColor"
                 )
@@ -4045,14 +4052,21 @@ private fun SettingsEntry(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
     val settingsRadius = LocalSettingsCornerRadius.current
     val controlRadius = (settingsRadius ?: uiStyle.controlRadiusDp).dp
+    val tileShape = RoundedCornerShape(controlRadius)
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(controlRadius)).mathFlowClickable(onClick = onClick).padding(vertical = 8.dp),
+        Modifier.fillMaxWidth().clip(tileShape).mathFlowClickable(onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(controlRadius)).background(p.key), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(44.dp).clip(tileShape)
+                .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), tileShape) else Modifier)
+                .background(if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key),
+            contentAlignment = Alignment.Center
+        ) {
             AppIcon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
