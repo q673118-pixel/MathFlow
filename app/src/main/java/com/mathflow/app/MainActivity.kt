@@ -67,6 +67,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Functions
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.RippleConfiguration
@@ -418,6 +423,7 @@ private fun animatePalette(target: Palette): Palette {
 }
 
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
+private val LocalMathFlowBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
@@ -603,6 +609,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
+        LocalMathFlowBackdrop provides backdrop,
         LocalKeyAnimationSettings provides keyAnimationSettings,
         // Disable all global press indications: no ripple, droplets, particles, or color overlay.
         LocalIndication provides MathFlowNoIndication,
@@ -1237,8 +1244,7 @@ private fun BottomNav(
     Box(
         Modifier.fillMaxWidth()
             .then(if (preview) Modifier else Modifier.navigationBarsPadding())
-            .then(if (!preview && uiStyle.glassSurface) Modifier.offset(y = (-16).dp) else Modifier)
-            .padding(horizontal = 28.dp, vertical = 8.dp),
+                        .padding(horizontal = 28.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -1792,7 +1798,7 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 8.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 30.dp),
         verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 12.dp)
     ) {
         Text(displayText(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
@@ -1804,14 +1810,32 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val backdrop = LocalMathFlowBackdrop.current
     val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
     val outline = uiStyle.outlineAlpha
+    val glassModifier = if (uiStyle.glassSurface && backdrop != null) {
+        Modifier.drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = {
+                blur(20.dp.toPx())
+                lens(10.dp.toPx(), 16.dp.toPx())
+                vibrancy()
+            },
+            highlight = { Highlight(width = 1.dp) },
+            onDrawSurface = { drawRect(p.surface.copy(alpha = 0.30f)) }
+        )
+    } else Modifier
     Surface(
-        modifier.animateContentSize(tween(180)).fillMaxWidth()
-            .then(if (outline > 0f) Modifier.border(1.dp, p.text.copy(alpha = outline), shape) else Modifier),
+        modifier.animateContentSize(tween(180)).fillMaxWidth().then(glassModifier)
+            .then(if (outline > 0f || uiStyle.glassSurface) Modifier.border(
+                1.dp,
+                p.text.copy(alpha = if (uiStyle.glassSurface) 0.30f else outline),
+                shape
+            ) else Modifier),
         shape = shape,
-        color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
-        shadowElevation = uiStyle.elevationDp.dp
+        color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
     ) {
         Column(Modifier.padding(if (uiStyle.compact) 12.dp else 15.dp),
             verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)) { content() }
@@ -2838,21 +2862,21 @@ private fun SettingsPage(
                     SettingsEntry(
                         title = tx("themes"),
                         subtitle = tx("theme_entry_subtitle"),
-                        icon = Icons.Default.Settings,
+                        icon = Icons.Default.ColorLens,
                         onClick = { pendingThemeId = selectedThemeId; section = SettingsSection.THEMES }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = "Стиль интерфейса",
                         subtitle = MathFlowUiStyle.fromId(selectedUiStyleId).title,
-                        icon = Icons.Default.Settings,
+                        icon = Icons.Default.Tune,
                         onClick = { pendingUiStyleId = selectedUiStyleId; section = SettingsSection.STYLES }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = tx("fonts"),
                         subtitle = tx("font_library_hint"),
-                        icon = Icons.Default.Functions,
+                        icon = Icons.Default.TextFields,
                         onClick = {
                             pendingFontPath = fontPath
                             fontMessage = null
@@ -2864,14 +2888,14 @@ private fun SettingsPage(
                     SettingsEntry(
                         title = tx("app_language"),
                         subtitle = AppLanguages.firstOrNull { it.tag == selectedLanguage }?.nativeName ?: "Русский",
-                        icon = Icons.Default.Functions,
+                        icon = Icons.Default.Language,
                         onClick = { section = SettingsSection.LANGUAGE }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = measurementText("measurements", LocalLanguage.current),
                         subtitle = measurementText("measurements_subtitle", LocalLanguage.current),
-                        icon = Icons.Default.Functions,
+                        icon = Icons.Default.Public,
                         onClick = { pendingMeasurementSystem = selectedMeasurementSystem; section = SettingsSection.MEASUREMENTS }
                     )
                 }
