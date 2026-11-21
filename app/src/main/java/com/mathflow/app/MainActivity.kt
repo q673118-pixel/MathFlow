@@ -1325,23 +1325,26 @@ private fun BottomNav(
                     effects = {
                         vibrancy()
                         blur((if (navLiquidPanel) settings.glassBlur else settings.matteBlur).dp.toPx())
-                        if (navLiquidPanel) lens(24.dp.toPx(), 24.dp.toPx())
+                        if (navLiquidPanel) {
+                            val panelLens = (8f + settings.refractionStrength * 16f).dp.toPx()
+                            lens(panelLens, panelLens)
+                        }
                     },
                     highlight = {
                         Highlight(
                             width = if (navLiquidPanel) 0.8.dp else 1.2.dp,
                             blurRadius = if (navLiquidPanel) 1.6.dp else 3.dp,
-                            alpha = if (navLiquidPanel) 0.9f else settings.matteHighlight
+                            alpha = if (navLiquidPanel) settings.highlightStrength else settings.matteHighlight
                         )
                     },
                     onDrawSurface = {
-                        drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f else settings.matteOpacity))
+                        drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f * settings.opacity else settings.matteOpacity))
                     }
                 )
             } else Modifier,
             shape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp),
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (navLiquidPanel) 0.dp else if (navFrostedPanel) (settings.matteDepth * 6f).dp else uiStyle.elevationDp.dp
+            shadowElevation = if (navLiquidPanel) (settings.shadowStrength * 3f).dp else if (navFrostedPanel) (settings.matteDepth * 6f + settings.matteShadow * 3f).dp else uiStyle.elevationDp.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
@@ -1368,13 +1371,16 @@ private fun BottomNav(
                                 effects = {
                                     vibrancy()
                                     blur((if (navLiquidPanel) settings.glassBlur else settings.matteBlur).dp.toPx())
-                                    if (navLiquidPanel) lens(24.dp.toPx(), 24.dp.toPx())
+                                    if (navLiquidPanel) {
+                                        val panelLens = (8f + settings.refractionStrength * 16f).dp.toPx()
+                                        lens(panelLens, panelLens)
+                                    }
                                 },
                                 highlight = {
-                                    Highlight.Default.copy(alpha = if (navLiquidPanel) 0.72f else settings.matteHighlight)
+                                    Highlight.Default.copy(alpha = if (navLiquidPanel) settings.highlightStrength else settings.matteHighlight)
                                 },
                                 onDrawSurface = {
-                                    drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f else settings.matteOpacity))
+                                    drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f * settings.opacity else settings.matteOpacity))
                                 }
                             ),
                         verticalAlignment = Alignment.CenterVertically
