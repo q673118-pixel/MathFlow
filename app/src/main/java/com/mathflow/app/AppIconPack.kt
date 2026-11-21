@@ -80,7 +80,8 @@ private fun iconVector(pack: AppIconPack, glyph: AppGlyph): ImageVector {
             AppGlyph.GLOBE -> Icons.Filled.Public
         }
         AppIconPack.IOS -> when (glyph) {
-            AppGlyph.HOME, AppGlyph.SOLVER, AppGlyph.FUNCTIONS -> Icons.Outlined.Functions
+            AppGlyph.HOME, AppGlyph.FUNCTIONS -> Icons.Outlined.Functions
+            AppGlyph.SOLVER -> Icons.Outlined.Calculate
             AppGlyph.TOOLS -> Icons.Outlined.GridView
             AppGlyph.HISTORY -> Icons.Outlined.History
             AppGlyph.SETTINGS, AppGlyph.TUNE -> Icons.Outlined.Tune
