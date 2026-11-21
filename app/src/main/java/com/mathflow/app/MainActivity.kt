@@ -1327,7 +1327,7 @@ private fun BottomNav(
                                     item.icon,
                                     contentDescription = null,
                                     tint = if (item == current) p.accent else p.muted,
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size(if (item == current) 29.dp else 26.dp)
                                 )
                             }
                         }
