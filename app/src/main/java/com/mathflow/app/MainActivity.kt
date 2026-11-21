@@ -1,6 +1,7 @@
 package com.mathflow.app
 
 import android.content.Context
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -115,12 +116,19 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
+import com.styropyr0.prismal.PrismalBackdrop
+import com.styropyr0.prismal.components.LocalPrismalBottomTabHighlightedIndex
+import com.styropyr0.prismal.components.PrismalGlassBottomTab
+import com.styropyr0.prismal.components.PrismalGlassBottomTabs
+import com.styropyr0.prismal.sources.prismalGlassLayer
+import com.styropyr0.prismal.sources.rememberPrismalGlassLayer
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
@@ -457,6 +465,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
     val backdrop = rememberLayerBackdrop()
+    val prismalBackdrop = rememberPrismalGlassLayer()
     var themeId by remember {
         mutableStateOf(prefs.getString("app_theme", if (prefs.getBoolean("dark_mode", true)) "vanilla" else "white") ?: "vanilla")
     }
@@ -677,6 +686,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth()
                                             .layerBackdrop(backdrop)
+                                            .then(if (MathFlowUiStyle.fromId(uiStyleId).glassSurface) Modifier.prismalGlassLayer(prismalBackdrop) else Modifier)
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
                                                 translationX = (1f - enterProgress.value) * 8.dp.toPx()
@@ -886,7 +896,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                 }
                             }
-                            BottomNav(page, bottomNavAnimationSettings, backdrop = backdrop) { page = it }
+                            BottomNav(page, bottomNavAnimationSettings, backdrop = backdrop, prismalBackdrop = prismalBackdrop) { page = it }
                         }
                         if (showWelcome && splashFinished) {
                             FirstLaunchWelcome(
@@ -1237,6 +1247,7 @@ private fun BottomNav(
     current: Page,
     settings: BottomNavAnimationSettings,
     backdrop: Backdrop? = null,
+    prismalBackdrop: PrismalBackdrop? = null,
     preview: Boolean = false,
     onSelect: (Page) -> Unit
 ) {
@@ -1244,6 +1255,73 @@ private fun BottomNav(
     val uiStyle = LocalMathFlowUiStyle.current
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
+
+    // Use PrismalAGSL's dual-layer tab capture and AGSL lens for Liquid Glass.
+    // The library renders the real icon row once and samples a hidden mirror into
+    // the moving droplet, preventing the ghost/double-icon artifact of the old overlay.
+    if (uiStyle.glassSurface && prismalBackdrop != null) {
+        prismalBackdrop.readSamplingState()
+        val systemConfiguration = LocalConfiguration.current
+        val glassConfiguration = remember(systemConfiguration.uiMode, p.dark) {
+            Configuration(systemConfiguration).apply {
+                uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                    (if (p.dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+            }
+        }
+        Box(
+            Modifier.fillMaxWidth()
+                .then(if (preview) Modifier else Modifier.navigationBarsPadding())
+                .padding(horizontal = 28.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            CompositionLocalProvider(LocalConfiguration provides glassConfiguration) {
+                PrismalGlassBottomTabs(
+                    selectedTabIndex = { current.ordinal },
+                    onTabSelected = { index ->
+                        Page.values().getOrNull(index)?.let { target ->
+                            if (target != current) onSelect(target)
+                        }
+                    },
+                    backdrop = prismalBackdrop,
+                    tabsCount = Page.values().size,
+                    modifier = Modifier.fillMaxWidth(),
+                    tintDropletContent = false,
+                    dropletChromaticAberration = 0f,
+                    dropletRefractionHeight = 14.dp,
+                    dropletRefractionAmount = 16.dp,
+                    dropletContentScaleX = 1f,
+                    dropletContentScaleY = 1f,
+                    renderWithLowOverhead = true,
+                    pressGlow = if (settings.enabled) (settings.opacity * 0.7f).coerceIn(0f, 1f) else 0f,
+                    hapticFeedback = false
+                ) {
+                    Page.values().forEachIndexed { index, item ->
+                        val highlightedIndex = LocalPrismalBottomTabHighlightedIndex.current()
+                        val selected = highlightedIndex == index
+                        val tint by animateColorAsState(
+                            targetValue = if (selected) p.accent else p.muted,
+                            animationSpec = tween(
+                                durationMillis = duration,
+                                easing = FastOutSlowInEasing
+                            ),
+                            label = "MathFlowPrismalTabTint"
+                        )
+                        PrismalGlassBottomTab(
+                            onClick = { if (item != current) onSelect(item) }
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = displayText(item.title),
+                                tint = tint,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        return
+    }
     val springMotion = settings.enabled && (
         uiStyle.glassSurface || style in setOf(
             BottomNavAnimationStyle.FLUID_PILL,
@@ -3264,9 +3342,22 @@ private fun SettingsPage(
                             Text(tx(style.descriptionKey), color = p.muted, fontSize = 11.sp, lineHeight = 15.sp)
                         }
                     }
+                    val navPreviewBackdrop = rememberPrismalGlassLayer()
                     Panel {
                         Text(tx("nav_preview"), color = p.muted, fontSize = 13.sp)
-                        BottomNav(navPreviewPage, pendingNavAnimationSettings, preview = true) { navPreviewPage = it }
+                        Box(Modifier.fillMaxWidth().height(80.dp)) {
+                            Box(
+                                Modifier.fillMaxSize()
+                                    .background(p.background)
+                                    .prismalGlassLayer(navPreviewBackdrop)
+                            )
+                            BottomNav(
+                                navPreviewPage,
+                                pendingNavAnimationSettings,
+                                prismalBackdrop = navPreviewBackdrop,
+                                preview = true
+                            ) { navPreviewPage = it }
+                        }
                     }
                     Text("${tx("nav_duration")}: ${pendingNavAnimationSettings.durationMs} ms", color = p.text, fontSize = 13.sp)
                     Slider(
