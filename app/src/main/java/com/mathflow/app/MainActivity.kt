@@ -309,12 +309,12 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
     }
 }
 
-private enum class Page(val title: String, val icon: ImageVector) {
-    HOME("Главная", Icons.Default.Calculate),
-    TOOLS("Инструменты", Icons.Default.Build),
-    SOLVER("Уравнения", Icons.Default.Functions),
-    HISTORY("История", Icons.Default.History),
-    SETTINGS("Настройки", Icons.Default.Settings)
+private enum class Page(val title: String, val glyph: AppGlyph) {
+    HOME("Главная", AppGlyph.HOME),
+    TOOLS("Инструменты", AppGlyph.TOOLS),
+    SOLVER("Уравнения", AppGlyph.SOLVER),
+    HISTORY("История", AppGlyph.HISTORY),
+    SETTINGS("Настройки", AppGlyph.SETTINGS)
 }
 
 // ---------------------------------------------------------------- palette
@@ -1028,7 +1028,7 @@ private fun FirstLaunchWelcome(
                                 Text(activeLanguage.nativeName, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                 Text(activeLanguage.englishName, fontSize = 11.sp, color = p.muted)
                             }
-                            Icon(Icons.Default.ArrowDropDown, null, tint = p.accent)
+                            AppIcon(AppGlyph.DROPDOWN, null, tint = p.accent)
                         }
                     }
                 }
@@ -1071,7 +1071,7 @@ private fun FirstLaunchWelcome(
                                     Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                                     Text(description, fontSize = 10.sp, color = p.muted)
                                 }
-                                if (selected) Icon(Icons.Default.Check, null, tint = p.accent)
+                                if (selected) AppIcon(AppGlyph.CHECK, null, tint = p.accent)
                             }
                         }
                     }
@@ -1157,7 +1157,7 @@ private fun FirstLaunchWelcome(
                 ) {
                     Row(Modifier.padding(horizontal = 18.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(measurementText("continue", language), modifier = Modifier.weight(1f), color = if (p.dark) Color(0xFF17131F) else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Icon(Icons.Default.Check, null, tint = if (p.dark) Color(0xFF17131F) else Color.White)
+                        AppIcon(AppGlyph.CHECK, null, tint = if (p.dark) Color(0xFF17131F) else Color.White)
                     }
                 }
             }
@@ -1230,7 +1230,7 @@ private fun FirstLaunchWelcome(
                                         Text(item.nativeName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                                         Text(item.englishName, fontSize = 11.sp, color = p.muted)
                                     }
-                                    if (selected) Icon(Icons.Default.Check, null, tint = p.accent)
+                                    if (selected) AppIcon(AppGlyph.CHECK, null, tint = p.accent)
                                 }
                             }
                         }
@@ -1338,8 +1338,8 @@ private fun BottomNav(
                     ) {
                         Page.values().forEach { item ->
                             Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    item.icon,
+                                AppIcon(
+                                    item.glyph,
                                     contentDescription = null,
                                     tint = if (item == current) p.accent else p.muted,
                                     modifier = Modifier
@@ -1510,8 +1510,8 @@ private fun BottomNav(
                                         .background(p.navActive)
                                 )
                             }
-                            Icon(
-                                imageVector = item.icon,
+                            AppIcon(
+                                glyph = item.glyph,
                                 contentDescription = displayText(item.title),
                                 tint = if (uiStyle.glassSurface && backdrop != null && selected) Color.Transparent else tint,
                                 modifier = Modifier.size(26.dp).graphicsLayer {
@@ -1755,7 +1755,7 @@ private fun CalculatorHome(
                         .mathFlowClickable { press("⌫") },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.Backspace, tx("delete"), tint = p.muted, modifier = Modifier.size(22.dp))
+                    AppIcon(AppGlyph.BACKSPACE, tx("delete"), tint = p.muted, modifier = Modifier.size(22.dp))
                 }
                 val decimalFormatLabel = tx("decimal_format")
                 val fractionFormatLabel = tx("fraction_format")
@@ -2970,28 +2970,28 @@ private fun SettingsPage(
                     SettingsEntry(
                         title = tx("app_icons"),
                         subtitle = tx("icon_entry_subtitle"),
-                        icon = Icons.Default.Build,
+                        icon = AppGlyph.BUILD,
                         onClick = { pendingIconId = selectedIconId; section = SettingsSection.ICONS }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = tx("themes"),
                         subtitle = tx("theme_entry_subtitle"),
-                        icon = Icons.Default.ColorLens,
+                        icon = AppGlyph.PALETTE,
                         onClick = { pendingThemeId = selectedThemeId; section = SettingsSection.THEMES }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = "Стиль интерфейса",
                         subtitle = MathFlowUiStyle.fromId(selectedUiStyleId).title,
-                        icon = Icons.Default.Tune,
+                        icon = AppGlyph.TUNE,
                         onClick = { pendingUiStyleId = selectedUiStyleId; section = SettingsSection.STYLES }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = tx("fonts"),
                         subtitle = tx("font_library_hint"),
-                        icon = Icons.Default.TextFields,
+                        icon = AppGlyph.TEXT,
                         onClick = {
                             pendingFontPath = fontPath
                             fontMessage = null
@@ -3003,14 +3003,14 @@ private fun SettingsPage(
                     SettingsEntry(
                         title = tx("app_language"),
                         subtitle = AppLanguages.firstOrNull { it.tag == selectedLanguage }?.nativeName ?: "Русский",
-                        icon = Icons.Default.Language,
+                        icon = AppGlyph.LANGUAGE,
                         onClick = { section = SettingsSection.LANGUAGE }
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
                         title = measurementText("measurements", LocalLanguage.current),
                         subtitle = measurementText("measurements_subtitle", LocalLanguage.current),
-                        icon = Icons.Default.Public,
+                        icon = AppGlyph.GLOBE,
                         onClick = { pendingMeasurementSystem = selectedMeasurementSystem; section = SettingsSection.MEASUREMENTS }
                     )
                 }
@@ -3018,7 +3018,7 @@ private fun SettingsPage(
                     SettingsEntry(
                         title = tx("animations"),
                         subtitle = tx("animation_entry_subtitle"),
-                        icon = Icons.Default.Settings,
+                        icon = AppGlyph.SETTINGS,
                         onClick = {
                             pendingAnimationSettings = appliedAnimationSettings
                             pendingNavAnimationSettings = appliedNavAnimationSettings
@@ -3029,7 +3029,7 @@ private fun SettingsPage(
                     SettingsEntry(
                         title = tx("configurations"),
                         subtitle = tx("configurations_subtitle"),
-                        icon = Icons.Default.Build,
+                        icon = AppGlyph.BUILD,
                         onClick = { selectedConfigId = activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty(); section = SettingsSection.CONFIGS }
                     )
                 }
@@ -3127,7 +3127,7 @@ private fun SettingsPage(
                                 Text(title, color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                                 Text(description, color = p.muted, fontSize = 12.sp)
                             }
-                            if (selected) Icon(Icons.Default.Check, contentDescription = null, tint = p.accent)
+                            if (selected) AppIcon(AppGlyph.CHECK, contentDescription = null, tint = p.accent)
                         }
                     }
                 }
@@ -3404,7 +3404,7 @@ private fun SettingsPage(
                                         fontSize = 11.sp
                                     )
                                 }
-                                if (selected) Icon(Icons.Default.Calculate, contentDescription = null, tint = p.accent)
+                                if (selected) AppIcon(AppGlyph.CALCULATOR, contentDescription = null, tint = p.accent)
                             }
                         }
                     }
@@ -3421,7 +3421,7 @@ private fun SettingsPage(
                             Text(tx("system_font"), color = p.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             Text(if (pendingFontPath == null) tx("selected") else tx("font_system_subtitle"), color = p.muted, fontSize = 11.sp)
                         }
-                        if (pendingFontPath == null) Icon(Icons.Default.Calculate, contentDescription = null, tint = p.accent)
+                        if (pendingFontPath == null) AppIcon(AppGlyph.CALCULATOR, contentDescription = null, tint = p.accent)
                     }
                     ApplySelectionButton(
                         text = when {
@@ -3442,7 +3442,7 @@ private fun SettingsPage(
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(42.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)).background(p.navActive), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Build, null, tint = p.accent, modifier = Modifier.size(22.dp))
+                            AppIcon(AppGlyph.BUILD, null, tint = p.accent, modifier = Modifier.size(22.dp))
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(tx("profile_manager_title"), color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
@@ -3508,7 +3508,7 @@ private fun SettingsPage(
                             Box(Modifier.size(46.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)).background(themeOption.palette.background)
                                 .border(1.dp, themeOption.palette.accent.copy(alpha = 0.55f), RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)),
                                 contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Settings, null, tint = themeOption.palette.accent, modifier = Modifier.size(22.dp))
+                                AppIcon(AppGlyph.SETTINGS, null, tint = themeOption.palette.accent, modifier = Modifier.size(22.dp))
                             }
                             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                 Text(profile.name, color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1)
@@ -3521,9 +3521,9 @@ private fun SettingsPage(
                                     color = if (activeConfigId == profile.id) p.accent else p.muted, fontSize = 11.sp)
                             }
                             if (activeConfigId == profile.id) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = p.accent)
+                                AppIcon(AppGlyph.CHECK, contentDescription = null, tint = p.accent)
                             } else if (selected) {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = p.accent)
+                                AppIcon(AppGlyph.DROPDOWN, contentDescription = null, tint = p.accent)
                             }
                         }
                         androidx.compose.animation.AnimatedVisibility(
@@ -3603,7 +3603,7 @@ private fun SettingsPage(
                             Text(language.englishName, color = p.muted, fontSize = 12.sp)
                         }
                         if (selected) {
-                            Icon(Icons.Default.Calculate, contentDescription = tx("selected"), tint = p.accent)
+                            AppIcon(AppGlyph.CALCULATOR, contentDescription = tx("selected"), tint = p.accent)
                         }
                     }
                 }
@@ -3626,7 +3626,7 @@ private fun SettingsPage(
                                 Text(style.title, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                                 Text(style.description, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
                             }
-                            if (selected) Icon(Icons.Default.Check, contentDescription = "Выбрано", tint = p.accent)
+                            if (selected) AppIcon(AppGlyph.CHECK, contentDescription = "Выбрано", tint = p.accent)
                         }
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(style.cardRadiusDp.dp))
@@ -3749,7 +3749,7 @@ private fun SettingsPage(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(42.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)).background(previewThemeOption.palette.background),
                             contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Settings, null, tint = previewThemeOption.palette.accent)
+                            AppIcon(AppGlyph.SETTINGS, null, tint = previewThemeOption.palette.accent)
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(tx("profile_preview"), fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
@@ -3808,7 +3808,7 @@ private fun LauncherIconPreview(
 private fun SettingsEntry(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    icon: AppGlyph,
     onClick: () -> Unit
 ) {
     val p = LocalPalette.current
@@ -3821,7 +3821,7 @@ private fun SettingsEntry(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(controlRadius)).background(p.key), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
+            AppIcon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(displayText(title), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.text)
@@ -3887,7 +3887,7 @@ private fun IconOptionCard(
                 overflow = TextOverflow.Ellipsis)
             if (selected) {
                 Box(Modifier.size(19.dp).clip(CircleShape).background(p.accent), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Check, contentDescription = tx("selected"), tint = p.onKeyEquals, modifier = Modifier.size(13.dp))
+                    AppIcon(AppGlyph.CHECK, contentDescription = tx("selected"), tint = p.onKeyEquals, modifier = Modifier.size(13.dp))
                 }
             }
         }
@@ -3960,7 +3960,7 @@ private fun ThemeOptionCard(
                 color = p.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (selected) {
                 Box(Modifier.size(19.dp).clip(CircleShape).background(p.accent), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Check, contentDescription = tx("selected"), tint = p.onKeyEquals, modifier = Modifier.size(13.dp))
+                    AppIcon(AppGlyph.CHECK, contentDescription = tx("selected"), tint = p.onKeyEquals, modifier = Modifier.size(13.dp))
                 }
             }
         }
@@ -3995,7 +3995,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(Icons.Default.Check, contentDescription = null, tint = p.onKeyEquals, modifier = Modifier.size(18.dp))
+            AppIcon(AppGlyph.CHECK, contentDescription = null, tint = p.onKeyEquals, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(9.dp))
             Text(tx("apply"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = p.onKeyEquals)
         }
