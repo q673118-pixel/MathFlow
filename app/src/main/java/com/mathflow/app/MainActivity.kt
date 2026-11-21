@@ -1399,6 +1399,69 @@ private fun BottomNav(
                         travelStretch.snapTo(1f)
                     }
                 }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Page.values().forEach { item ->
+                        val selected = item == current
+                        val tint by animateColorAsState(
+                            targetValue = if (selected) p.accent else p.muted,
+                            animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
+                            label = "MathFlowNavigationIconTint"
+                        )
+                        val iconScale by animateFloatAsState(
+                            targetValue = if (settings.enabled && selected && !uiStyle.glassSurface &&
+                                style in setOf(
+                                    BottomNavAnimationStyle.SPRING_MOTION,
+                                    BottomNavAnimationStyle.MORPH,
+                                    BottomNavAnimationStyle.SOFT_FOCUS,
+                                    BottomNavAnimationStyle.ELASTIC_SLIDE
+                                )
+                            ) 1f + settings.iconScale else 1f,
+                            animationSpec = if (springMotion) spring(
+                                dampingRatio = 0.88f - settings.intensity * 0.38f,
+                                stiffness = springStiffness
+                            ) else tween(duration, easing = FastOutSlowInEasing),
+                            label = "MathFlowNavigationIconScale"
+                        )
+                        val morphY by animateFloatAsState(
+                            targetValue = if (settings.enabled && selected && !uiStyle.glassSurface && style == BottomNavAnimationStyle.MORPH) {
+                                1f - settings.iconScale * (0.35f + settings.intensity * 0.45f)
+                            } else 1f,
+                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
+                            label = "MathFlowNavigationIconMorph"
+                        )
+                        val focusAlpha by animateFloatAsState(
+                            targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
+                                settings.opacity * 0.72f
+                            } else 0f,
+                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
+                            label = "MathFlowNavSoftFocusAlpha"
+                        )
+                        Box(
+                            Modifier.weight(1f).height(48.dp).mathFlowClickable {
+                                if (!selected) onSelect(item)
+                            },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (style == BottomNavAnimationStyle.SOFT_FOCUS && settings.enabled) {
+                                Box(
+                                    Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp)
+                                        .graphicsLayer { alpha = focusAlpha }
+                                        .clip(RoundedCornerShape(percent = 50))
+                                        .background(p.navActive)
+                                )
+                            }
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = displayText(item.title),
+                                tint = tint,
+                                modifier = Modifier.size(26.dp).graphicsLayer {
+                                    scaleX = iconScale
+                                    scaleY = iconScale * morphY
+                                }
+                            )
+                        }
+                    }
+                }
                 if (uiStyle.glassSurface && backdrop != null) {
                     // The active item is itself a small refractive glass lens.
                     // Its shape stays capsule-like; the spring stretch supplies the liquid motion.
@@ -1472,69 +1535,7 @@ private fun BottomNav(
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Page.values().forEach { item ->
-                        val selected = item == current
-                        val tint by animateColorAsState(
-                            targetValue = if (selected) p.accent else p.muted,
-                            animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconTint"
-                        )
-                        val iconScale by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected &&
-                                style in setOf(
-                                    BottomNavAnimationStyle.SPRING_MOTION,
-                                    BottomNavAnimationStyle.MORPH,
-                                    BottomNavAnimationStyle.SOFT_FOCUS,
-                                    BottomNavAnimationStyle.ELASTIC_SLIDE
-                                )
-                            ) 1f + settings.iconScale else 1f,
-                            animationSpec = if (springMotion) spring(
-                                dampingRatio = 0.88f - settings.intensity * 0.38f,
-                                stiffness = springStiffness
-                            ) else tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconScale"
-                        )
-                        val morphY by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.MORPH) {
-                                1f - settings.iconScale * (0.35f + settings.intensity * 0.45f)
-                            } else 1f,
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconMorph"
-                        )
-                        val focusAlpha by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
-                                settings.opacity * 0.72f
-                            } else 0f,
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavSoftFocusAlpha"
-                        )
-                        Box(
-                            Modifier.weight(1f).height(48.dp).mathFlowClickable {
-                                if (!selected) onSelect(item)
-                            },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (style == BottomNavAnimationStyle.SOFT_FOCUS && settings.enabled) {
-                                Box(
-                                    Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp)
-                                        .graphicsLayer { alpha = focusAlpha }
-                                        .clip(RoundedCornerShape(percent = 50))
-                                        .background(p.navActive)
-                                )
-                            }
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = displayText(item.title),
-                                tint = tint,
-                                modifier = Modifier.size(26.dp).graphicsLayer {
-                                    scaleX = iconScale
-                                    scaleY = iconScale * morphY
-                                }
-                            )
-                        }
-                    }
-                }
+
             }
         }
     }
