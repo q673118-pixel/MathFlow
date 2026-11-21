@@ -1582,7 +1582,7 @@ private fun BottomNav(
                                         ((12.dp + (settings.iconScale * 24f).dp + (motionEnergy * 18f).dp) * refractionBoost).toPx(),
                                         ((24.dp + (settings.iconScale * 34f).dp + (motionEnergy * 22f).dp) * refractionBoost).toPx(),
                                         depthEffect = true,
-                                        chromaticAberration = true
+                                        chromaticAberration = false
                                     )
                                 },
                                 highlight = {
