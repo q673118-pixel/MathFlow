@@ -681,7 +681,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                             .layerBackdrop(backdrop)
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
-                                                translationX = (1f - enterProgress.value) * 8.dp.toPx()
+                                                translationX = (1f - enterProgress.value) * 3.dp.toPx()
                                             }
                                     ) {
                                         when (page) {
@@ -1232,7 +1232,7 @@ private fun FirstLaunchWelcome(
 }
 
 private const val NAV_TRANSITION_DURATION_MS = 180
-private const val PAGE_ENTER_DURATION_MS = 260
+private const val PAGE_ENTER_DURATION_MS = 160
 
 @Composable
 private fun BottomNav(
@@ -1381,7 +1381,7 @@ private fun BottomNav(
                     targetValue = when {
                         !settings.enabled -> 1f
                         style == BottomNavAnimationStyle.EXPAND -> 1f + settings.intensity * 0.12f
-                        style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f + settings.intensity * 0.20f
+                        style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f
                         style == BottomNavAnimationStyle.LIGHT_TRAIL -> 1f + settings.intensity * 0.08f
                         else -> 1f
                     },
@@ -1407,17 +1407,23 @@ private fun BottomNav(
                         bloom.snapTo(1f)
                     }
                 }
+                // Keep the elastic response restrained: the pill should glide, not
+                // become a long capsule. Liquid Glass gets only a subtle optical pulse.
+                val stretchAmount = when {
+                    uiStyle.glassSurface -> 0.045f
+                    style == BottomNavAnimationStyle.FLUID_PILL -> 0.16f
+                    style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.075f
+                    else -> 0f
+                }
                 val travelStretch = remember(current, style) { Animatable(1f) }
                 LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface) {
-                    if (settings.enabled && (uiStyle.glassSurface || style in setOf(BottomNavAnimationStyle.FLUID_PILL, BottomNavAnimationStyle.ELASTIC_SLIDE))) {
-                        travelStretch.snapTo(
-                            1f + settings.intensity * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.28f else 0.38f
-                        )
+                    if (settings.enabled && stretchAmount > 0f) {
+                        travelStretch.snapTo(1f + settings.intensity * stretchAmount)
                         travelStretch.animateTo(
                             1f,
                             spring(
-                                dampingRatio = if (style == BottomNavAnimationStyle.FLUID_PILL) 0.72f else 0.48f,
-                                stiffness = springStiffness * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.95f else 1.05f
+                                dampingRatio = if (style == BottomNavAnimationStyle.FLUID_PILL) 0.78f else 0.82f,
+                                stiffness = springStiffness * 1.05f
                             )
                         )
                     } else {
@@ -1528,8 +1534,8 @@ private fun BottomNav(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 translationX = indicatorOffset
-                                scaleX = indicatorScaleX * travelStretch.value
-                                scaleY = 1f / (1f + (travelStretch.value - 1f) * 0.42f)
+                                scaleX = 1f + (travelStretch.value - 1f) * 0.35f
+                                scaleY = 1f
                                 alpha = indicatorAlpha
                             }
                             .drawBackdrop(
@@ -1538,7 +1544,7 @@ private fun BottomNav(
                                 effects = {
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
-                                    lens(16.dp.toPx(), 22.dp.toPx(), chromaticAberration = false)
+                                    lens(5.dp.toPx(), 7.dp.toPx(), chromaticAberration = false)
                                 },
                                 highlight = {
                                     val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
