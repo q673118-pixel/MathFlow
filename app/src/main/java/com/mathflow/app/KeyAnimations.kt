@@ -282,7 +282,7 @@ internal fun MathFlowKeyButton(
         ),
         shape = shape,
         color = if (frosted) background.copy(alpha = glass.matteOpacity) else background,
-        shadowElevation = if (frosted) (glass.matteDepth * 4f + glass.matteShadow * 2f).dp else 0.dp,
+        shadowElevation = if (frosted) (glass.matteDepth * 4f + glass.matteShadow * 3f).dp else 0.dp,
         contentColor = foreground
     ) {
         Box(
