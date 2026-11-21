@@ -17,7 +17,7 @@ val useDistributionSigning = listOf(
 
 android {
     namespace = "com.mathflow.app"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.mathflow.app"
@@ -61,7 +61,7 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2025.11.00"))
+    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
     implementation("androidx.activity:activity-compose:1.10.0")
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.compose.ui:ui")
@@ -71,6 +71,8 @@ dependencies {
     // Kyant Backdrop provides GPU-based refraction, lens distortion and glass highlights.
     implementation("io.github.kyant0:backdrop:1.0.6")
     implementation("io.github.kyant0:shapes:1.2.0")
+    // PrismalAGSL: AGSL-backed liquid glass, refraction, specular depth and droplet navigation.
+    implementation("com.github.styropyr0:PrismalAGSL:Prismal:1.0.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
