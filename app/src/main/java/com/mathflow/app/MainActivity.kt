@@ -1407,12 +1407,12 @@ private fun BottomNav(
                         bloom.snapTo(1f)
                     }
                 }
-                // Keep the elastic response restrained: the pill should glide, not
-                // become a long capsule. Liquid Glass gets only a subtle optical pulse.
+                // Restore the original droplet-like elastic travel. The lens and
+                // capsule stretch together, then settle with a soft spring rebound.
                 val stretchAmount = when {
-                    uiStyle.glassSurface -> 0.025f
-                    style == BottomNavAnimationStyle.FLUID_PILL -> 0.10f
-                    style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.045f
+                    uiStyle.glassSurface -> 0.38f
+                    style == BottomNavAnimationStyle.FLUID_PILL -> 0.28f
+                    style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.38f
                     else -> 0f
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
@@ -1422,8 +1422,8 @@ private fun BottomNav(
                         travelStretch.animateTo(
                             1f,
                             spring(
-                                dampingRatio = if (style == BottomNavAnimationStyle.FLUID_PILL) 0.78f else 0.82f,
-                                stiffness = springStiffness * 1.05f
+                                dampingRatio = if (style == BottomNavAnimationStyle.FLUID_PILL) 0.72f else 0.48f,
+                                stiffness = springStiffness * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.95f else 1.05f
                             )
                         )
                     } else {
@@ -1529,8 +1529,8 @@ private fun BottomNav(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 translationX = indicatorOffset
-                                scaleX = 1f + (travelStretch.value - 1f) * 0.35f
-                                scaleY = 1f
+                                scaleX = indicatorScaleX * travelStretch.value
+                                scaleY = 1f / (1f + (travelStretch.value - 1f) * 0.42f)
                                 alpha = indicatorAlpha
                             }
                             .drawBackdrop(
