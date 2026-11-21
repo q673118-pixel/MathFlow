@@ -3359,7 +3359,7 @@ private fun SettingsPage(
                         valueRange = 0f..1f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("${if (uiStyle.glassSurface) "Сила преломления" else tx("nav_icon_scale")}: ${(pendingNavAnimationSettings.iconScale * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("Масштаб иконки: ${(pendingNavAnimationSettings.iconScale * 500).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.iconScale,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(iconScale = it) },
