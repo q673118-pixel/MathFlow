@@ -424,6 +424,7 @@ private fun animatePalette(target: Palette): Palette {
 
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 private val LocalMathFlowBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
+private val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
@@ -460,6 +461,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var uiStyleId by remember {
         mutableStateOf(MathFlowUiStyle.fromId(prefs.getString("ui_style", "material_you") ?: "material_you").id)
     }
+    var settingsCornerRadiusDp by remember { mutableStateOf(prefs.getInt("settings_corner_radius_dp", 18).coerceIn(0, 32)) }
     var selectedIconId by remember { mutableStateOf(prefs.getString("app_icon", "vanilla") ?: "vanilla") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
     val initialFontPath = remember {
@@ -710,7 +712,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                     }
                                                 }
                                             }
-                                            Page.SETTINGS -> SettingsPage(
+                                            Page.SETTINGS -> CompositionLocalProvider(LocalSettingsCornerRadius provides settingsCornerRadiusDp) {
+                                            SettingsPage(
                                                 currentConfig = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
                                                     appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId),
                                                 configProfiles = configProfiles,
@@ -802,6 +805,11 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                 },
                                                 selectedThemeId = themeId,
                                                 selectedUiStyleId = uiStyleId,
+                                                settingsCornerRadiusDp = settingsCornerRadiusDp,
+                                                onSettingsCornerRadiusChange = { radius ->
+                                                    settingsCornerRadiusDp = radius.coerceIn(0, 32)
+                                                    prefs.edit().putInt("settings_corner_radius_dp", settingsCornerRadiusDp).apply()
+                                                },
                                                 onUiStyleSelected = { id ->
                                                     uiStyleId = MathFlowUiStyle.fromId(id).id
                                                     prefs.edit().putString("ui_style", uiStyleId).apply()
@@ -869,6 +877,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .apply()
                                                 }
                                             )
+                                            }
                                         }
                                     }
                                 }
@@ -1816,7 +1825,8 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
+    val settingsRadius = LocalSettingsCornerRadius.current
+    val shape = RoundedCornerShape((settingsRadius ?: uiStyle.cardRadiusDp).dp)
     val outline = uiStyle.outlineAlpha
     // Backdrop sampling from inside the page's own layer can create a recursive
     // RenderNode tree on some Android 14 GPU drivers. Keep panels translucent,
@@ -2625,6 +2635,8 @@ private fun SettingsPage(
     onDuplicateConfig: (MathFlowConfigProfile) -> Unit,
     selectedThemeId: String,
     selectedUiStyleId: String,
+    settingsCornerRadiusDp: Int,
+    onSettingsCornerRadiusChange: (Int) -> Unit,
     onUiStyleSelected: (String) -> Unit,
     selectedIconId: String,
     onThemeSelected: (String) -> Unit,
@@ -2845,6 +2857,32 @@ private fun SettingsPage(
     ) { target ->
         when (target) {
             SettingsSection.MAIN -> PageColumn(tx("settings")) {
+                Panel {
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("Скругление элементов", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+                                Text("Общий радиус углов элементов настроек", fontSize = 12.sp, color = p.muted, lineHeight = 16.sp)
+                            }
+                            Text("${settingsCornerRadiusDp} dp", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.accent)
+                        }
+                        Slider(
+                            value = settingsCornerRadiusDp.toFloat(),
+                            onValueChange = { onSettingsCornerRadiusChange(it.toInt().coerceIn(0, 32)) },
+                            valueRange = 0f..32f,
+                            steps = 15,
+                            colors = SliderDefaults.colors(
+                                thumbColor = p.accent, activeTrackColor = p.accent,
+                                inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
+                                inactiveTickColor = Color.Transparent
+                            )
+                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("0 · Острые углы", fontSize = 11.sp, color = p.muted)
+                            Text("32 · Сильное скругление", fontSize = 11.sp, color = p.muted)
+                        }
+                    }
+                }
                 Panel {
                     SettingsEntry(
                         title = tx("app_icons"),
@@ -3667,12 +3705,14 @@ private fun SettingsEntry(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val settingsRadius = LocalSettingsCornerRadius.current
+    val controlRadius = (settingsRadius ?: uiStyle.controlRadiusDp).dp
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).mathFlowClickable(onClick = onClick).padding(vertical = 8.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(controlRadius)).mathFlowClickable(onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(p.key), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(44.dp).clip(RoundedCornerShape(controlRadius)).background(p.key), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -3693,7 +3733,8 @@ private fun IconOptionCard(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
+    val settingsRadius = LocalSettingsCornerRadius.current
+    val shape = RoundedCornerShape((settingsRadius ?: uiStyle.cardRadiusDp).dp)
     val borderColor by animateColorAsState(
         if (selected) p.accent else p.key,
         animationSpec = tween(190, easing = FastOutSlowInEasing),
