@@ -1657,6 +1657,7 @@ private fun CalculatorHome(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
     val calculationScope = rememberCoroutineScope()
     var calculationJob by remember { mutableStateOf<Job?>(null) }
     var expression by rememberSaveable { mutableStateOf("") }
@@ -1774,10 +1775,11 @@ private fun CalculatorHome(
     ) {
         val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
         Surface(
-            Modifier.fillMaxWidth().weight(1f),
+            Modifier.fillMaxWidth().weight(1f)
+                .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), displayShape) else Modifier),
             shape = displayShape,
-            color = if (uiStyle.glassSurface) p.surface.copy(alpha = 0.50f) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (uiStyle.glassSurface) 1.dp else uiStyle.elevationDp.dp
+            color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 4f).dp else uiStyle.elevationDp.dp
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
@@ -1871,7 +1873,13 @@ private fun CalculatorHome(
             exit = androidx.compose.animation.fadeOut(tween(110)) +
                 androidx.compose.animation.shrinkVertically(tween(110))
         ) {
-            Surface(Modifier.fillMaxWidth().heightIn(max = 96.dp), shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp), color = p.surface.copy(alpha = uiStyle.surfaceAlpha)) {
+            Surface(
+                Modifier.fillMaxWidth().heightIn(max = 96.dp)
+                    .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), RoundedCornerShape(uiStyle.cardRadiusDp.dp)) else Modifier),
+                shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
+                color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+                shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f).dp else 0.dp
+            ) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
                     steps.forEachIndexed { index, step ->
                         Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
@@ -2516,6 +2524,8 @@ private fun EquationSolverPage() {
 @Composable
 private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
     val p = LocalPalette.current
+    val glass = LocalBottomNavGlassSettings.current
+    val uiStyle = LocalMathFlowUiStyle.current
     // Compose only visible history rows instead of building the full list at once.
     LazyColumn(
         modifier = Modifier.fillMaxSize()
@@ -2533,12 +2543,14 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
         } else {
             items(entries, key = { it.id }) { entry ->
                 var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
-                val uiStyle = LocalMathFlowUiStyle.current
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().then(
+                        if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), RoundedCornerShape(uiStyle.cardRadiusDp.dp))
+                        else Modifier
+                    ),
                     shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-                    color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
-                    shadowElevation = uiStyle.elevationDp.dp
+                    color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+                    shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 3f + glass.matteShadow * 2f).dp else uiStyle.elevationDp.dp
                 ) {
                     Column(
                         Modifier.fillMaxWidth()
