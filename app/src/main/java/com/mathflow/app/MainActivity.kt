@@ -1303,7 +1303,22 @@ private fun BottomNav(
                     Row(
                         Modifier.fillMaxWidth().height(48.dp)
                             .graphicsLayer { alpha = 0f }
-                            .layerBackdrop(tabsBackdrop),
+                            .layerBackdrop(tabsBackdrop)
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(35.dp) },
+                                effects = {
+                                    vibrancy()
+                                    blur(8.dp.toPx())
+                                    lens(24.dp.toPx(), 24.dp.toPx())
+                                },
+                                highlight = {
+                                    Highlight.Default.copy(alpha = 0.72f)
+                                },
+                                onDrawSurface = {
+                                    drawRect(p.surface.copy(alpha = 0.22f))
+                                }
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Page.values().forEach { item ->
