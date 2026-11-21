@@ -678,7 +678,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth()
-                                            .layerBackdrop(backdrop)
+                                            .then(if (MathFlowUiStyle.fromId(uiStyleId).glassSurface) Modifier.layerBackdrop(backdrop) else Modifier)
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
                                                 translationX = (1f - enterProgress.value) * 3.dp.toPx()
