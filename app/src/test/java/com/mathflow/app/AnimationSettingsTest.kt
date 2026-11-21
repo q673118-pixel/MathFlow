@@ -58,6 +58,14 @@ class AnimationSettingsTest {
     }
 
     @Test
+    fun removedLightTrailStyleFallsBackSafelyForOldProfiles() {
+        assertEquals(
+            BottomNavAnimationStyle.FLUID_PILL,
+            BottomNavAnimationStyle.fromId("light_trail")
+        )
+    }
+
+    @Test
     fun unknownBottomNavigationStyleFallsBackSafely() {
         assertEquals(
             BottomNavAnimationStyle.FLUID_PILL,
