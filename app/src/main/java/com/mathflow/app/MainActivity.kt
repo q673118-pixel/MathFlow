@@ -1303,22 +1303,7 @@ private fun BottomNav(
                     Row(
                         Modifier.fillMaxWidth().height(48.dp)
                             .graphicsLayer { alpha = 0f }
-                            .layerBackdrop(tabsBackdrop)
-                            .drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { RoundedCornerShape(35.dp) },
-                                effects = {
-                                    vibrancy()
-                                    blur(8.dp.toPx())
-                                    lens(24.dp.toPx(), 24.dp.toPx())
-                                },
-                                highlight = {
-                                    Highlight.Default.copy(alpha = 0.72f)
-                                },
-                                onDrawSurface = {
-                                    drawRect(p.surface.copy(alpha = 0.22f))
-                                }
-                            ),
+                            .layerBackdrop(tabsBackdrop),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Page.values().forEach { item ->
@@ -1361,7 +1346,7 @@ private fun BottomNav(
                 }
                 // The indicator always follows the duration slider. Spring-like character
                 // is retained by the stretch and icon-scale effects below.
-                val offsetSpec = if (uiStyle.glassSurface && settings.enabled) {
+                val offsetSpec = if (springMotion) {
                     spring<Float>(
                         dampingRatio = 0.76f,
                         stiffness = springStiffness * 0.92f
@@ -1410,9 +1395,9 @@ private fun BottomNav(
                 // Keep the elastic response restrained: the pill should glide, not
                 // become a long capsule. Liquid Glass gets only a subtle optical pulse.
                 val stretchAmount = when {
-                    uiStyle.glassSurface -> 0.045f
-                    style == BottomNavAnimationStyle.FLUID_PILL -> 0.16f
-                    style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.075f
+                    uiStyle.glassSurface -> 0.025f
+                    style == BottomNavAnimationStyle.FLUID_PILL -> 0.10f
+                    style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.045f
                     else -> 0f
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
@@ -1473,14 +1458,9 @@ private fun BottomNav(
                             label = "MathFlowNavigationIconTint"
                         )
                         val iconScale by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && !uiStyle.glassSurface &&
-                                style in setOf(
-                                    BottomNavAnimationStyle.SPRING_MOTION,
-                                    BottomNavAnimationStyle.MORPH,
-                                    BottomNavAnimationStyle.SOFT_FOCUS,
-                                    BottomNavAnimationStyle.ELASTIC_SLIDE
-                                )
-                            ) 1f + settings.iconScale else 1f,
+                            targetValue = if (settings.enabled && selected && !uiStyle.glassSurface) {
+                                1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
+                            } else 1f,
                             animationSpec = if (springMotion) spring(
                                 dampingRatio = 0.88f - settings.intensity * 0.38f,
                                 stiffness = springStiffness
@@ -1489,7 +1469,7 @@ private fun BottomNav(
                         )
                         val morphY by animateFloatAsState(
                             targetValue = if (settings.enabled && selected && !uiStyle.glassSurface && style == BottomNavAnimationStyle.MORPH) {
-                                1f - settings.iconScale * (0.35f + settings.intensity * 0.45f)
+                                1f - settings.iconScale * (0.18f + settings.intensity * 0.22f)
                             } else 1f,
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconMorph"
