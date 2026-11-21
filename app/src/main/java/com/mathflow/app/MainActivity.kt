@@ -1327,7 +1327,18 @@ private fun BottomNav(
                                     item.icon,
                                     contentDescription = null,
                                     tint = if (item == current) p.accent else p.muted,
-                                    modifier = Modifier.size(if (item == current) 29.dp else 26.dp)
+                                    modifier = Modifier
+                                        .size(if (item == current) 29.dp else 26.dp)
+                                        .graphicsLayer {
+                                            // The captured source glyph is deliberately larger than
+                                            // the visible glyph. The glass lens then refracts this
+                                            // real icon image instead of merely enlarging its shell.
+                                            val sourceMagnification = if (item == current) {
+                                                1.20f + settings.intensity * 0.10f
+                                            } else 1f
+                                            scaleX = sourceMagnification
+                                            scaleY = sourceMagnification
+                                        }
                                 )
                             }
                         }
@@ -1576,10 +1587,14 @@ private fun BottomNav(
                                         BottomNavAnimationStyle.RIPPLE_BLOOM -> 1.10f
                                         else -> 1f
                                     }
+                                    val motionEnergy = if (settings.enabled) {
+                                        (travelStretch.value - 1f).coerceIn(0f, 0.24f)
+                                    } else 0f
                                     lens(
-                                        ((8.dp + (settings.iconScale * 30f).dp) * refractionBoost).toPx(),
-                                        ((11.dp + (settings.iconScale * 35f).dp) * refractionBoost).toPx(),
-                                        chromaticAberration = false
+                                        ((12.dp + (settings.iconScale * 24f).dp + (motionEnergy * 18f).dp) * refractionBoost).toPx(),
+                                        ((24.dp + (settings.iconScale * 34f).dp + (motionEnergy * 22f).dp) * refractionBoost).toPx(),
+                                        depthEffect = true,
+                                        chromaticAberration = true
                                     )
                                 },
                                 highlight = {
