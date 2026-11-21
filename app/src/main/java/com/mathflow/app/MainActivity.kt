@@ -497,7 +497,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                 durationMs = prefs.getInt("nav_animation_duration", 280),
                 intensity = prefs.getFloat("nav_animation_intensity", 0.65f),
                 iconScale = prefs.getFloat("nav_animation_icon_scale", 0.08f),
-                opacity = prefs.getFloat("nav_animation_opacity", 0.85f)
+                opacity = prefs.getFloat("nav_animation_opacity", 0.85f),
+                refractionStrength = prefs.getFloat("nav_refraction_strength", 0.35f),
+                dropletRoundness = prefs.getFloat("nav_droplet_roundness", 0.96f),
+                glassBlur = prefs.getFloat("nav_glass_blur", 8f),
+                glassDepth = prefs.getFloat("nav_glass_depth", 0.70f),
+                highlightStrength = prefs.getFloat("nav_highlight_strength", 0.90f),
+                shadowStrength = prefs.getFloat("nav_shadow_strength", 0.42f)
             ).normalized()
         )
     }
@@ -1263,7 +1269,7 @@ private fun BottomNav(
                         // Follow Kyant's LiquidBottomTabs material stack: vibrancy,
                         // restrained blur, then optical refraction of the real page beneath.
                         vibrancy()
-                        blur(8.dp.toPx())
+                        blur(settings.glassBlur.dp.toPx())
                         lens(24.dp.toPx(), 24.dp.toPx())
                     },
                     highlight = { Highlight(width = 0.8.dp, blurRadius = 1.6.dp, alpha = 0.9f) },
@@ -1300,7 +1306,7 @@ private fun BottomNav(
                                 shape = { RoundedCornerShape(35.dp) },
                                 effects = {
                                     vibrancy()
-                                    blur(8.dp.toPx())
+                                    blur(settings.glassBlur.dp.toPx())
                                     lens(24.dp.toPx(), 24.dp.toPx())
                                 },
                                 highlight = {
@@ -1363,17 +1369,10 @@ private fun BottomNav(
                 }
                 // The indicator always follows the duration slider. Spring-like character
                 // is retained by the stretch and icon-scale effects below.
-                val offsetSpec = if (springMotion) {
-                    spring<Float>(
-                        dampingRatio = 0.76f,
-                        stiffness = springStiffness * 0.92f
-                    )
-                } else {
-                    tween<Float>(
-                        durationMillis = duration,
-                        easing = FastOutSlowInEasing
-                    )
-                }
+                val offsetSpec = tween<Float>(
+                    durationMillis = duration.coerceAtLeast(1),
+                    easing = FastOutSlowInEasing
+                )
                 val indicatorOffset by animateFloatAsState(
                     targetValue = targetOffset,
                     animationSpec = offsetSpec,
@@ -1427,10 +1426,7 @@ private fun BottomNav(
                         travelStretch.snapTo(1f + settings.intensity * stretchAmount)
                         travelStretch.animateTo(
                             1f,
-                            spring(
-                                dampingRatio = if (style == BottomNavAnimationStyle.FLUID_PILL) 0.72f else 0.48f,
-                                stiffness = springStiffness * if (style == BottomNavAnimationStyle.FLUID_PILL) 0.95f else 1.05f
-                            )
+                            tween(durationMillis = duration.coerceAtLeast(1), easing = FastOutSlowInEasing)
                         )
                     } else {
                         travelStretch.snapTo(1f)
@@ -1556,52 +1552,37 @@ private fun BottomNav(
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
                                 shape = {
-                                    val morphCorner = if (settings.enabled) {
-                                        when (style) {
-                                            BottomNavAnimationStyle.MORPH ->
-                                                (34f + (travelStretch.value - 1f) * 42f).toInt().coerceIn(24, 50)
-                                            BottomNavAnimationStyle.ELASTIC_SLIDE ->
-                                                (46f - (travelStretch.value - 1f) * 20f).toInt().coerceIn(38, 50)
-                                            BottomNavAnimationStyle.EXPAND ->
-                                                (42f + (bloom.value * 8f)).toInt().coerceIn(42, 50)
-                                            else -> 50
-                                        }
-                                    } else 50
-                                    RoundedCornerShape(percent = morphCorner)
+                                     RoundedCornerShape(percent = (settings.dropletRoundness * 50f).toInt().coerceIn(40, 50))
                                 },
                                 effects = {
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
-                                    val refractionBoost = when (style) {
-                                        BottomNavAnimationStyle.MORPH -> 1.18f
-                                        BottomNavAnimationStyle.ELASTIC_SLIDE -> 1.12f
-                                        BottomNavAnimationStyle.RIPPLE_BLOOM -> 1.10f
-                                        else -> 1f
-                                    }
-                                    val motionEnergy = if (settings.enabled) {
-                                        (travelStretch.value - 1f).coerceIn(0f, 0.24f)
-                                    } else 0f
-                                    lens(
-                                        ((12.dp + (settings.iconScale * 24f).dp + (motionEnergy * 18f).dp) * refractionBoost).toPx(),
-                                        ((24.dp + (settings.iconScale * 34f).dp + (motionEnergy * 22f).dp) * refractionBoost).toPx(),
-                                        depthEffect = true,
-                                        chromaticAberration = false
+                                     val refraction = settings.refractionStrength
+                                     if (refraction > 0f) {
+                                         val motionEnergy = if (settings.enabled) (travelStretch.value - 1f).coerceIn(0f, 0.24f) else 0f
+                                         lens(
+                                             ((24f * refraction + motionEnergy * 18f * refraction).dp).toPx(),
+                                             ((42f * refraction + motionEnergy * 22f * refraction).dp).toPx(),
+                                             depthEffect = settings.glassDepth > 0f,
+                                             chromaticAberration = false
+                                         )
+                                     }
                                     )
                                 },
                                 highlight = {
                                     val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
                                         .coerceIn(0.55f, 1f)
-                                    Highlight.Default.copy(alpha = energy)
+                                    Highlight.Default.copy(alpha = energy * settings.highlightStrength)
                                 },
                                 shadow = {
                                     val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
                                         .coerceIn(0.55f, 1f)
-                                    Shadow(radius = 18.dp, alpha = 0.42f * energy)
+                                    Shadow(radius = 18.dp, alpha = settings.shadowStrength * energy)
                                 },
                                 innerShadow = {
                                     val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
                                         .coerceIn(0.55f, 1f)
-                                    InnerShadow(radius = 7.dp, alpha = 0.16f * energy)
+                                    InnerShadow(radius = 7.dp, alpha = settings.glassDepth * 0.16f * energy)
                                 },
                                 onDrawSurface = {
                                     drawRect(p.accent.copy(alpha = 0.035f))
