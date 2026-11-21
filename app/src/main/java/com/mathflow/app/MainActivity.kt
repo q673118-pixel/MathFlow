@@ -456,6 +456,9 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var uiStyleId by remember {
         mutableStateOf(MathFlowUiStyle.fromId(prefs.getString("ui_style", "material_you") ?: "material_you").id)
     }
+    var iconPackId by remember {
+        mutableStateOf(AppIconPack.fromId(prefs.getString("app_icon_pack", "material") ?: "material").id)
+    }
     var settingsCornerRadiusDp by remember { mutableStateOf(prefs.getInt("settings_corner_radius_dp", 18).coerceIn(0, 40)) }
     var selectedIconId by remember { mutableStateOf(prefs.getString("app_icon", "vanilla") ?: "vanilla") }
     var fontScale by remember { mutableFloatStateOf(prefs.getFloat("font_scale", 1f)) }
@@ -511,12 +514,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var activeConfigId by remember {
         mutableStateOf(prefs.getString("mathflow_active_config", null)?.takeIf { id -> configProfiles.any { it.id == id } })
     }
-    LaunchedEffect(themeId, selectedIconId, fontScale, fontPath, appLanguage, measurementSystem,
+    LaunchedEffect(themeId, selectedIconId, iconPackId, fontScale, fontPath, appLanguage, measurementSystem,
         keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, activeConfigId) {
         val activeId = activeConfigId
         if (activeId != null) {
             val snapshot = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId)
+                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId)
             configProfiles = configProfiles.map { profile ->
                 if (profile.id == activeId) profile.copy(settings = snapshot) else profile
             }
@@ -612,6 +615,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalDensity provides density,
         LocalPalette provides palette,
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
+        LocalAppIconPack provides AppIconPack.fromId(iconPackId),
         LocalMathFlowBackdrop provides backdrop,
         // One persisted radius controls settings controls and calculator keys consistently.
         LocalSettingsCornerRadius provides settingsCornerRadiusDp,
@@ -744,6 +748,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                 onApplyConfig = { profile ->
                                                     val cfg = validateConfigSnapshot(profile.settings)
                                                     themeId = cfg.getString("theme")
+                                                    iconPackId = AppIconPack.fromId(cfg.optString("iconPack", "material")).id
                                                     uiStyleId = MathFlowUiStyle.fromId(cfg.optString("uiStyle", "material_you")).id
                                                     selectedIconId = cfg.getString("icon")
                                                     fontScale = cfg.getDouble("fontScale").toFloat()
@@ -771,6 +776,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                     prefs.edit()
                                                         .putString("app_theme", themeId).putString("ui_style", uiStyleId)
                                                         .putString("app_icon", selectedIconId)
+                                                        .putString("app_icon_pack", iconPackId)
                                                         .putFloat("font_scale", fontScale).putString("app_language", appLanguage)
                                                         .putString("measurement_system", measurementSystem)
                                                         .putString("font_path", fontPath)
@@ -820,6 +826,11 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                 },
                                                 selectedThemeId = themeId,
                                                 selectedUiStyleId = uiStyleId,
+                                                selectedIconPackId = iconPackId,
+                                                onIconPackSelected = { id ->
+                                                    iconPackId = AppIconPack.fromId(id).id
+                                                    prefs.edit().putString("app_icon_pack", iconPackId).apply()
+                                                },
                                                 settingsCornerRadiusDp = settingsCornerRadiusDp,
                                                 onSettingsCornerRadiusChange = { radius ->
                                                     settingsCornerRadiusDp = radius.coerceIn(0, 40)
@@ -2651,17 +2662,19 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
 
-private enum class SettingsSection { MAIN, ICONS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS, CONFIGS }
+private enum class SettingsSection { MAIN, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS, CONFIGS }
 
 private fun makeConfigSnapshot(
     theme: String, icon: String, fontScale: Float, fontPath: String?, language: String,
     measurement: String, key: KeyAnimationSettings, nav: BottomNavAnimationSettings,
     resultFormat: String,
-    uiStyle: String = MathFlowUiStyle.MATERIAL_YOU.id
+    uiStyle: String = MathFlowUiStyle.MATERIAL_YOU.id,
+    iconPack: String = "material"
 ): JSONObject = JSONObject()
-    .put("schemaVersion", 4)
+    .put("schemaVersion", 5)
     .put("theme", theme)
     .put("uiStyle", MathFlowUiStyle.fromId(uiStyle).id)
+    .put("iconPack", AppIconPack.fromId(iconPack).id)
     .put("icon", icon)
     .put("fontScale", fontScale.toDouble())
     .put("fontPath", fontPath ?: JSONObject.NULL)
@@ -2688,7 +2701,8 @@ private fun makeConfigSnapshot(
     .put("navShadow", nav.shadowStrength.toDouble())
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
-    require(input.optInt("schemaVersion", -1) in 1..4) { "Unsupported settings schema" }
+    require(input.optInt("schemaVersion", -1) in 1..5) { "Unsupported settings schema" }
+    val iconPack = AppIconPack.fromId(input.optString("iconPack", "material")).id
     val theme = input.optString("theme", "vanilla")
     val uiStyle = MathFlowUiStyle.fromId(input.optString("uiStyle", "material_you")).id
     val icon = input.optString("icon", "vanilla")
@@ -2729,7 +2743,7 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
         input.optDouble("navShadow", 0.42).toFloat()
     ).normalized()
     return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
-        language, measurement, key, nav, resultFormat, uiStyle)
+        language, measurement, key, nav, resultFormat, uiStyle, iconPack)
 }
 
 @Composable
@@ -2747,6 +2761,8 @@ private fun SettingsPage(
     onDuplicateConfig: (MathFlowConfigProfile) -> Unit,
     selectedThemeId: String,
     selectedUiStyleId: String,
+    selectedIconPackId: String,
+    onIconPackSelected: (String) -> Unit,
     settingsCornerRadiusDp: Int,
     onSettingsCornerRadiusChange: (Int) -> Unit,
     onUiStyleSelected: (String) -> Unit,
@@ -2783,6 +2799,7 @@ private fun SettingsPage(
     var pendingIconId by rememberSaveable(selectedIconId) { mutableStateOf(selectedIconId) }
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var pendingUiStyleId by rememberSaveable(selectedUiStyleId) { mutableStateOf(selectedUiStyleId) }
+    var pendingIconPackId by rememberSaveable(selectedIconPackId) { mutableStateOf(selectedIconPackId) }
     var pendingFontScale by remember(fontScale) { mutableFloatStateOf(fontScale) }
     var pendingLanguage by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
     var pendingMeasurementSystem by remember(selectedMeasurementSystem) { mutableStateOf(selectedMeasurementSystem) }
@@ -3004,6 +3021,13 @@ private fun SettingsPage(
                     )
                     HorizontalDivider(color = p.key.copy(alpha = 0.65f))
                     SettingsEntry(
+                        title = "Стиль системных иконок",
+                        subtitle = AppIconPack.fromId(selectedIconPackId).title,
+                        icon = AppGlyph.TUNE,
+                        onClick = { pendingIconPackId = selectedIconPackId; section = SettingsSection.ICON_PACKS }
+                    )
+                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
+                    SettingsEntry(
                         title = tx("themes"),
                         subtitle = tx("theme_entry_subtitle"),
                         icon = AppGlyph.PALETTE,
@@ -3086,6 +3110,41 @@ private fun SettingsPage(
                         fontSize = 13.sp, color = p.muted, lineHeight = 18.sp
                     )
                 }
+            }
+
+            SettingsSection.ICON_PACKS -> PageColumn("Стиль иконок") {
+                Text("Выбери единый набор для нижней навигации, настроек, действий и системных элементов MathFlow.",
+                    color = p.muted, fontSize = 13.sp, lineHeight = 19.sp)
+                AppIconPack.entries.forEach { pack ->
+                    val selected = pendingIconPackId == pack.id
+                    Panel {
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+                                .background(if (selected) p.navActive else Color.Transparent)
+                                .mathFlowClickable { pendingIconPackId = pack.id }
+                                .padding(13.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(13.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                listOf(AppGlyph.HOME, AppGlyph.TOOLS, AppGlyph.SOLVER, AppGlyph.HISTORY, AppGlyph.SETTINGS).forEach { glyph ->
+                                    AppIcon(glyph, contentDescription = null, tint = if (selected) p.accent else p.muted,
+                                        modifier = Modifier.size(23.dp))
+                                }
+                            }
+                            if (selected) AppIcon(AppGlyph.CHECK, null, tint = p.accent)
+                        }
+                        Text(pack.title, color = if (selected) p.accent else p.text,
+                            fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(pack.description, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                    }
+                }
+                ApplySelectionButton(
+                    text = if (pendingIconPackId == selectedIconPackId) tx("already_applied") else tx("apply"),
+                    enabled = pendingIconPackId != selectedIconPackId,
+                    onClick = { onIconPackSelected(pendingIconPackId) }
+                )
             }
 
             SettingsSection.ICONS -> PageColumn(tx("app_icons")) {
@@ -3747,6 +3806,7 @@ private fun SettingsPage(
             if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
             if (pendingThemeId != selectedThemeId) onThemeSelected(pendingThemeId)
             if (pendingUiStyleId != selectedUiStyleId) onUiStyleSelected(pendingUiStyleId)
+            if (pendingIconPackId != selectedIconPackId) onIconPackSelected(pendingIconPackId)
             if (pendingAnimationSettings != appliedAnimationSettings) {
                 onAnimationSettingsApplied(pendingAnimationSettings.normalized())
             }
