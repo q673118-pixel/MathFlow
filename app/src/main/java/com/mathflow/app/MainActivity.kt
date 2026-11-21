@@ -252,7 +252,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
         }
 
         delay(120L)
-        splashAlpha.animateTo(0f, tween(1000, easing = LinearOutSlowInEasing))
+        splashAlpha.animateTo(0f, tween(2200, easing = LinearOutSlowInEasing))
         onFinished()
     }
 
@@ -281,7 +281,10 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                 quadraticTo(80f, 28f, 80f, 37f)
                 lineTo(80f, 78f)
             }
-            val estimatedPathLength = 168f
+            // The full Ocean contour is about 170 px long in this 108-unit
+            // coordinate space. Keep the visible dash longer than the contour:
+            // otherwise the last stroke segment falls into the dash gap.
+            val fullContourDash = 240f
             drawContext.transform.scale(scaleX, scaleY, pivot = Offset.Zero)
             drawPath(
                 path = oceanM,
@@ -291,7 +294,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round,
                     pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                        floatArrayOf((estimatedPathLength * mProgress.value).coerceAtLeast(0.001f), estimatedPathLength * 2f),
+                        floatArrayOf((fullContourDash * mProgress.value).coerceAtLeast(0.001f), fullContourDash * 2f),
                         0f
                     )
                 )
