@@ -1367,17 +1367,14 @@ private fun BottomNav(
                 val indicatorWidth = minOf(
                     when {
                         uiStyle.glassSurface -> 66.dp
-                        style == BottomNavAnimationStyle.LIGHT_TRAIL -> 38.dp
                         style == BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
                         style == BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
                         else -> 72.dp
                     },
                     itemWidth * if (uiStyle.glassSurface) 0.84f else 0.92f
                 )
-                val trailWidth = minOf(62.dp, itemWidth * 0.96f)
                 val indicatorHeight = when {
                     uiStyle.glassSurface -> 44.dp
-                    style == BottomNavAnimationStyle.LIGHT_TRAIL -> 4.dp
                     style == BottomNavAnimationStyle.MORPH -> 38.dp
                     style == BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
                     else -> 42.dp
@@ -1401,7 +1398,6 @@ private fun BottomNav(
                         !settings.enabled -> 1f
                         style == BottomNavAnimationStyle.EXPAND -> 1f + settings.intensity * 0.12f
                         style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f
-                        style == BottomNavAnimationStyle.LIGHT_TRAIL -> 1f + settings.intensity * 0.08f
                         else -> 1f
                     },
                     animationSpec = tween(duration, easing = FastOutSlowInEasing),
@@ -1431,7 +1427,6 @@ private fun BottomNav(
                 val stretchAmount = when (style) {
                     BottomNavAnimationStyle.FLUID_PILL -> 0.28f
                     BottomNavAnimationStyle.SPRING_MOTION -> 0.16f
-                    BottomNavAnimationStyle.LIGHT_TRAIL -> 0.10f
                     BottomNavAnimationStyle.MORPH -> 0.46f
                     BottomNavAnimationStyle.EXPAND -> 0.22f
                     BottomNavAnimationStyle.SOFT_FOCUS -> 0.08f
@@ -1455,33 +1450,19 @@ private fun BottomNav(
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
-                                translationX = indicatorOffset - if (style == BottomNavAnimationStyle.LIGHT_TRAIL) {
-                                    with(density) { ((trailWidth - indicatorWidth) / 2).toPx() }
-                                } else 0f
+                                translationX = indicatorOffset
                                 scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX * travelStretch.value
                                 alpha = indicatorAlpha
                             }
-                            .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 14.dp else 0.dp)
                             .size(
-                                width = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) trailWidth else indicatorWidth,
-                                height = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 12.dp else indicatorHeight
+                                width = indicatorWidth,
+                                height = indicatorHeight
                             )
                     ) {
-                        if (style == BottomNavAnimationStyle.LIGHT_TRAIL && settings.enabled) {
-                            Box(
-                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
-                                    .background(p.accent.copy(alpha = 0.16f))
-                            )
-                            Box(
-                                Modifier.align(Alignment.Center).size(width = indicatorWidth, height = 3.dp)
-                                    .clip(RoundedCornerShape(percent = 50)).background(p.accent)
-                            )
-                        } else {
-                            Box(
-                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
-                                    .background(if (style == BottomNavAnimationStyle.LIGHT_TRAIL) p.accent else p.navActive)
-                            )
-                        }
+                        Box(
+                            Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
+                                .background(p.navActive)
+                        )
                     }
                 }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -1551,7 +1532,6 @@ private fun BottomNav(
                                 val styleWidth = when (style) {
                                     BottomNavAnimationStyle.RIPPLE_BLOOM -> bloom.value
                                     BottomNavAnimationStyle.EXPAND -> bloom.value
-                                    BottomNavAnimationStyle.LIGHT_TRAIL -> 1f + settings.intensity * 0.10f
                                     else -> 1f
                                 }
                                 scaleX = indicatorScaleX * travelStretch.value * styleWidth
