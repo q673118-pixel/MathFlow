@@ -3020,6 +3020,7 @@ private fun SettingsPage(
         pendingIconId != selectedIconId ||
         pendingThemeId != selectedThemeId ||
         pendingUiStyleId != selectedUiStyleId ||
+        pendingIconPackId != selectedIconPackId ||
         pendingAnimationSettings != appliedAnimationSettings ||
         pendingNavAnimationSettings != appliedNavAnimationSettings ||
         pendingFontPath != fontPath ||
@@ -3188,7 +3189,7 @@ private fun SettingsPage(
                                 verticalAlignment = Alignment.CenterVertically) {
                                 listOf(AppGlyph.HOME, AppGlyph.TOOLS, AppGlyph.SOLVER, AppGlyph.HISTORY, AppGlyph.SETTINGS).forEach { glyph ->
                                     AppIcon(glyph, contentDescription = null, tint = if (selected) p.accent else p.muted,
-                                        modifier = Modifier.size(23.dp))
+                                        modifier = Modifier.size(23.dp), pack = pack)
                                 }
                             }
                             if (selected) AppIcon(AppGlyph.CHECK, null, tint = p.accent)
