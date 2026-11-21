@@ -71,8 +71,6 @@ dependencies {
     // Kyant Backdrop provides GPU-based refraction, lens distortion and glass highlights.
     implementation("io.github.kyant0:backdrop:1.0.6")
     implementation("io.github.kyant0:shapes:1.2.0")
-    // PrismalAGSL is published as an Android AAR by its JitPack install task.
-    implementation("com.github.styropyr0:Prismal:1.0.7@aar")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
