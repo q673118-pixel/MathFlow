@@ -1650,25 +1650,11 @@ private fun CalculatorHome(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
-        val displayBackdrop = LocalMathFlowBackdrop.current
-        val displayGlass = if (uiStyle.glassSurface && displayBackdrop != null) {
-            Modifier.drawBackdrop(
-                backdrop = displayBackdrop,
-                shape = { displayShape },
-                effects = {
-                    blur(24.dp.toPx())
-                    lens(16.dp.toPx(), 22.dp.toPx())
-                    vibrancy()
-                },
-                highlight = { Highlight(width = 1.2.dp) },
-                onDrawSurface = { drawRect(p.surface.copy(alpha = 0.28f)) }
-            )
-        } else Modifier
         Surface(
-            Modifier.fillMaxWidth().weight(1f).then(displayGlass),
+            Modifier.fillMaxWidth().weight(1f),
             shape = displayShape,
-            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
+            color = if (uiStyle.glassSurface) p.surface.copy(alpha = 0.50f) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            shadowElevation = if (uiStyle.glassSurface) 1.dp else uiStyle.elevationDp.dp
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
@@ -1830,38 +1816,26 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val backdrop = LocalMathFlowBackdrop.current
     val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
     val outline = uiStyle.outlineAlpha
-    val glassModifier = if (uiStyle.glassSurface && backdrop != null) {
-        Modifier.drawBackdrop(
-            backdrop = backdrop,
-            shape = { shape },
-            effects = {
-                blur(20.dp.toPx())
-                lens(10.dp.toPx(), 16.dp.toPx())
-                vibrancy()
-            },
-            highlight = { Highlight(width = 1.dp) },
-            onDrawSurface = { drawRect(p.surface.copy(alpha = 0.30f)) }
-        )
-    } else Modifier
+    // Backdrop sampling from inside the page's own layer can create a recursive
+    // RenderNode tree on some Android 14 GPU drivers. Keep panels translucent,
+    // but reserve actual backdrop sampling for the navigation overlay.
     Surface(
-        modifier.animateContentSize(tween(180)).fillMaxWidth().then(glassModifier)
+        modifier.animateContentSize(tween(180)).fillMaxWidth()
             .then(if (outline > 0f || uiStyle.glassSurface) Modifier.border(
                 1.dp,
                 p.text.copy(alpha = if (uiStyle.glassSurface) 0.30f else outline),
                 shape
             ) else Modifier),
         shape = shape,
-        color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-        shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
+        color = if (uiStyle.glassSurface) p.surface.copy(alpha = 0.48f) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        shadowElevation = if (uiStyle.glassSurface) 1.dp else uiStyle.elevationDp.dp
     ) {
         Column(Modifier.padding(if (uiStyle.compact) 12.dp else 15.dp),
             verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)) { content() }
     }
 }
-
 @Composable
 private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
     val p = LocalPalette.current
