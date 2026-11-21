@@ -1894,7 +1894,7 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
                 shape
             ) else Modifier),
         shape = shape,
-        color = if (uiStyle.glassSurface) p.surface.copy(alpha = 0.48f) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        color = if (uiStyle.glassSurface) p.surface.copy(alpha = 0.90f) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
         shadowElevation = if (uiStyle.glassSurface) 1.dp else uiStyle.elevationDp.dp
     ) {
         Column(Modifier.padding(if (uiStyle.compact) 12.dp else 15.dp),
