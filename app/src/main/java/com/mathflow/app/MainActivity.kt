@@ -1785,7 +1785,7 @@ private fun CalculatorHome(
                 .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), displayShape) else Modifier),
             shape = displayShape,
             color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 4f).dp else uiStyle.elevationDp.dp
+            shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 4f + glass.matteShadow * 3f).dp else uiStyle.elevationDp.dp
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
@@ -1884,7 +1884,7 @@ private fun CalculatorHome(
                     .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), RoundedCornerShape(uiStyle.cardRadiusDp.dp)) else Modifier),
                 shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
                 color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-                shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f).dp else 0.dp
+                shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f + glass.matteShadow * 2f).dp else 0.dp
             ) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
                     steps.forEachIndexed { index, step ->
@@ -4236,7 +4236,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
             .clip(shape).mathFlowClickable(onClick = onClick),
         shape = shape,
         color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.keyEquals,
-        shadowElevation = if (uiStyle.glassSurface) (4f + glass.matteDepth * 6f).dp else 10.dp
+        shadowElevation = if (uiStyle.glassSurface) (4f + glass.matteDepth * 6f + glass.matteShadow * 3f).dp else 10.dp
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 22.dp),
