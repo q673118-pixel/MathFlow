@@ -17,7 +17,7 @@ val useDistributionSigning = listOf(
 
 android {
     namespace = "com.mathflow.app"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.mathflow.app"
