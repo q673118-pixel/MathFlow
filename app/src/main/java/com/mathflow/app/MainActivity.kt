@@ -3234,10 +3234,9 @@ private fun SettingsPage(
                         Text(pack.description, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
                     }
                 }
-                ApplySelectionButton(
-                    text = if (pendingIconPackId == selectedIconPackId) tx("already_applied") else tx("apply"),
-                    enabled = pendingIconPackId != selectedIconPackId,
-                    onClick = { onIconPackSelected(pendingIconPackId) }
+                Text(
+                    if (pendingIconPackId == selectedIconPackId) "Этот набор уже используется." else "Нажми «Применить» в нижней панели, чтобы сохранить выбор.",
+                    color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
                 )
             }
 
