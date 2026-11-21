@@ -1296,6 +1296,8 @@ private fun BottomNav(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val navLiquidPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.LIQUID
+    val navFrostedPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.FROSTED
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -1316,26 +1318,30 @@ private fun BottomNav(
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            modifier = if (uiStyle.glassSurface && backdrop != null) {
+            modifier = if ((navLiquidPanel || navFrostedPanel) && backdrop != null) {
                 Modifier.drawBackdrop(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(35.dp) },
                     effects = {
-                        // Follow Kyant's LiquidBottomTabs material stack: vibrancy,
-                        // restrained blur, then optical refraction of the real page beneath.
                         vibrancy()
-                        blur(settings.glassBlur.dp.toPx())
-                        lens(24.dp.toPx(), 24.dp.toPx())
+                        blur((if (navLiquidPanel) settings.glassBlur else settings.matteBlur).dp.toPx())
+                        if (navLiquidPanel) lens(24.dp.toPx(), 24.dp.toPx())
                     },
-                    highlight = { Highlight(width = 0.8.dp, blurRadius = 1.6.dp, alpha = 0.9f) },
+                    highlight = {
+                        Highlight(
+                            width = if (navLiquidPanel) 0.8.dp else 1.2.dp,
+                            blurRadius = if (navLiquidPanel) 1.6.dp else 3.dp,
+                            alpha = if (navLiquidPanel) 0.9f else settings.matteHighlight
+                        )
+                    },
                     onDrawSurface = {
-                        drawRect(p.surface.copy(alpha = 0.22f))
+                        drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f else settings.matteOpacity))
                     }
                 )
             } else Modifier,
             shape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp),
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
+            shadowElevation = if (navLiquidPanel) 0.dp else if (navFrostedPanel) (settings.matteDepth * 6f).dp else uiStyle.elevationDp.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
@@ -1361,14 +1367,14 @@ private fun BottomNav(
                                 shape = { RoundedCornerShape(35.dp) },
                                 effects = {
                                     vibrancy()
-                                    blur(settings.glassBlur.dp.toPx())
-                                    lens(24.dp.toPx(), 24.dp.toPx())
+                                    blur((if (navLiquidPanel) settings.glassBlur else settings.matteBlur).dp.toPx())
+                                    if (navLiquidPanel) lens(24.dp.toPx(), 24.dp.toPx())
                                 },
                                 highlight = {
-                                    Highlight.Default.copy(alpha = 0.72f)
+                                    Highlight.Default.copy(alpha = if (navLiquidPanel) 0.72f else settings.matteHighlight)
                                 },
                                 onDrawSurface = {
-                                    drawRect(p.surface.copy(alpha = 0.22f))
+                                    drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f else settings.matteOpacity))
                                 }
                             ),
                         verticalAlignment = Alignment.CenterVertically
@@ -1933,12 +1939,12 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
     val settingsRadius = LocalSettingsCornerRadius.current
     val neo = uiStyle.id == "neo"
     val skeuo = uiStyle.id == "skeuomorphic"
     val retro = uiStyle.id == "retro_grid"
-    // Keep the user's custom radius for existing systems. The three new systems
-    // own their geometry so their visual identity cannot be flattened by that slider.
+    val frosted = uiStyle.glassSurface
     val shape = RoundedCornerShape(
         (if (neo || skeuo || retro) uiStyle.cardRadiusDp else settingsRadius ?: uiStyle.cardRadiusDp).dp
     )
@@ -1952,35 +1958,44 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         neo -> p.accent
         retro -> p.accent.copy(alpha = 0.78f)
         skeuo -> p.text.copy(alpha = 0.14f)
-        uiStyle.glassSurface -> p.text.copy(alpha = 0.30f)
+        frosted -> p.text.copy(alpha = 0.12f + glass.matteHighlight * 0.18f)
         else -> p.text.copy(alpha = outline)
     }
-    // Do not sample a panel's own backdrop: recursive RenderNode trees have
-    // caused crashes on Android 14 GPU drivers. Frosted material is applied
-    // through the dedicated glass surfaces, not recursive panel capture.
     Surface(
         modifier.animateContentSize(tween(180)).fillMaxWidth()
-            .then(if (neo || retro || skeuo || outline > 0f || uiStyle.glassSurface) {
-                Modifier.border(borderWidth, borderColor, shape)
+            .then(if (neo || retro || skeuo || outline > 0f || frosted) {
+                Modifier.border(if (frosted) 1.dp else borderWidth, borderColor, shape)
             } else Modifier),
         shape = shape,
-        color = if (uiStyle.glassSurface) p.surface.copy(alpha = 0.90f) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        color = if (frosted) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
         shadowElevation = when {
-            uiStyle.glassSurface -> 1.dp
+            frosted -> (1f + glass.matteDepth * 6f + glass.matteShadow * 3f).dp
             skeuo -> 7.dp
             else -> uiStyle.elevationDp.dp
         }
     ) {
-        Column(
-            Modifier.padding(when {
-                neo -> 13.dp
-                retro -> 11.dp
-                skeuo -> 16.dp
-                uiStyle.compact -> 12.dp
-                else -> 15.dp
-            }),
-            verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)
-        ) { content() }
+        Box {
+            if (frosted && glass.matteHighlight > 0f) {
+                Box(
+                    Modifier.fillMaxWidth().height(28.dp)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(p.text.copy(alpha = glass.matteHighlight * 0.075f), Color.Transparent)
+                            )
+                        )
+                )
+            }
+            Column(
+                Modifier.padding(when {
+                    neo -> 13.dp
+                    retro -> 11.dp
+                    skeuo -> 16.dp
+                    uiStyle.compact -> 12.dp
+                    else -> 15.dp
+                }),
+                verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)
+            ) { content() }
+        }
     }
 }
 @Composable
@@ -2046,10 +2061,15 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
 private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
+    val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp)
     Surface(
-        modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp).mathFlowClickable(onClick = onClick),
-        shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp),
-        color = p.keyEquals
+        modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp)
+            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), shape) else Modifier)
+            .mathFlowClickable(onClick = onClick),
+        shape = shape,
+        color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.keyEquals,
+        shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 4f).dp else 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(displayText(text), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
