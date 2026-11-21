@@ -1558,8 +1558,7 @@ private fun BottomNav(
                             )
                             .size(width = indicatorWidth, height = indicatorHeight)
                     )
-
-
+                }
             }
         }
     }
