@@ -420,6 +420,7 @@ private fun animatePalette(target: Palette): Palette {
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 private val LocalMathFlowBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
 internal val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
+private val LocalBottomNavGlassSettings = androidx.compose.runtime.staticCompositionLocalOf { BottomNavAnimationSettings() }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
@@ -506,7 +507,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                 glassBlur = prefs.getFloat("nav_glass_blur", 8f),
                 glassDepth = prefs.getFloat("nav_glass_depth", 0.70f),
                 highlightStrength = prefs.getFloat("nav_highlight_strength", 0.90f),
-                shadowStrength = prefs.getFloat("nav_shadow_strength", 0.42f)
+                shadowStrength = prefs.getFloat("nav_shadow_strength", 0.42f),
+                surfaceMaterial = BottomNavSurfaceMaterial.fromId(prefs.getString("nav_surface_material", "frosted") ?: "frosted"),
+                matteOpacity = prefs.getFloat("matte_glass_opacity", 0.72f),
+                matteBlur = prefs.getFloat("matte_glass_blur", 12f),
+                matteDepth = prefs.getFloat("matte_glass_depth", 0.38f),
+                matteHighlight = prefs.getFloat("matte_glass_highlight", 0.58f),
+                matteShadow = prefs.getFloat("matte_glass_shadow", 0.32f)
             ).normalized()
         )
     }
@@ -616,6 +623,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalPalette provides palette,
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalAppIconPack provides AppIconPack.fromId(iconPackId),
+        LocalBottomNavGlassSettings provides bottomNavAnimationSettings,
         LocalMathFlowBackdrop provides backdrop,
         // One persisted radius controls settings controls and calculator keys consistently.
         LocalSettingsCornerRadius provides settingsCornerRadiusDp,
@@ -771,7 +779,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         cfg.optDouble("navBlur", 8.0).toFloat(),
                                                         cfg.optDouble("navDepth", 0.70).toFloat(),
                                                         cfg.optDouble("navHighlight", 0.90).toFloat(),
-                                                        cfg.optDouble("navShadow", 0.42).toFloat()
+                                                        cfg.optDouble("navShadow", 0.42).toFloat(),
+                                                        BottomNavSurfaceMaterial.fromId(cfg.optString("navSurfaceMaterial", "frosted")),
+                                                        cfg.optDouble("matteOpacity", 0.72).toFloat(),
+                                                        cfg.optDouble("matteBlur", 12.0).toFloat(),
+                                                        cfg.optDouble("matteDepth", 0.38).toFloat(),
+                                                        cfg.optDouble("matteHighlight", 0.58).toFloat(),
+                                                        cfg.optDouble("matteShadow", 0.32).toFloat()
                                                     ).normalized()
                                                     prefs.edit()
                                                         .putString("app_theme", themeId).putString("ui_style", uiStyleId)
@@ -799,6 +813,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .putFloat("nav_glass_depth", bottomNavAnimationSettings.glassDepth)
                                                         .putFloat("nav_highlight_strength", bottomNavAnimationSettings.highlightStrength)
                                                         .putFloat("nav_shadow_strength", bottomNavAnimationSettings.shadowStrength)
+                                                        .putString("nav_surface_material", bottomNavAnimationSettings.surfaceMaterial.id)
+                                                        .putFloat("matte_glass_opacity", bottomNavAnimationSettings.matteOpacity)
+                                                        .putFloat("matte_glass_blur", bottomNavAnimationSettings.matteBlur)
+                                                        .putFloat("matte_glass_depth", bottomNavAnimationSettings.matteDepth)
+                                                        .putFloat("matte_glass_highlight", bottomNavAnimationSettings.matteHighlight)
+                                                        .putFloat("matte_glass_shadow", bottomNavAnimationSettings.matteShadow)
                                                         .putString("calculator_result_format", calculatorResultFormat).apply()
                                                     runCatching { setLauncherIcon(context, selectedIconId) }
                                                     activeConfigId = profile.id
@@ -906,6 +926,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                          .putFloat("nav_glass_depth", normalized.glassDepth)
                                                          .putFloat("nav_highlight_strength", normalized.highlightStrength)
                                                          .putFloat("nav_shadow_strength", normalized.shadowStrength)
+                                                        .putString("nav_surface_material", normalized.surfaceMaterial.id)
+                                                        .putFloat("matte_glass_opacity", normalized.matteOpacity)
+                                                        .putFloat("matte_glass_blur", normalized.matteBlur)
+                                                        .putFloat("matte_glass_depth", normalized.matteDepth)
+                                                        .putFloat("matte_glass_highlight", normalized.matteHighlight)
+                                                        .putFloat("matte_glass_shadow", normalized.matteShadow)
                                                         .apply()
                                                 }
                                             )
@@ -2671,7 +2697,7 @@ private fun makeConfigSnapshot(
     uiStyle: String = MathFlowUiStyle.MATERIAL_YOU.id,
     iconPack: String = "material"
 ): JSONObject = JSONObject()
-    .put("schemaVersion", 5)
+    .put("schemaVersion", 6)
     .put("theme", theme)
     .put("uiStyle", MathFlowUiStyle.fromId(uiStyle).id)
     .put("iconPack", AppIconPack.fromId(iconPack).id)
@@ -2699,9 +2725,15 @@ private fun makeConfigSnapshot(
     .put("navDepth", nav.glassDepth.toDouble())
     .put("navHighlight", nav.highlightStrength.toDouble())
     .put("navShadow", nav.shadowStrength.toDouble())
+    .put("navSurfaceMaterial", nav.surfaceMaterial.id)
+    .put("matteOpacity", nav.matteOpacity.toDouble())
+    .put("matteBlur", nav.matteBlur.toDouble())
+    .put("matteDepth", nav.matteDepth.toDouble())
+    .put("matteHighlight", nav.matteHighlight.toDouble())
+    .put("matteShadow", nav.matteShadow.toDouble())
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
-    require(input.optInt("schemaVersion", -1) in 1..5) { "Unsupported settings schema" }
+    require(input.optInt("schemaVersion", -1) in 1..6) { "Unsupported settings schema" }
     val iconPack = AppIconPack.fromId(input.optString("iconPack", "material")).id
     val theme = input.optString("theme", "vanilla")
     val uiStyle = MathFlowUiStyle.fromId(input.optString("uiStyle", "material_you")).id
@@ -2740,7 +2772,13 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
         input.optDouble("navBlur", 8.0).toFloat(),
         input.optDouble("navDepth", 0.70).toFloat(),
         input.optDouble("navHighlight", 0.90).toFloat(),
-        input.optDouble("navShadow", 0.42).toFloat()
+        input.optDouble("navShadow", 0.42).toFloat(),
+        BottomNavSurfaceMaterial.fromId(input.optString("navSurfaceMaterial", "frosted")),
+        input.optDouble("matteOpacity", 0.72).toFloat(),
+        input.optDouble("matteBlur", 12.0).toFloat(),
+        input.optDouble("matteDepth", 0.38).toFloat(),
+        input.optDouble("matteHighlight", 0.58).toFloat(),
+        input.optDouble("matteShadow", 0.32).toFloat()
     ).normalized()
     return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
         language, measurement, key, nav, resultFormat, uiStyle, iconPack)
