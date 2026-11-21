@@ -14,6 +14,7 @@ import androidx.compose.animation.core.Animatable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -201,6 +202,8 @@ internal fun MathFlowKeyButton(
 ) {
     val palette = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val glass = LocalBottomNavGlassSettings.current
+    val frosted = uiStyle.glassSurface
     val normalized = settings.normalized()
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -270,13 +273,16 @@ internal fun MathFlowKeyButton(
         modifier = modifier.graphicsLayer {
             this.scaleX = scaleX
             this.scaleY = scaleY
-        }.clip(shape).clickable(
+        }.then(if (frosted) Modifier.border(
+            1.dp, palette.text.copy(alpha = glass.matteHighlight * 0.22f), shape
+        ) else Modifier).clip(shape).clickable(
             interactionSource = interactionSource,
             indication = null,
             onClick = onClick
         ),
         shape = shape,
-        color = background,
+        color = if (frosted) background.copy(alpha = glass.matteOpacity) else background,
+        shadowElevation = if (frosted) (glass.matteDepth * 4f + glass.matteShadow * 2f).dp else 0.dp,
         contentColor = foreground
     ) {
         Box(
