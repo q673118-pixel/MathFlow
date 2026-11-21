@@ -129,6 +129,8 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -1264,11 +1266,13 @@ private fun BottomNav(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(35.dp) },
                     effects = {
-                        // Blur first, then refract: reversing this order washes out the lens detail.
-                        blur(26.dp.toPx())
-                        lens(34.dp.toPx(), 34.dp.toPx())
+                        // Follow Kyant's LiquidBottomTabs material stack: vibrancy,
+                        // restrained blur, then optical refraction of the real page beneath.
+                        vibrancy()
+                        blur(8.dp.toPx())
+                        lens(24.dp.toPx(), 24.dp.toPx())
                     },
-                    highlight = { Highlight(width = 1.2.dp) },
+                    highlight = { Highlight(width = 0.8.dp, blurRadius = 1.6.dp, alpha = 0.9f) },
                     onDrawSurface = {
                         drawRect(p.surface.copy(alpha = 0.22f))
                     }
@@ -1410,12 +1414,27 @@ private fun BottomNav(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
                                 shape = { RoundedCornerShape(percent = 50) },
                                 effects = {
-                                    blur(2.dp.toPx())
-                                    lens(12.dp.toPx(), 22.dp.toPx())
+                                    // A selected tab is a real refractive lens, not a
+                                    // colored capsule: dispersion makes edges bend light.
+                                    lens(10.dp.toPx(), 14.dp.toPx(), chromaticAberration = true)
                                 },
-                                highlight = { Highlight(width = 0.9.dp) },
+                                highlight = {
+                                    val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
+                                        .coerceIn(0.2f, 1f)
+                                    Highlight.Default.copy(alpha = energy)
+                                },
+                                shadow = {
+                                    val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
+                                        .coerceIn(0.2f, 1f)
+                                    Shadow(radius = 16.dp, alpha = 0.48f * energy)
+                                },
+                                innerShadow = {
+                                    val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
+                                        .coerceIn(0.2f, 1f)
+                                    InnerShadow(radius = 8.dp, alpha = 0.62f * energy)
+                                },
                                 onDrawSurface = {
-                                    drawRect(p.accent.copy(alpha = 0.12f))
+                                    drawRect(p.accent.copy(alpha = 0.075f))
                                 }
                             )
                             .size(width = indicatorWidth, height = indicatorHeight)
