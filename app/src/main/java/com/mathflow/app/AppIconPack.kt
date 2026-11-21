@@ -52,10 +52,11 @@ internal fun AppIcon(
     glyph: AppGlyph,
     contentDescription: String? = null,
     modifier: Modifier = Modifier,
-    tint: Color
+    tint: Color,
+    pack: AppIconPack? = null
 ) {
     Icon(
-        imageVector = iconVector(LocalAppIconPack.current, glyph),
+        imageVector = iconVector(pack ?: LocalAppIconPack.current, glyph),
         contentDescription = contentDescription,
         modifier = modifier,
         tint = tint
