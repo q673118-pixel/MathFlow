@@ -204,8 +204,8 @@ private fun IosNavigationGlyph(glyph: AppGlyph, modifier: Modifier, tint: Color)
                     }
                 }
                 AppGlyph.SOLVER -> {
-                    drawLine(tint, Offset(size.width * 0.22f, centerY - s * 0.16f), Offset(size.width * 0.78f, centerY - s * 0.16f), line)
-                    drawLine(tint, Offset(size.width * 0.22f, centerY + s * 0.16f), Offset(size.width * 0.78f, centerY + s * 0.16f), line)
+                    drawLine(tint, Offset(size.width * 0.22f, centerY - s * 0.16f), Offset(size.width * 0.78f, centerY - s * 0.16f), strokeWidth = stroke, cap = StrokeCap.Round)
+                    drawLine(tint, Offset(size.width * 0.22f, centerY + s * 0.16f), Offset(size.width * 0.78f, centerY + s * 0.16f), strokeWidth = stroke, cap = StrokeCap.Round)
                 }
                 AppGlyph.HISTORY -> {
                     drawArc(tint, 42f, 300f, false,
@@ -217,14 +217,14 @@ private fun IosNavigationGlyph(glyph: AppGlyph, modifier: Modifier, tint: Color)
                         lineTo(size.width * 0.30f, size.height * 0.12f)
                     }
                     drawPath(arrow, tint, style = line)
-                    drawLine(tint, Offset(centerX, centerY), Offset(centerX, centerY - s * 0.19f), line)
-                    drawLine(tint, Offset(centerX, centerY), Offset(centerX + s * 0.16f, centerY + s * 0.10f), line)
+                    drawLine(tint, Offset(centerX, centerY), Offset(centerX, centerY - s * 0.19f), strokeWidth = stroke, cap = StrokeCap.Round)
+                    drawLine(tint, Offset(centerX, centerY), Offset(centerX + s * 0.16f, centerY + s * 0.10f), strokeWidth = stroke, cap = StrokeCap.Round)
                 }
                 AppGlyph.SETTINGS, AppGlyph.TUNE -> {
                     val ys = listOf(size.height * 0.25f, centerY, size.height * 0.75f)
                     val knobs = listOf(size.width * 0.38f, size.width * 0.67f, size.width * 0.31f)
                     ys.forEachIndexed { i, y ->
-                        drawLine(tint, Offset(left, y), Offset(right, y), line)
+                        drawLine(tint, Offset(left, y), Offset(right, y), strokeWidth = stroke, cap = StrokeCap.Round)
                         drawCircle(tint, s * 0.105f, Offset(knobs[i], y), style = line)
                     }
                 }
