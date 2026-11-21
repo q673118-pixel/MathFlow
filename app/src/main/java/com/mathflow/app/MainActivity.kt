@@ -1294,16 +1294,38 @@ private fun BottomNav(
                 val indicatorBackdrop = if (tabsBackdrop != null && backdrop != null) {
                     rememberCombinedBackdrop(backdrop, tabsBackdrop)
                 } else backdrop
-                if (tabsBackdrop != null) {
+                if (tabsBackdrop != null && backdrop != null) {
+                    // Mirror the complete visible glass tab row into a dedicated backdrop:
+                    // panel material + icon glyphs. The moving lens samples this composite.
                     Row(
                         Modifier.fillMaxWidth().height(48.dp)
                             .graphicsLayer { alpha = 0f }
-                            .layerBackdrop(tabsBackdrop),
+                            .layerBackdrop(tabsBackdrop)
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(35.dp) },
+                                effects = {
+                                    vibrancy()
+                                    blur(8.dp.toPx())
+                                    lens(24.dp.toPx(), 24.dp.toPx())
+                                },
+                                highlight = {
+                                    Highlight.Default.copy(alpha = 0.72f)
+                                },
+                                onDrawSurface = {
+                                    drawRect(p.surface.copy(alpha = 0.22f))
+                                }
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Page.values().forEach { item ->
                             Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(item.icon, contentDescription = null, tint = p.muted, modifier = Modifier.size(26.dp))
+                                Icon(
+                                    item.icon,
+                                    contentDescription = null,
+                                    tint = if (item == current) p.accent else p.muted,
+                                    modifier = Modifier.size(26.dp)
+                                )
                             }
                         }
                     }
@@ -1399,6 +1421,40 @@ private fun BottomNav(
                         travelStretch.snapTo(1f)
                     }
                 }
+                if (!(uiStyle.glassSurface && backdrop != null) &&
+                    (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled)) {
+                    Box(
+                        Modifier.align(Alignment.CenterStart)
+                            .graphicsLayer {
+                                translationX = indicatorOffset - if (style == BottomNavAnimationStyle.LIGHT_TRAIL) {
+                                    with(density) { ((trailWidth - indicatorWidth) / 2).toPx() }
+                                } else 0f
+                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX * travelStretch.value
+                                alpha = indicatorAlpha
+                            }
+                            .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 14.dp else 0.dp)
+                            .size(
+                                width = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) trailWidth else indicatorWidth,
+                                height = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 12.dp else indicatorHeight
+                            )
+                    ) {
+                        if (style == BottomNavAnimationStyle.LIGHT_TRAIL && settings.enabled) {
+                            Box(
+                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
+                                    .background(p.accent.copy(alpha = 0.16f))
+                            )
+                            Box(
+                                Modifier.align(Alignment.Center).size(width = indicatorWidth, height = 3.dp)
+                                    .clip(RoundedCornerShape(percent = 50)).background(p.accent)
+                            )
+                        } else {
+                            Box(
+                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
+                                    .background(if (style == BottomNavAnimationStyle.LIGHT_TRAIL) p.accent else p.navActive)
+                            )
+                        }
+                    }
+                }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Page.values().forEach { item ->
                         val selected = item == current
@@ -1479,7 +1535,7 @@ private fun BottomNav(
                                 effects = {
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
-                                    lens(10.dp.toPx(), 14.dp.toPx(), chromaticAberration = true)
+                                    lens(10.dp.toPx(), 14.dp.toPx(), chromaticAberration = false)
                                 },
                                 highlight = {
                                     val energy = (0.35f + (travelStretch.value - 1f) * 1.8f)
@@ -1502,39 +1558,7 @@ private fun BottomNav(
                             )
                             .size(width = indicatorWidth, height = indicatorHeight)
                     )
-                } else if (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled) {
-                    Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .graphicsLayer {
-                                translationX = indicatorOffset - if (style == BottomNavAnimationStyle.LIGHT_TRAIL) {
-                                    with(density) { ((trailWidth - indicatorWidth) / 2).toPx() }
-                                } else 0f
-                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX * travelStretch.value
-                                alpha = indicatorAlpha
-                            }
-                            .offset(y = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 14.dp else 0.dp)
-                            .size(
-                                width = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) trailWidth else indicatorWidth,
-                                height = if (style == BottomNavAnimationStyle.LIGHT_TRAIL) 12.dp else indicatorHeight
-                            )
-                    ) {
-                        if (style == BottomNavAnimationStyle.LIGHT_TRAIL && settings.enabled) {
-                            Box(
-                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
-                                    .background(p.accent.copy(alpha = 0.16f))
-                            )
-                            Box(
-                                Modifier.align(Alignment.Center).size(width = indicatorWidth, height = 3.dp)
-                                    .clip(RoundedCornerShape(percent = 50)).background(p.accent)
-                            )
-                        } else {
-                            Box(
-                                Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
-                                    .background(if (style == BottomNavAnimationStyle.LIGHT_TRAIL) p.accent else p.navActive)
-                            )
-                        }
-                    }
-                }
+
 
             }
         }
