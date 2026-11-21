@@ -1897,24 +1897,53 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     val settingsRadius = LocalSettingsCornerRadius.current
-    val shape = RoundedCornerShape((settingsRadius ?: uiStyle.cardRadiusDp).dp)
+    val neo = uiStyle.id == "neo"
+    val skeuo = uiStyle.id == "skeuomorphic"
+    val retro = uiStyle.id == "retro_grid"
+    // Keep the user's custom radius for existing systems. The three new systems
+    // own their geometry so their visual identity cannot be flattened by that slider.
+    val shape = RoundedCornerShape(
+        (if (neo || skeuo || retro) uiStyle.cardRadiusDp else settingsRadius ?: uiStyle.cardRadiusDp).dp
+    )
     val outline = uiStyle.outlineAlpha
-    // Backdrop sampling from inside the page's own layer can create a recursive
-    // RenderNode tree on some Android 14 GPU drivers. Keep panels translucent,
-    // but reserve actual backdrop sampling for the navigation overlay.
+    val borderWidth = when {
+        neo -> 2.dp
+        retro -> 1.5.dp
+        else -> 1.dp
+    }
+    val borderColor = when {
+        neo -> p.accent
+        retro -> p.accent.copy(alpha = 0.78f)
+        skeuo -> p.text.copy(alpha = 0.14f)
+        uiStyle.glassSurface -> p.text.copy(alpha = 0.30f)
+        else -> p.text.copy(alpha = outline)
+    }
+    // Do not sample a panel's own backdrop: recursive RenderNode trees have
+    // caused crashes on Android 14 GPU drivers. Frosted material is applied
+    // through the dedicated glass surfaces, not recursive panel capture.
     Surface(
         modifier.animateContentSize(tween(180)).fillMaxWidth()
-            .then(if (outline > 0f || uiStyle.glassSurface) Modifier.border(
-                1.dp,
-                p.text.copy(alpha = if (uiStyle.glassSurface) 0.30f else outline),
-                shape
-            ) else Modifier),
+            .then(if (neo || retro || skeuo || outline > 0f || uiStyle.glassSurface) {
+                Modifier.border(borderWidth, borderColor, shape)
+            } else Modifier),
         shape = shape,
         color = if (uiStyle.glassSurface) p.surface.copy(alpha = 0.90f) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-        shadowElevation = if (uiStyle.glassSurface) 1.dp else uiStyle.elevationDp.dp
+        shadowElevation = when {
+            uiStyle.glassSurface -> 1.dp
+            skeuo -> 7.dp
+            else -> uiStyle.elevationDp.dp
+        }
     ) {
-        Column(Modifier.padding(if (uiStyle.compact) 12.dp else 15.dp),
-            verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)) { content() }
+        Column(
+            Modifier.padding(when {
+                neo -> 13.dp
+                retro -> 11.dp
+                skeuo -> 16.dp
+                uiStyle.compact -> 12.dp
+                else -> 15.dp
+            }),
+            verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)
+        ) { content() }
     }
 }
 @Composable
