@@ -730,12 +730,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                             Page.SETTINGS -> CompositionLocalProvider(LocalSettingsCornerRadius provides settingsCornerRadiusDp) {
                                             SettingsPage(
                                                 currentConfig = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId),
+                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId),
                                                 configProfiles = configProfiles,
                                                 activeConfigId = activeConfigId,
                                                 onCreateConfig = { name ->
                                                     val profile = MathFlowConfigProfiles.create(name, makeConfigSnapshot(themeId, selectedIconId, fontScale,
-                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId))
+                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId))
                                                     configProfiles = configProfiles + profile
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
