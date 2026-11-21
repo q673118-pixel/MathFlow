@@ -17,6 +17,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
 
 /**
  * App-wide icon families. The iOS family follows the SF Symbols visual language
@@ -55,12 +68,21 @@ internal fun AppIcon(
     tint: Color,
     pack: AppIconPack? = null
 ) {
-    Icon(
-        imageVector = iconVector(pack ?: LocalAppIconPack.current, glyph),
-        contentDescription = contentDescription,
-        modifier = modifier,
-        tint = tint
-    )
+    val activePack = pack ?: LocalAppIconPack.current
+    if (activePack == AppIconPack.IOS && glyph in setOf(
+            AppGlyph.HOME, AppGlyph.FUNCTIONS, AppGlyph.TOOLS, AppGlyph.SOLVER,
+            AppGlyph.HISTORY, AppGlyph.SETTINGS, AppGlyph.TUNE
+        )
+    ) {
+        IosNavigationGlyph(glyph, modifier, tint)
+    } else {
+        Icon(
+            imageVector = iconVector(activePack, glyph),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            tint = tint
+        )
+    }
 }
 
 private fun iconVector(pack: AppIconPack, glyph: AppGlyph): ImageVector {
@@ -136,6 +158,77 @@ private fun iconVector(pack: AppIconPack, glyph: AppGlyph): ImageVector {
             AppGlyph.TEXT -> Icons.TwoTone.TextFields
             AppGlyph.LANGUAGE -> Icons.TwoTone.Language
             AppGlyph.GLOBE -> Icons.TwoTone.Public
+        }
+    }
+}
+
+
+/** Custom SF-Symbol-inspired navigation glyphs matching the iOS reference screenshot. */
+@Composable
+private fun IosNavigationGlyph(glyph: AppGlyph, modifier: Modifier, tint: Color) {
+    when (glyph) {
+        AppGlyph.HOME, AppGlyph.FUNCTIONS -> Text(
+            text = "ƒ(x)",
+            modifier = modifier,
+            color = tint,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Medium,
+            fontStyle = FontStyle.Italic,
+            maxLines = 1
+        )
+        else -> Canvas(modifier) {
+            val s = size.minDimension
+            val stroke = s * 0.085f
+            val left = size.width * 0.12f
+            val right = size.width * 0.88f
+            val top = size.height * 0.12f
+            val bottom = size.height * 0.88f
+            val centerX = size.width / 2f
+            val centerY = size.height / 2f
+            val line = Stroke(width = stroke, cap = StrokeCap.Round)
+            when (glyph) {
+                AppGlyph.TOOLS -> {
+                    val cell = s * 0.34f
+                    val gap = s * 0.12f
+                    val startX = (size.width - (cell * 2f + gap)) / 2f
+                    val startY = (size.height - (cell * 2f + gap)) / 2f
+                    for (row in 0..1) for (col in 0..1) {
+                        drawRoundRect(
+                            tint,
+                            Offset(startX + col * (cell + gap), startY + row * (cell + gap)),
+                            Size(cell, cell),
+                            androidx.compose.ui.geometry.CornerRadius(s * 0.055f),
+                            style = line
+                        )
+                    }
+                }
+                AppGlyph.SOLVER -> {
+                    drawLine(tint, Offset(size.width * 0.22f, centerY - s * 0.16f), Offset(size.width * 0.78f, centerY - s * 0.16f), line)
+                    drawLine(tint, Offset(size.width * 0.22f, centerY + s * 0.16f), Offset(size.width * 0.78f, centerY + s * 0.16f), line)
+                }
+                AppGlyph.HISTORY -> {
+                    drawArc(tint, 42f, 300f, false,
+                        Offset(size.width * 0.18f, size.height * 0.18f),
+                        Size(size.width * 0.64f, size.height * 0.64f), style = line)
+                    val arrow = Path().apply {
+                        moveTo(size.width * 0.08f, size.height * 0.28f)
+                        lineTo(size.width * 0.10f, size.height * 0.08f)
+                        lineTo(size.width * 0.30f, size.height * 0.12f)
+                    }
+                    drawPath(arrow, tint, style = line)
+                    drawLine(tint, Offset(centerX, centerY), Offset(centerX, centerY - s * 0.19f), line)
+                    drawLine(tint, Offset(centerX, centerY), Offset(centerX + s * 0.16f, centerY + s * 0.10f), line)
+                }
+                AppGlyph.SETTINGS, AppGlyph.TUNE -> {
+                    val ys = listOf(size.height * 0.25f, centerY, size.height * 0.75f)
+                    val knobs = listOf(size.width * 0.38f, size.width * 0.67f, size.width * 0.31f)
+                    ys.forEachIndexed { i, y ->
+                        drawLine(tint, Offset(left, y), Offset(right, y), line)
+                        drawCircle(tint, s * 0.105f, Offset(knobs[i], y), style = line)
+                    }
+                }
+                else -> Unit
+            }
         }
     }
 }
