@@ -54,6 +54,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -1420,6 +1421,31 @@ private fun BottomNav(
                     BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.18f
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
+                val contourBase = when (style) {
+                    BottomNavAnimationStyle.MORPH -> 0.78f
+                    BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.58f
+                    BottomNavAnimationStyle.FLUID_PILL -> 0.50f
+                    BottomNavAnimationStyle.SPRING_MOTION -> 0.54f
+                    BottomNavAnimationStyle.LIGHT_TRAIL -> 0.44f
+                    BottomNavAnimationStyle.EXPAND -> 0.62f
+                    BottomNavAnimationStyle.SOFT_FOCUS -> 0.48f
+                    BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.68f
+                }
+                val contourMorph = (contourBase + (travelStretch.value - 1f) * 0.32f)
+                    .coerceIn(0.38f, 0.86f)
+                val dropletShape = remember(contourMorph) {
+                    GenericShape { size, _ ->
+                        val w = size.width
+                        val h = size.height
+                        val mid = h / 2f
+                        val tip = (contourMorph - 0.5f) * 0.42f
+                        moveTo(0f, mid)
+                        cubicTo(w * (0.18f - tip), 0f, w * (0.78f - tip), 0f, w, mid)
+                        cubicTo(w * (0.78f + tip), h, w * (0.18f + tip), h, 0f, mid)
+                        close()
+                    }
+                }
+
                 LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface) {
                     if (settings.enabled && stretchAmount > 0f) {
                         travelStretch.snapTo(1f + settings.intensity * stretchAmount)
@@ -1529,8 +1555,8 @@ private fun BottomNav(
                     }
                 }
                 if (uiStyle.glassSurface && backdrop != null) {
-                    // The active item is itself a small refractive glass lens.
-                    // Its shape stays capsule-like; the spring stretch supplies the liquid motion.
+                    // The active item is a clean refractive glass droplet.
+                    // Its custom contour morphs with the selected navigation animation style.
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
@@ -1553,12 +1579,7 @@ private fun BottomNav(
                             }
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
-                                shape = {
-                                    val morphCorner = if (settings.enabled && style == BottomNavAnimationStyle.MORPH) {
-                                        (34f + (travelStretch.value - 1f) * 42f).toInt().coerceIn(24, 50)
-                                    } else 50
-                                    RoundedCornerShape(percent = morphCorner)
-                                },
+                                shape = { dropletShape },
                                 effects = {
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
