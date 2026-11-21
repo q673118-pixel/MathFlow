@@ -1409,11 +1409,15 @@ private fun BottomNav(
                 }
                 // Restore the original droplet-like elastic travel. The lens and
                 // capsule stretch together, then settle with a soft spring rebound.
-                val stretchAmount = when {
-                    uiStyle.glassSurface -> 0.38f
-                    style == BottomNavAnimationStyle.FLUID_PILL -> 0.28f
-                    style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.38f
-                    else -> 0f
+                val stretchAmount = when (style) {
+                    BottomNavAnimationStyle.FLUID_PILL -> 0.28f
+                    BottomNavAnimationStyle.SPRING_MOTION -> 0.16f
+                    BottomNavAnimationStyle.LIGHT_TRAIL -> 0.10f
+                    BottomNavAnimationStyle.MORPH -> 0.46f
+                    BottomNavAnimationStyle.EXPAND -> 0.22f
+                    BottomNavAnimationStyle.SOFT_FOCUS -> 0.08f
+                    BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.38f
+                    BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.18f
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
                 LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface) {
@@ -1531,19 +1535,42 @@ private fun BottomNav(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 translationX = indicatorOffset
-                                scaleX = indicatorScaleX * travelStretch.value
-                                scaleY = 1f / (1f + (travelStretch.value - 1f) * 0.42f)
+                                val styleWidth = when (style) {
+                                    BottomNavAnimationStyle.RIPPLE_BLOOM -> bloom.value
+                                    BottomNavAnimationStyle.EXPAND -> bloom.value
+                                    BottomNavAnimationStyle.LIGHT_TRAIL -> 1f + settings.intensity * 0.10f
+                                    else -> 1f
+                                }
+                                scaleX = indicatorScaleX * travelStretch.value * styleWidth
+                                scaleY = (1f / (1f + (travelStretch.value - 1f) * 0.42f)) *
+                                    when (style) {
+                                        BottomNavAnimationStyle.MORPH -> 0.94f + (travelStretch.value - 1f) * 0.12f
+                                        BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.92f + bloom.value * 0.08f
+                                        BottomNavAnimationStyle.EXPAND -> 0.94f + bloom.value * 0.06f
+                                        else -> 1f
+                                    }
                                 alpha = indicatorAlpha
                             }
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
-                                shape = { RoundedCornerShape(percent = 50) },
+                                shape = {
+                                    val morphCorner = if (settings.enabled && style == BottomNavAnimationStyle.MORPH) {
+                                        (34f + (travelStretch.value - 1f) * 42f).toInt().coerceIn(24, 50)
+                                    } else 50
+                                    RoundedCornerShape(percent = morphCorner)
+                                },
                                 effects = {
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
+                                    val refractionBoost = when (style) {
+                                        BottomNavAnimationStyle.MORPH -> 1.18f
+                                        BottomNavAnimationStyle.ELASTIC_SLIDE -> 1.12f
+                                        BottomNavAnimationStyle.RIPPLE_BLOOM -> 1.10f
+                                        else -> 1f
+                                    }
                                     lens(
-                                        (8.dp + (settings.iconScale * 30f).dp).toPx(),
-                                        (11.dp + (settings.iconScale * 35f).dp).toPx(),
+                                        ((8.dp + (settings.iconScale * 30f).dp) * refractionBoost).toPx(),
+                                        ((11.dp + (settings.iconScale * 35f).dp) * refractionBoost).toPx(),
                                         chromaticAberration = false
                                     )
                                 },
