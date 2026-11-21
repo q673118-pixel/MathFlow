@@ -3435,6 +3435,62 @@ private fun SettingsPage(
                             onCheckedChange = null
                         )
                     }
+                    Text("Материал нижней панели", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    BottomNavSurfaceMaterial.entries.forEach { material ->
+                        val selected = pendingNavAnimationSettings.surfaceMaterial == material
+                        Column(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                                .background(if (selected) p.navActive else p.surface)
+                                .border(1.dp, if (selected) p.accent else p.key, RoundedCornerShape(16.dp))
+                                .mathFlowClickable {
+                                    pendingNavAnimationSettings = pendingNavAnimationSettings.copy(surfaceMaterial = material)
+                                }
+                                .padding(13.dp),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Text(material.title, color = if (selected) p.accent else p.text,
+                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            Text(material.description, color = p.muted, fontSize = 11.sp, lineHeight = 15.sp)
+                        }
+                    }
+                    Text("Матовое стекло · общие поверхности", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Эти параметры влияют на карточки, кнопки и элементы настроек только в стиле Liquid Glass. Капля остаётся жидким стеклом.",
+                        color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                    Text("Непрозрачность: ${(pendingNavAnimationSettings.matteOpacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.matteOpacity,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteOpacity = it) },
+                        valueRange = 0.25f..0.96f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    Text("Размытие панели: ${pendingNavAnimationSettings.matteBlur.toInt()} dp", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.matteBlur,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteBlur = it) },
+                        valueRange = 0f..24f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    Text("Глубина: ${(pendingNavAnimationSettings.matteDepth * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.matteDepth,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteDepth = it) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    Text("Блики: ${(pendingNavAnimationSettings.matteHighlight * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.matteHighlight,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteHighlight = it) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
+                    Text("Тени: ${(pendingNavAnimationSettings.matteShadow * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(
+                        value = pendingNavAnimationSettings.matteShadow,
+                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteShadow = it) },
+                        valueRange = 0f..1f,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
+                    )
                     BottomNavAnimationStyle.values().forEach { style ->
                         val selected = pendingNavAnimationSettings.style == style
                         val shape = RoundedCornerShape(LocalMathFlowUiStyle.current.cardRadiusDp.dp)
