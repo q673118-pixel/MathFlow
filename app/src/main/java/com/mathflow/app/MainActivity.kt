@@ -760,7 +760,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                     bottomNavAnimationSettings = BottomNavAnimationSettings(
                                                         cfg.getBoolean("navEnabled"), BottomNavAnimationStyle.fromId(cfg.getString("navStyle")),
                                                         cfg.getInt("navDuration"), cfg.getDouble("navIntensity").toFloat(),
-                                                        cfg.getDouble("navIconScale").toFloat(), cfg.getDouble("navOpacity").toFloat()
+                                                        cfg.getDouble("navIconScale").toFloat(), cfg.getDouble("navOpacity").toFloat(),
+                                                        cfg.optDouble("navRefraction", 0.35).toFloat(),
+                                                        cfg.optDouble("navRoundness", 0.96).toFloat(),
+                                                        cfg.optDouble("navBlur", 8.0).toFloat(),
+                                                        cfg.optDouble("navDepth", 0.70).toFloat(),
+                                                        cfg.optDouble("navHighlight", 0.90).toFloat(),
+                                                        cfg.optDouble("navShadow", 0.42).toFloat()
                                                     ).normalized()
                                                     prefs.edit()
                                                         .putString("app_theme", themeId).putString("ui_style", uiStyleId)
@@ -781,6 +787,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .putFloat("nav_animation_intensity", bottomNavAnimationSettings.intensity)
                                                         .putFloat("nav_animation_icon_scale", bottomNavAnimationSettings.iconScale)
                                                         .putFloat("nav_animation_opacity", bottomNavAnimationSettings.opacity)
+                                                        .putFloat("nav_refraction_strength", bottomNavAnimationSettings.refractionStrength)
+                                                        .putFloat("nav_droplet_roundness", bottomNavAnimationSettings.dropletRoundness)
+                                                        .putFloat("nav_glass_blur", bottomNavAnimationSettings.glassBlur)
+                                                        .putFloat("nav_glass_depth", bottomNavAnimationSettings.glassDepth)
+                                                        .putFloat("nav_highlight_strength", bottomNavAnimationSettings.highlightStrength)
+                                                        .putFloat("nav_shadow_strength", bottomNavAnimationSettings.shadowStrength)
                                                         .putString("calculator_result_format", calculatorResultFormat).apply()
                                                     runCatching { setLauncherIcon(context, selectedIconId) }
                                                     activeConfigId = profile.id
@@ -1486,10 +1498,7 @@ private fun BottomNav(
                                 settings.enabled && selected -> 1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
                                 else -> 1f
                             },
-                            animationSpec = if (springMotion) spring(
-                                dampingRatio = 0.88f - settings.intensity * 0.38f,
-                                stiffness = springStiffness
-                            ) else tween(duration, easing = FastOutSlowInEasing),
+                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconScale"
                         )
                         val morphY by animateFloatAsState(
