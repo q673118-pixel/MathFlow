@@ -877,6 +877,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .putFloat("nav_animation_intensity", normalized.intensity)
                                                         .putFloat("nav_animation_icon_scale", normalized.iconScale)
                                                         .putFloat("nav_animation_opacity", normalized.opacity)
+                                                         .putFloat("nav_refraction_strength", normalized.refractionStrength)
+                                                         .putFloat("nav_droplet_roundness", normalized.dropletRoundness)
+                                                         .putFloat("nav_glass_blur", normalized.glassBlur)
+                                                         .putFloat("nav_glass_depth", normalized.glassDepth)
+                                                         .putFloat("nav_highlight_strength", normalized.highlightStrength)
+                                                         .putFloat("nav_shadow_strength", normalized.shadowStrength)
                                                         .apply()
                                                 }
                                             )
@@ -2636,7 +2642,7 @@ private fun makeConfigSnapshot(
     resultFormat: String,
     uiStyle: String = MathFlowUiStyle.MATERIAL_YOU.id
 ): JSONObject = JSONObject()
-    .put("schemaVersion", 3)
+    .put("schemaVersion", 4)
     .put("theme", theme)
     .put("uiStyle", MathFlowUiStyle.fromId(uiStyle).id)
     .put("icon", icon)
@@ -2657,9 +2663,15 @@ private fun makeConfigSnapshot(
     .put("navIntensity", nav.intensity.toDouble())
     .put("navIconScale", nav.iconScale.toDouble())
     .put("navOpacity", nav.opacity.toDouble())
+    .put("navRefraction", nav.refractionStrength.toDouble())
+    .put("navRoundness", nav.dropletRoundness.toDouble())
+    .put("navBlur", nav.glassBlur.toDouble())
+    .put("navDepth", nav.glassDepth.toDouble())
+    .put("navHighlight", nav.highlightStrength.toDouble())
+    .put("navShadow", nav.shadowStrength.toDouble())
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
-    require(input.optInt("schemaVersion", -1) in 1..3) { "Unsupported settings schema" }
+    require(input.optInt("schemaVersion", -1) in 1..4) { "Unsupported settings schema" }
     val theme = input.optString("theme", "vanilla")
     val uiStyle = MathFlowUiStyle.fromId(input.optString("uiStyle", "material_you")).id
     val icon = input.optString("icon", "vanilla")
@@ -2691,7 +2703,13 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
         input.optInt("navDuration", 280),
         input.optDouble("navIntensity", 0.65).toFloat(),
         input.optDouble("navIconScale", 0.08).toFloat(),
-        input.optDouble("navOpacity", 0.85).toFloat()
+        input.optDouble("navOpacity", 0.85).toFloat(),
+        input.optDouble("navRefraction", 0.35).toFloat(),
+        input.optDouble("navRoundness", 0.96).toFloat(),
+        input.optDouble("navBlur", 8.0).toFloat(),
+        input.optDouble("navDepth", 0.70).toFloat(),
+        input.optDouble("navHighlight", 0.90).toFloat(),
+        input.optDouble("navShadow", 0.42).toFloat()
     ).normalized()
     return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
         language, measurement, key, nav, resultFormat, uiStyle)
@@ -3339,6 +3357,18 @@ private fun SettingsPage(
                         valueRange = 0f..0.20f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
+                    Text("Сила преломления: ${(pendingNavAnimationSettings.refractionStrength * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(value = pendingNavAnimationSettings.refractionStrength, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(refractionStrength = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
+                    Text("Овальность капли: ${(pendingNavAnimationSettings.dropletRoundness * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(value = pendingNavAnimationSettings.dropletRoundness, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(dropletRoundness = it) }, valueRange = 0.80f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
+                    Text("Размытие фона: ${pendingNavAnimationSettings.glassBlur.toInt()} dp", color = p.text, fontSize = 13.sp)
+                    Slider(value = pendingNavAnimationSettings.glassBlur, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(glassBlur = it) }, valueRange = 0f..20f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
+                    Text("Глубина стекла: ${(pendingNavAnimationSettings.glassDepth * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(value = pendingNavAnimationSettings.glassDepth, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(glassDepth = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
+                    Text("Блик: ${(pendingNavAnimationSettings.highlightStrength * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(value = pendingNavAnimationSettings.highlightStrength, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(highlightStrength = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
+                    Text("Тень: ${(pendingNavAnimationSettings.shadowStrength * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Slider(value = pendingNavAnimationSettings.shadowStrength, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(shadowStrength = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
                     Text("${if (uiStyle.glassSurface) "Прозрачность стекла" else tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.opacity,
