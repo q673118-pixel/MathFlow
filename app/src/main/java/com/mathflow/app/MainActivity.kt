@@ -1582,7 +1582,6 @@ private fun BottomNav(
                                              chromaticAberration = false
                                          )
                                      }
-                                    )
                                 },
                                 highlight = {
                                     val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
