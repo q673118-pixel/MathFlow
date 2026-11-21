@@ -420,7 +420,7 @@ private fun animatePalette(target: Palette): Palette {
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 private val LocalMathFlowBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
 internal val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
-private val LocalBottomNavGlassSettings = androidx.compose.runtime.staticCompositionLocalOf { BottomNavAnimationSettings() }
+internal val LocalBottomNavGlassSettings = androidx.compose.runtime.staticCompositionLocalOf { BottomNavAnimationSettings() }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
