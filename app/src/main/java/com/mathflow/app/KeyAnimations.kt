@@ -86,13 +86,25 @@ internal data class BottomNavAnimationSettings(
     val durationMs: Int = 280,
     val intensity: Float = 0.65f,
     val iconScale: Float = 0.08f,
-    val opacity: Float = 0.85f
+    val opacity: Float = 0.85f,
+    val refractionStrength: Float = 0.35f,
+    val dropletRoundness: Float = 0.96f,
+    val glassBlur: Float = 8f,
+    val glassDepth: Float = 0.70f,
+    val highlightStrength: Float = 0.90f,
+    val shadowStrength: Float = 0.42f
 ) {
     fun normalized() = copy(
         durationMs = durationMs.coerceIn(100, 1000),
         intensity = intensity.coerceIn(0f, 1f),
         iconScale = iconScale.coerceIn(0f, 0.20f),
-        opacity = opacity.coerceIn(0f, 1f)
+        opacity = opacity.coerceIn(0f, 1f),
+        refractionStrength = refractionStrength.coerceIn(0f, 1f),
+        dropletRoundness = dropletRoundness.coerceIn(0.80f, 1f),
+        glassBlur = glassBlur.coerceIn(0f, 20f),
+        glassDepth = glassDepth.coerceIn(0f, 1f),
+        highlightStrength = highlightStrength.coerceIn(0f, 1f),
+        shadowStrength = shadowStrength.coerceIn(0f, 1f)
     )
 }
 
