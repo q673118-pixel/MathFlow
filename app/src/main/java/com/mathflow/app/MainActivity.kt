@@ -199,60 +199,39 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
     val density = LocalDensity.current
-    val mScale = remember { Animatable(0f) }
     val startY = with(density) { (-450).dp.toPx() }
     val firstBounceY = with(density) { (-42).dp.toPx() }
     val secondBounceY = with(density) { (-14).dp.toPx() }
+    val mProgress = remember { Animatable(0f) }
     val dotY = remember { Animatable(startY) }
     val dotAlpha = remember { Animatable(0f) }
     val dotScaleX = remember { Animatable(1f) }
     val dotScaleY = remember { Animatable(1f) }
     val splashAlpha = remember { Animatable(1f) }
 
+    // Keep the existing intro timing and bouncing-dot choreography. Only replace
+    // the old bitmap M + separate dot with the exact Ocean vector geometry.
     LaunchedEffect(Unit) {
         delay(500L)
-        mScale.animateTo(
-            1.08f,
-            tween(390, easing = androidx.compose.animation.core.Easing { f ->
+        mProgress.animateTo(
+            1f,
+            tween(760, easing = androidx.compose.animation.core.Easing { f ->
                 1f - (1f - f) * (1f - f) * (1f - f)
             })
         )
-        mScale.animateTo(1f, spring(dampingRatio = 0.48f, stiffness = 430f))
         dotAlpha.snapTo(1f)
 
-        // Run the ball trajectory as separate phases. Each impact is a real
-        // direction change, so it cannot be skipped by reaching the final keyframe early.
         kotlinx.coroutines.coroutineScope {
             launch {
-                // Gravity: accelerate downwards into the first impact.
-                dotY.animateTo(
-                    0f,
-                    tween(420, easing = androidx.compose.animation.core.Easing { it * it })
-                )
-                // Stay at the contact point while the ball visibly compresses.
+                dotY.animateTo(0f, tween(420, easing = androidx.compose.animation.core.Easing { it * it }))
                 delay(60L)
-                // First rebound: upward, then gravity pulls the ball back down.
-                dotY.animateTo(
-                    firstBounceY,
-                    tween(190, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) })
-                )
-                dotY.animateTo(
-                    0f,
-                    tween(170, easing = androidx.compose.animation.core.Easing { it * it })
-                )
-                // A shorter second impact, followed by a smaller rebound.
+                dotY.animateTo(firstBounceY, tween(190, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) }))
+                dotY.animateTo(0f, tween(170, easing = androidx.compose.animation.core.Easing { it * it }))
                 delay(45L)
-                dotY.animateTo(
-                    secondBounceY,
-                    tween(125, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) })
-                )
-                dotY.animateTo(
-                    0f,
-                    tween(115, easing = androidx.compose.animation.core.Easing { it * it })
-                )
+                dotY.animateTo(secondBounceY, tween(125, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) }))
+                dotY.animateTo(0f, tween(115, easing = androidx.compose.animation.core.Easing { it * it }))
             }
             launch {
-                // Keep the ball round during the fall; squash only at contact.
                 delay(420L)
                 dotScaleX.animateTo(1.18f, tween(60))
                 dotScaleX.animateTo(0.90f, tween(190))
@@ -272,12 +251,8 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
             }
         }
 
-        // Let the final landing settle before the overlay begins to fade.
         delay(120L)
-        splashAlpha.animateTo(
-            0f,
-            tween(1000, easing = LinearOutSlowInEasing)
-        )
+        splashAlpha.animateTo(0f, tween(1000, easing = LinearOutSlowInEasing))
         onFinished()
     }
 
@@ -294,27 +269,40 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(R.drawable.mark_m),
-            contentDescription = null,
-            modifier = Modifier.size(108.dp).graphicsLayer {
-                scaleX = mScale.value
-                scaleY = mScale.value
-            },
-            colorFilter = ColorFilter.tint(palette.accent)
-        )
-        Image(
-            painter = painterResource(R.drawable.mark_dot),
-            contentDescription = null,
-            modifier = Modifier.size(108.dp).graphicsLayer {
-                translationY = dotY.value
+        Canvas(Modifier.size(108.dp)) {
+            val scaleX = size.width / 108f
+            val scaleY = size.height / 108f
+            val oceanM = Path().apply {
+                moveTo(28f, 78f)
+                lineTo(28f, 37f)
+                quadraticTo(28f, 28f, 36f, 37f)
+                lineTo(54f, 65f)
+                lineTo(72f, 37f)
+                quadraticTo(80f, 28f, 80f, 37f)
+                lineTo(80f, 78f)
+            }
+            val estimatedPathLength = 168f
+            drawContext.transform.scale(scaleX, scaleY, pivot = Offset.Zero)
+            drawPath(
+                path = oceanM,
+                color = palette.accent,
+                style = Stroke(
+                    width = 10f,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                        floatArrayOf((estimatedPathLength * mProgress.value).coerceAtLeast(0.001f), estimatedPathLength * 2f),
+                        0f
+                    )
+                )
+            )
+            drawCircle(
+                color = palette.accent,
+                radius = 4.5f * dotScaleX.value,
+                center = Offset(54f, 25f + (dotY.value / scaleY)),
                 alpha = dotAlpha.value
-                scaleX = dotScaleX.value
-                scaleY = dotScaleY.value
-                transformOrigin = TransformOrigin(0.5f, 0.308f)
-            },
-            colorFilter = ColorFilter.tint(palette.keyEquals)
-        )
+            )
+        }
     }
 }
 
