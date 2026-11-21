@@ -1911,7 +1911,7 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     val uiStyle = LocalMathFlowUiStyle.current
     Surface(
         modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp).mathFlowClickable(onClick = onClick),
-        shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp),
+        shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp),
         color = p.keyEquals
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -3033,7 +3033,7 @@ private fun SettingsPage(
                     }
                     Panel {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
                                 .background(if (selected) p.navActive else Color.Transparent)
                                 .mathFlowClickable { pendingMeasurementSystem = mode }
                                 .padding(13.dp),
@@ -3281,7 +3281,7 @@ private fun SettingsPage(
                         val active = fontPath == path
                         Panel {
                             Row(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
                                     .background(if (selected) p.navActive else Color.Transparent)
                                     .mathFlowClickable { pendingFontPath = path }
                                     .padding(12.dp),
@@ -3303,7 +3303,7 @@ private fun SettingsPage(
                 }
                 Panel {
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
                             .mathFlowClickable { pendingFontPath = null }
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -3333,7 +3333,7 @@ private fun SettingsPage(
                 Text(tx("configurations_description"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(p.navActive), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)).background(p.navActive), contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Build, null, tint = p.accent, modifier = Modifier.size(22.dp))
                         }
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -3387,9 +3387,9 @@ private fun SettingsPage(
                     Column(
                         Modifier.fillMaxWidth().animateContentSize(tween(340, easing = FastOutSlowInEasing))
                     ) {
-                    Panel(modifier = Modifier.border(if (selected) 1.5.dp else 1.dp, cardBorder, RoundedCornerShape(uiStyle.cardRadiusDp.dp))) {
+                    Panel(modifier = Modifier.border(if (selected) 1.5.dp else 1.dp, cardBorder, RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.cardRadiusDp).dp))) {
                         Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
                                 .background(cardBackground)
                                 .animateContentSize(tween(300, easing = FastOutSlowInEasing))
                                 .mathFlowClickable { selectedConfigId = if (selected) "" else profile.id }
@@ -3397,8 +3397,8 @@ private fun SettingsPage(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(11.dp)
                         ) {
-                            Box(Modifier.size(46.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(themeOption.palette.background)
-                                .border(1.dp, themeOption.palette.accent.copy(alpha = 0.55f), RoundedCornerShape(uiStyle.controlRadiusDp.dp)),
+                            Box(Modifier.size(46.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)).background(themeOption.palette.background)
+                                .border(1.dp, themeOption.palette.accent.copy(alpha = 0.55f), RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)),
                                 contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.Settings, null, tint = themeOption.palette.accent, modifier = Modifier.size(22.dp))
                             }
@@ -3471,7 +3471,7 @@ private fun SettingsPage(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text(tx("search_languages")) },
-                    shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
+                    shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)
                 )
                 val visibleLanguages = AppLanguages.filter { language ->
                     language.nativeName.contains(languageQuery, ignoreCase = true) ||
@@ -3480,7 +3480,7 @@ private fun SettingsPage(
                 if (visibleLanguages.isEmpty()) Text(tx("no_languages_found"), color = p.muted, fontSize = 13.sp)
                 visibleLanguages.forEach { language ->
                     val selected = pendingLanguage == language.tag
-                    val shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
+                    val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)
                     Row(
                         Modifier.fillMaxWidth().clip(shape)
                             .background(if (selected) p.navActive else p.surface)
@@ -3581,7 +3581,7 @@ private fun SettingsPage(
                 val selected = themeFor(pendingThemeId)
                 Panel {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(Modifier.size(54.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(selected.palette.background).border(1.dp, p.key, RoundedCornerShape(uiStyle.controlRadiusDp.dp)))
+                        Box(Modifier.size(54.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)).background(selected.palette.background).border(1.dp, p.key, RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(selected.title, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = p.text)
                             Text(tx("theme_option_description"), fontSize = 13.sp, lineHeight = 18.sp, color = p.muted)
@@ -3633,13 +3633,13 @@ private fun SettingsPage(
         Dialog(onDismissRequest = { pendingImportedProfile = null }) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
+                shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.cardRadiusDp).dp),
                 color = p.surface,
                 contentColor = p.text
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp)).background(previewThemeOption.palette.background),
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)).background(previewThemeOption.palette.background),
                             contentAlignment = Alignment.Center) {
                             Icon(Icons.Default.Settings, null, tint = previewThemeOption.palette.accent)
                         }
@@ -3802,7 +3802,7 @@ private fun ThemeOptionCard(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
+    val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.cardRadiusDp).dp)
     val borderColor by animateColorAsState(
         if (selected) p.accent else p.key,
         animationSpec = tween(190, easing = FastOutSlowInEasing),
@@ -3824,7 +3824,7 @@ private fun ThemeOptionCard(
     ) {
         // Tiny interface preview communicates the actual palette more clearly than swatches alone.
         Row(
-            Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+            Modifier.fillMaxWidth().height(38.dp).clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
                 .background(option.palette.background).padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically
