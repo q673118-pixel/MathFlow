@@ -2036,15 +2036,32 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         frosted -> p.text.copy(alpha = 0.12f + glass.matteHighlight * 0.18f)
         else -> p.text.copy(alpha = outline)
     }
+    val backdrop = LocalMathFlowBackdrop.current
+    val glassLayer = if (frosted && backdrop != null) {
+        Modifier.clip(shape).drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = { vibrancy(); blur(10.dp.toPx()) },
+            highlight = {
+                Highlight(width = 0.9.dp, blurRadius = 2.dp,
+                    alpha = glass.matteHighlight.coerceIn(0f, 0.8f))
+            },
+            onDrawSurface = {
+                drawRect(p.surface.copy(alpha = (glass.matteOpacity * 0.52f).coerceIn(0.12f, 0.48f)))
+            }
+        )
+    } else Modifier
     Surface(
         modifier.animateContentSize(tween(180)).fillMaxWidth()
+            .then(glassLayer)
             .then(if (neo || retro || skeuo || outline > 0f || frosted) {
-                Modifier.border(if (frosted) 1.dp else borderWidth, borderColor, shape)
+                Modifier.border(if (frosted) 0.8.dp else borderWidth, borderColor, shape)
             } else Modifier),
         shape = shape,
-        color = if (frosted) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        color = if (frosted && backdrop != null) Color.Transparent
+            else if (frosted) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
         shadowElevation = when {
-            frosted -> (1f + glass.matteDepth * 6f + glass.matteShadow * 3f).dp
+            frosted -> (0.8f + glass.matteDepth * 2.2f + glass.matteShadow * 1.4f).dp
             skeuo -> 7.dp
             else -> uiStyle.elevationDp.dp
         }
@@ -2142,13 +2159,39 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     val uiStyle = LocalMathFlowUiStyle.current
     val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp)
+    val backdrop = LocalMathFlowBackdrop.current
+    val buttonGlass = if (uiStyle.glassSurface && backdrop != null) {
+        Modifier.clip(shape).drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = { vibrancy(); blur(7.dp.toPx()) },
+            highlight = { Highlight(width = 1.dp, blurRadius = 2.dp, alpha = glass.matteHighlight * 0.72f) },
+            onDrawSurface = { drawRect(p.accent.copy(alpha = 0.10f)) }
+        )
+    } else Modifier
+    var pressed by remember { mutableStateOf(false) }
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.975f else 1f,
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 620f),
+        label = "GlassActionButtonPress"
+    )
     Surface(
         modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), shape) else Modifier)
-            .mathFlowClickable(onClick = onClick),
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .then(buttonGlass)
+            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.30f), shape) else Modifier)
+            .pointerInput(onClick) {
+                detectTapGestures(onPress = {
+                    pressed = true
+                    val released = tryAwaitRelease()
+                    pressed = false
+                    if (released) onClick()
+                })
+            },
         shape = shape,
-        color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.keyEquals,
-        shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 4f).dp else 0.dp
+        color = if (uiStyle.glassSurface && backdrop != null) Color.Transparent
+            else if (uiStyle.glassSurface) p.accent.copy(alpha = 0.16f) else p.keyEquals,
+        shadowElevation = if (uiStyle.glassSurface) (1.5f + glass.matteDepth * 3f).dp else 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(displayText(text), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
@@ -4287,13 +4330,40 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
     val uiStyle = LocalMathFlowUiStyle.current
     val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp)
+    val backdrop = LocalMathFlowBackdrop.current
+    var pressed by remember { mutableStateOf(false) }
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.965f else 1f,
+        animationSpec = spring(dampingRatio = 0.68f, stiffness = 560f),
+        label = "SettingsApplyGlassPress"
+    )
+    val applyGlass = if (uiStyle.glassSurface && backdrop != null) {
+        Modifier.clip(shape).drawBackdrop(
+            backdrop = backdrop,
+            shape = { shape },
+            effects = { vibrancy(); blur(9.dp.toPx()) },
+            highlight = { Highlight(width = 1.2.dp, blurRadius = 2.4.dp, alpha = glass.matteHighlight * 0.88f) },
+            shadow = { Shadow(radius = 16.dp, alpha = 0.22f) },
+            onDrawSurface = { drawRect(p.accent.copy(alpha = 0.16f)) }
+        )
+    } else Modifier
     Surface(
         modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), shape) else Modifier)
-            .clip(shape).mathFlowClickable(onClick = onClick),
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
+            .then(applyGlass)
+            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.34f), shape) else Modifier)
+            .pointerInput(onClick) {
+                detectTapGestures(onPress = {
+                    pressed = true
+                    val released = tryAwaitRelease()
+                    pressed = false
+                    if (released) onClick()
+                })
+            },
         shape = shape,
-        color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.keyEquals,
-        shadowElevation = if (uiStyle.glassSurface) (4f + glass.matteDepth * 6f + glass.matteShadow * 3f).dp else 10.dp
+        color = if (uiStyle.glassSurface && backdrop != null) Color.Transparent
+            else if (uiStyle.glassSurface) p.accent.copy(alpha = 0.20f) else p.keyEquals,
+        shadowElevation = if (uiStyle.glassSurface) (2f + glass.matteDepth * 3f + glass.matteShadow * 2f).dp else 10.dp
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 22.dp),
