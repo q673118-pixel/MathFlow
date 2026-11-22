@@ -107,7 +107,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
@@ -1331,9 +1330,10 @@ private fun BottomNav(
                         .padding(horizontal = 28.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
+        val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
         Surface(
             modifier = if ((navLiquidPanel || navFrostedPanel) && backdrop != null) {
-                Modifier.drawBackdrop(
+                Modifier.clip(panelShape).drawBackdrop(
                     backdrop = backdrop,
                     shape = { RoundedCornerShape(35.dp) },
                     effects = {
@@ -1356,7 +1356,7 @@ private fun BottomNav(
                     }
                 )
             } else Modifier,
-            shape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp),
+            shape = panelShape,
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
             shadowElevation = if (navLiquidPanel) (settings.shadowStrength * 3f).dp else if (navFrostedPanel) (settings.matteDepth * 6f + settings.matteShadow * 3f).dp else uiStyle.elevationDp.dp
         ) {
@@ -1380,11 +1380,8 @@ private fun BottomNav(
                     // here creates the unwanted rectangular underlay below the navigation bar.
                     Row(
                         Modifier.fillMaxWidth().height(48.dp)
-                            .clipToBounds()
-                            .layerBackdrop(tabsBackdrop)
-                            // Keep this recorder out of the visible composition. Its pixels
-                            // remain available to the combined backdrop used by the droplet.
-                            .drawWithContent { },
+                            .graphicsLayer { alpha = 0f }
+                            .layerBackdrop(tabsBackdrop),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Page.values().forEach { item ->
