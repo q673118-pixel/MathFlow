@@ -93,6 +93,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
@@ -106,6 +107,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
@@ -392,6 +394,16 @@ private val ThemeOptions = listOf(
         Color(0xFF222431), Color(0xFF2D3040), Color(0xFF3A3D4F), Color(0xFF4A4D62),
         Color(0xFFAEB4D8), Color(0xFF222431), Color(0xFFF1F2FF), Color(0xFFB0B4C9),
         Color(0xFFD1D5FF), Color(0xFF3C4056), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("gray", "Gray", "Нейтральная графитово-серая палитра без цветового оттенка.", Palette(
+        Color(0xFF17191E), Color(0xFF22252C), Color(0xFF2E323A), Color(0xFF515965),
+        Color(0xFFD4D8E0), Color(0xFF20232A), Color(0xFFF2F3F5), Color(0xFFAEB3BD),
+        Color(0xFFDCE0E8), Color(0xFF393E48), Color(0xFFFF8A80), true
+    )),
+    ThemeOption("transparent", "Transparent", "Полупрозрачные поверхности и холодные стеклянные оттенки.", Palette(
+        Color(0xFF10151C), Color(0xC01C2633), Color(0xA02C3948), Color(0xB34D6379),
+        Color(0xFFDCEBFA), Color(0xFF16202B), Color(0xFFF4F8FC), Color(0xFFB5C2D0),
+        Color(0xFFB7D9F5), Color(0x803B536B), Color(0xFFFF8A80), true
     ))
 )
 
@@ -1368,8 +1380,11 @@ private fun BottomNav(
                     // here creates the unwanted rectangular underlay below the navigation bar.
                     Row(
                         Modifier.fillMaxWidth().height(48.dp)
-                            .graphicsLayer { alpha = 0f }
-                            .layerBackdrop(tabsBackdrop),
+                            .clipToBounds()
+                            .layerBackdrop(tabsBackdrop)
+                            // Keep this recorder out of the visible composition. Its pixels
+                            // remain available to the combined backdrop used by the droplet.
+                            .drawWithContent { },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Page.values().forEach { item ->
@@ -1429,6 +1444,31 @@ private fun BottomNav(
                     animationSpec = offsetSpec,
                     label = "MathFlowNavIndicatorPosition"
                 )
+                val dragOffset = remember { Animatable(0f) }
+                val indicatorPositionPx = (indicatorOffset + dragOffset.value).coerceIn(
+                    0f,
+                    with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
+                )
+                val latestIndicatorOffset = rememberUpdatedState(indicatorOffset)
+                val navScope = rememberCoroutineScope()
+                var isDragging by remember { mutableStateOf(false) }
+                var isPressed by remember { mutableStateOf(false) }
+                val pressedScale by animateFloatAsState(
+                    targetValue = if (isDragging || isPressed) 1.085f else 1f,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
+                    label = "MathFlowDropletPressScale"
+                )
+                val idleFloat = remember { Animatable(0f) }
+                LaunchedEffect(isDragging, isPressed) {
+                    if (!isDragging && !isPressed) {
+                        while (true) {
+                            idleFloat.animateTo(0.85f, tween(1650, easing = FastOutSlowInEasing))
+                            idleFloat.animateTo(-0.85f, tween(1650, easing = FastOutSlowInEasing))
+                        }
+                    } else {
+                        idleFloat.animateTo(0f, tween(120))
+                    }
+                }
                 val indicatorScaleX by animateFloatAsState(
                     targetValue = when {
                         !settings.enabled -> 1f
@@ -1539,7 +1579,7 @@ private fun BottomNav(
                             val itemCenter = with(density) {
                                 itemWidth.toPx() * (itemVisualIndex + 0.5f)
                             }
-                            val dropletCenter = indicatorOffset + with(density) { indicatorWidth.toPx() * 0.5f }
+                            val dropletCenter = indicatorPositionPx + with(density) { indicatorWidth.toPx() * 0.5f }
                             val coverage = (1f - abs(dropletCenter - itemCenter) /
                                 (with(density) { itemWidth.toPx() } * 0.58f)).coerceIn(0f, 1f)
                             val smoothCoverage = coverage * coverage * (3f - 2f * coverage)
@@ -1581,14 +1621,15 @@ private fun BottomNav(
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
-                                translationX = indicatorOffset
+                                translationX = indicatorPositionPx
+                                translationY = with(density) { idleFloat.value.dp.toPx() }
                                 val styleWidth = when (style) {
                                     BottomNavAnimationStyle.RIPPLE_BLOOM -> bloom.value
                                     BottomNavAnimationStyle.EXPAND -> bloom.value
                                     else -> 1f
                                 }
-                                scaleX = indicatorScaleX * travelStretch.value * styleWidth
-                                scaleY = (1f / (1f + (travelStretch.value - 1f) * 0.42f)) *
+                                scaleX = indicatorScaleX * travelStretch.value * styleWidth * pressedScale
+                                scaleY = (1f / (1f + (travelStretch.value - 1f) * 0.42f)) * pressedScale *
                                     when (style) {
                                         BottomNavAnimationStyle.MORPH -> 0.94f + (travelStretch.value - 1f) * 0.12f
                                         BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.92f + bloom.value * 0.08f
@@ -1596,6 +1637,57 @@ private fun BottomNav(
                                         else -> 1f
                                     }
                                 alpha = indicatorAlpha
+                            }
+                            .pointerInput(current, duration, maxWidth) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = {
+                                        isDragging = true
+                                        isPressed = true
+                                        navScope.launch { dragOffset.stop() }
+                                    },
+                                    onDragEnd = {
+                                        isDragging = false
+                                        isPressed = false
+                                        val itemWidthPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
+                                        val indicatorWidthPx = with(density) { indicatorWidth.toPx() }
+                                        val maxOffsetPx = with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
+                                        val absoluteOffset = (latestIndicatorOffset.value + dragOffset.value).coerceIn(0f, maxOffsetPx)
+                                        val visualIndex = ((absoluteOffset + indicatorWidthPx * 0.5f) / itemWidthPx)
+                                            .toInt().coerceIn(0, Page.values().lastIndex)
+                                        val logicalIndex = if (layoutDirection == LayoutDirection.Rtl) {
+                                            Page.values().lastIndex - visualIndex
+                                        } else visualIndex
+                                        onSelect(Page.values()[logicalIndex])
+                                        navScope.launch {
+                                            dragOffset.animateTo(
+                                                0f,
+                                                tween(durationMillis = duration.coerceAtLeast(120), easing = FastOutSlowInEasing)
+                                            )
+                                        }
+                                    },
+                                    onDragCancel = {
+                                        isDragging = false
+                                        isPressed = false
+                                        navScope.launch {
+                                            dragOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 420f))
+                                        }
+                                    },
+                                    onHorizontalDrag = { change, dragAmount ->
+                                        change.consume()
+                                        navScope.launch {
+                                            val base = latestIndicatorOffset.value
+                                            val maxOffsetPx = with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
+                                            dragOffset.snapTo((dragOffset.value + dragAmount).coerceIn(-base, maxOffsetPx - base))
+                                        }
+                                    }
+                                )
+                            }
+                            .pointerInput(current) {
+                                detectTapGestures(onPress = {
+                                    isPressed = true
+                                    tryAwaitRelease()
+                                    isPressed = false
+                                })
                             }
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
@@ -4246,7 +4338,11 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            val applyContentColor = if (uiStyle.glassSurface) p.text else p.onKeyEquals
+            // Palette text animates between themes; choose a stable contrast color from
+            // the target theme so the label never flashes black on a dark glass surface.
+            val applyContentColor = if (uiStyle.glassSurface) {
+                if (p.dark) Color.White else Color(0xFF17131F)
+            } else p.onKeyEquals
             AppIcon(AppGlyph.CHECK, contentDescription = null, tint = applyContentColor, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(9.dp))
             Text(tx("apply"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = applyContentColor)
