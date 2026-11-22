@@ -1339,10 +1339,6 @@ private fun BottomNav(
                     effects = {
                         vibrancy()
                         blur((if (navLiquidPanel) settings.glassBlur else settings.matteBlur).dp.toPx())
-                        if (navLiquidPanel) {
-                            val panelLens = (8f + settings.refractionStrength * 16f).dp.toPx()
-                            lens(panelLens, panelLens)
-                        }
                     },
                     highlight = {
                         Highlight(
@@ -1364,49 +1360,24 @@ private fun BottomNav(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
                 val itemWidth = maxWidth / Page.values().size
-                // Record the tab glyphs separately so the moving lens refracts both
-                // the page beneath the bar and the navigation material itself.
-                val tabsBackdrop = if (uiStyle.glassSurface && backdrop != null) {
-                    rememberLayerBackdrop()
+                // Each visible icon owns its own tiny capture layer. The icon is
+                // composed once; the outer alpha fades only its on-screen copy while
+                // layerBackdrop records the un-faded pixels for the moving lens.
+                val iconBackdrops = if (uiStyle.glassSurface && backdrop != null) {
+                    listOf(
+                        rememberLayerBackdrop(),
+                        rememberLayerBackdrop(),
+                        rememberLayerBackdrop(),
+                        rememberLayerBackdrop(),
+                        rememberLayerBackdrop()
+                    )
+                } else emptyList()
+                val iconsBackdrop = if (iconBackdrops.isNotEmpty()) {
+                    rememberCombinedBackdrop(*iconBackdrops.toTypedArray())
                 } else null
-                val indicatorBackdrop = if (tabsBackdrop != null && backdrop != null) {
-                    rememberCombinedBackdrop(backdrop, tabsBackdrop)
+                val indicatorBackdrop = if (iconsBackdrop != null && backdrop != null) {
+                    rememberCombinedBackdrop(backdrop, iconsBackdrop)
                 } else backdrop
-                if (tabsBackdrop != null && backdrop != null) {
-                    // Mirror the complete visible glass tab row into a dedicated backdrop:
-                    // panel material + icon glyphs. The moving lens samples this composite.
-                    // Capture only the glyphs for the selected lens. The real panel is
-                    // already drawn by the visible Surface above; duplicating its backdrop
-                    // here creates the unwanted rectangular underlay below the navigation bar.
-                    Row(
-                        Modifier.fillMaxWidth().height(48.dp)
-                            .graphicsLayer { alpha = 0f }
-                            .layerBackdrop(tabsBackdrop),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Page.values().forEach { item ->
-                            Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
-                                AppIcon(
-                                    item.glyph,
-                                    contentDescription = null,
-                                    tint = if (item == current) p.accent else p.muted,
-                                    modifier = Modifier
-                                        .size(if (item == current) 29.dp else 26.dp)
-                                        .graphicsLayer {
-                                            // The captured source glyph is deliberately larger than
-                                            // the visible glyph. The glass lens then refracts this
-                                            // real icon image instead of merely enlarging its shell.
-                                            val sourceMagnification = if (item == current) {
-                                                1.20f + settings.intensity * 0.10f
-                                            } else 1f
-                                            scaleX = sourceMagnification
-                                            scaleY = sourceMagnification
-                                        }
-                                )
-                            }
-                        }
-                    }
-                }
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
@@ -1533,7 +1504,7 @@ private fun BottomNav(
                     Page.values().forEach { item ->
                         val selected = item == current
                         val tint by animateColorAsState(
-                            targetValue = if (selected) p.accent else p.muted,
+                            targetValue = if (selected) p.accent else p.accent.copy(alpha = 0.74f),
                             animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconTint"
                         )
@@ -1574,9 +1545,14 @@ private fun BottomNav(
                             1f - smoothCoverage
                         } else 1f
                         Box(
-                            Modifier.weight(1f).height(48.dp).mathFlowClickable {
-                                if (!selected) onSelect(item)
-                            },
+                            Modifier.weight(1f).height(48.dp)
+                                // graphicsLayer is outside layerBackdrop: the captured source
+                                // keeps the full icon while only the visible pixels fade under glass.
+                                .graphicsLayer { alpha = navGlyphAlpha }
+                                .then(if (iconBackdrops.isNotEmpty()) Modifier.layerBackdrop(iconBackdrops[item.ordinal]) else Modifier)
+                                .mathFlowClickable {
+                                    if (!selected) onSelect(item)
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             if (style == BottomNavAnimationStyle.SOFT_FOCUS && settings.enabled) {
@@ -1597,7 +1573,6 @@ private fun BottomNav(
                                 modifier = Modifier.size(26.dp).graphicsLayer {
                                     scaleX = iconScale
                                     scaleY = iconScale * morphY
-                                    alpha = navGlyphAlpha
                                 }
                             )
                         }
