@@ -2865,7 +2865,7 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
 
-private enum class SettingsSection { MAIN, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, ANIMATIONS, FONTS, CONFIGS }
+private enum class SettingsSection { MAIN, DISPLAY, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, ANIMATIONS, NAVIGATION, FONTS, CONFIGS }
 
 private fun makeConfigSnapshot(
     theme: String, icon: String, fontScale: Float, fontPath: String?, language: String,
@@ -3203,129 +3203,89 @@ private fun SettingsPage(
         when (target) {
             SettingsSection.MAIN -> PageColumn(tx("settings")) {
                 Panel {
-                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                Text("Скругление элементов", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = p.text)
-                                Text("Общий радиус углов элементов настроек", fontSize = 12.sp, color = p.muted, lineHeight = 16.sp)
-                            }
-                            Text("${settingsCornerRadiusDp} dp", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.accent)
-                        }
-                        Slider(
-                            value = settingsCornerRadiusDp.toFloat(),
-                            onValueChange = { onSettingsCornerRadiusChange(it.toInt().coerceIn(0, 40)) },
-                            valueRange = 0f..40f,
-                            steps = 19,
-                            colors = SliderDefaults.colors(
-                                thumbColor = p.accent, activeTrackColor = p.accent,
-                                inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
-                                inactiveTickColor = Color.Transparent
-                            )
-                        )
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("0 · Острые углы", fontSize = 11.sp, color = p.muted)
-                            Text("40 · Сильное скругление", fontSize = 11.sp, color = p.muted)
-                        }
+                    Text("ПЕРСОНАЛИЗАЦИЯ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    SettingsEntry(tx("themes"), ThemeOptions.firstOrNull { it.id == selectedThemeId }?.title ?: tx("theme_entry_subtitle"), AppGlyph.PALETTE) {
+                        pendingThemeId = selectedThemeId; section = SettingsSection.THEMES
+                    }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry("Стиль интерфейса", MathFlowUiStyle.fromId(selectedUiStyleId).title, AppGlyph.TUNE) {
+                        pendingUiStyleId = selectedUiStyleId; section = SettingsSection.STYLES
+                    }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry("Внешний вид и размеры", "Скругления, масштаб текста и плотность", AppGlyph.SETTINGS) { section = SettingsSection.DISPLAY }
+                }
+                Panel {
+                    Text("НАВИГАЦИЯ И АНИМАЦИЯ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    SettingsEntry("Нижняя панель", "Материал, форма, преломление и движение", AppGlyph.HISTORY) {
+                        pendingNavAnimationSettings = appliedNavAnimationSettings; navPreviewPage = Page.HOME; section = SettingsSection.NAVIGATION
+                    }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry("Анимация кнопок", tx("animation_entry_subtitle"), AppGlyph.SETTINGS) {
+                        pendingAnimationSettings = appliedAnimationSettings; section = SettingsSection.ANIMATIONS
                     }
                 }
                 Panel {
-                    SettingsEntry(
-                        title = tx("app_icons"),
-                        subtitle = tx("icon_entry_subtitle"),
-                        icon = AppGlyph.BUILD,
-                        onClick = { pendingIconId = selectedIconId; section = SettingsSection.ICONS }
-                    )
-                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
-                    SettingsEntry(
-                        title = "Стиль системных иконок",
-                        subtitle = AppIconPack.fromId(selectedIconPackId).title,
-                        icon = AppGlyph.TUNE,
-                        onClick = { pendingIconPackId = selectedIconPackId; section = SettingsSection.ICON_PACKS }
-                    )
-                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
-                    SettingsEntry(
-                        title = tx("themes"),
-                        subtitle = tx("theme_entry_subtitle"),
-                        icon = AppGlyph.PALETTE,
-                        onClick = { pendingThemeId = selectedThemeId; section = SettingsSection.THEMES }
-                    )
-                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
-                    SettingsEntry(
-                        title = "Стиль интерфейса",
-                        subtitle = MathFlowUiStyle.fromId(selectedUiStyleId).title,
-                        icon = AppGlyph.TUNE,
-                        onClick = { pendingUiStyleId = selectedUiStyleId; section = SettingsSection.STYLES }
-                    )
-                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
-                    SettingsEntry(
-                        title = tx("fonts"),
-                        subtitle = tx("font_library_hint"),
-                        icon = AppGlyph.TEXT,
-                        onClick = {
-                            pendingFontPath = fontPath
-                            fontMessage = null
-                            section = SettingsSection.FONTS
-                        }
-                    )
+                    Text("ПЕРСОНАЛИЗАЦИЯ ПРИЛОЖЕНИЯ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    SettingsEntry(tx("app_icons"), tx("icon_entry_subtitle"), AppGlyph.BUILD) { pendingIconId = selectedIconId; section = SettingsSection.ICONS }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry("Стиль системных иконок", AppIconPack.fromId(selectedIconPackId).title, AppGlyph.TUNE) { pendingIconPackId = selectedIconPackId; section = SettingsSection.ICON_PACKS }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry(tx("fonts"), tx("font_library_hint"), AppGlyph.TEXT) {
+                        pendingFontPath = fontPath; fontMessage = null; section = SettingsSection.FONTS
+                    }
                 }
                 Panel {
-                    SettingsEntry(
-                        title = tx("app_language"),
-                        subtitle = AppLanguages.firstOrNull { it.tag == selectedLanguage }?.nativeName ?: "Русский",
-                        icon = AppGlyph.LANGUAGE,
-                        onClick = { section = SettingsSection.LANGUAGE }
-                    )
-                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
-                    SettingsEntry(
-                        title = measurementText("measurements", LocalLanguage.current),
-                        subtitle = measurementText("measurements_subtitle", LocalLanguage.current),
-                        icon = AppGlyph.GLOBE,
-                        onClick = { pendingMeasurementSystem = selectedMeasurementSystem; section = SettingsSection.MEASUREMENTS }
-                    )
+                    Text("РЕГИОН И ФОРМАТЫ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    SettingsEntry(tx("app_language"), AppLanguages.firstOrNull { it.tag == selectedLanguage }?.nativeName ?: "Русский", AppGlyph.LANGUAGE) { section = SettingsSection.LANGUAGE }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry(measurementText("measurements", LocalLanguage.current), measurementText("measurements_subtitle", LocalLanguage.current), AppGlyph.GLOBE) {
+                        pendingMeasurementSystem = selectedMeasurementSystem; section = SettingsSection.MEASUREMENTS
+                    }
                 }
                 Panel {
-                    SettingsEntry(
-                        title = tx("animations"),
-                        subtitle = tx("animation_entry_subtitle"),
-                        icon = AppGlyph.SETTINGS,
-                        onClick = {
-                            pendingAnimationSettings = appliedAnimationSettings
-                            pendingNavAnimationSettings = appliedNavAnimationSettings
-                            section = SettingsSection.ANIMATIONS
+                    Text("ДАННЫЕ И ПРОФИЛИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    SettingsEntry(tx("configurations"), tx("configurations_subtitle"), AppGlyph.BUILD) {
+                        selectedConfigId = activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty(); section = SettingsSection.CONFIGS
+                    }
+                }
+                Panel {
+                    Text("MathFlow", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+                    Text("Version $version", fontSize = 13.sp, color = p.accent)
+                    Text(tx("about_description"), fontSize = 12.sp, color = p.muted, lineHeight = 18.sp)
+                }
+            }
+
+            SettingsSection.DISPLAY -> PageColumn("Внешний вид и размеры") {
+                Panel {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text("Скругление элементов", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = p.text)
+                                Text("Радиус углов карточек и элементов настроек", fontSize = 12.sp, color = p.muted)
+                            }
+                            Text("$settingsCornerRadiusDp dp", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.accent)
                         }
-                    )
-                    HorizontalDivider(color = p.key.copy(alpha = 0.65f))
-                    SettingsEntry(
-                        title = tx("configurations"),
-                        subtitle = tx("configurations_subtitle"),
-                        icon = AppGlyph.BUILD,
-                        onClick = { selectedConfigId = activeConfigId ?: configProfiles.firstOrNull()?.id.orEmpty(); section = SettingsSection.CONFIGS }
-                    )
+                        Slider(value = settingsCornerRadiusDp.toFloat(), onValueChange = { onSettingsCornerRadiusChange(it.toInt().coerceIn(0, 40)) },
+                            valueRange = 0f..40f, steps = 19,
+                            colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key,
+                                activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("0 · Острые", fontSize = 11.sp, color = p.muted); Text("40 · Сильные", fontSize = 11.sp, color = p.muted)
+                        }
+                    }
                 }
                 Panel {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(tx("text_size"), fontSize = 15.sp, color = p.muted)
-                        Text("${(fontScale * 100).toInt()}%", fontSize = 15.sp, color = p.text)
+                        Text(tx("text_size"), fontSize = 14.sp, color = p.text)
+                        Text("${(pendingFontScale * 100).toInt()}%", fontSize = 14.sp, color = p.accent)
                     }
-                    Slider(
-                        value = pendingFontScale,
-                        onValueChange = { pendingFontScale = Math.round(it * 20f) / 20f },
-                        valueRange = 0.85f..1.25f,
-                        steps = 7,
-                        colors = SliderDefaults.colors(
-                            thumbColor = p.accent, activeTrackColor = p.accent,
-                            inactiveTrackColor = p.key, activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent
-                        )
-                    )
+                    Slider(value = pendingFontScale, onValueChange = { pendingFontScale = Math.round(it * 20f) / 20f },
+                        valueRange = 0.85f..1.25f, steps = 7,
+                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key,
+                            activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent))
+                    Text("Изменение размера текста во всём приложении", fontSize = 12.sp, color = p.muted)
                 }
-                Panel {
-                    Text("MathFlow", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Version $version", fontSize = 14.sp, color = p.accent)
-                    Text(
-                        tx("about_description"),
-                        fontSize = 13.sp, color = p.muted, lineHeight = 18.sp
-                    )
-                }
+                Text("Изменения применяются через общую кнопку «Применить».", fontSize = 12.sp, color = p.muted)
             }
 
             SettingsSection.ICON_PACKS -> PageColumn("Стиль иконок") {
@@ -3568,6 +3528,10 @@ private fun SettingsPage(
                         onClick = { onAnimationSettingsApplied(pendingAnimationSettings.normalized()) }
                     )
                 }
+
+
+            SettingsSection.NAVIGATION -> PageColumn("Нижняя панель") {
+                Text("Настрой внешний вид панели отдельно от анимации кнопок.", color = p.muted, fontSize = 13.sp, lineHeight = 19.sp)
                 Panel {
                     Row(
                         Modifier.fillMaxWidth().toggleable(
@@ -3730,6 +3694,8 @@ private fun SettingsPage(
                     )
                 }
             }
+            }
+
             SettingsSection.FONTS -> PageColumn(tx("fonts")) {
                 Text(tx("font_library_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 Panel {
