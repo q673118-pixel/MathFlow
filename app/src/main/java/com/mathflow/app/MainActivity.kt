@@ -1332,26 +1332,21 @@ private fun BottomNav(
     ) {
         val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
         Surface(
-            modifier = if ((navLiquidPanel || navFrostedPanel) && backdrop != null) {
-                Modifier.clip(panelShape).drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(35.dp) },
-                    effects = {
-                        vibrancy()
-                        blur((if (navLiquidPanel) settings.glassBlur else settings.matteBlur).dp.toPx())
-                    },
-                    highlight = {
-                        Highlight(
-                            width = if (navLiquidPanel) 0.8.dp else 1.2.dp,
-                            blurRadius = if (navLiquidPanel) 1.6.dp else 3.dp,
-                            alpha = if (navLiquidPanel) settings.highlightStrength else settings.matteHighlight
+            modifier = Modifier
+                .clip(panelShape)
+                .background(
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(
+                            p.surface.copy(alpha = if (navLiquidPanel) 0.46f * settings.opacity else settings.matteOpacity),
+                            p.surface.copy(alpha = if (navLiquidPanel) 0.30f * settings.opacity else settings.matteOpacity * 0.84f)
                         )
-                    },
-                    onDrawSurface = {
-                        drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f * settings.opacity else settings.matteOpacity))
-                    }
+                    )
                 )
-            } else Modifier,
+                .border(
+                    if (navLiquidPanel) 0.8.dp else 1.dp,
+                    p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
+                    panelShape
+                ),
             shape = panelShape,
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
             shadowElevation = if (navLiquidPanel) (settings.shadowStrength * 3f).dp else if (navFrostedPanel) (settings.matteDepth * 6f + settings.matteShadow * 3f).dp else uiStyle.elevationDp.dp
@@ -1363,15 +1358,17 @@ private fun BottomNav(
                 // Each visible icon owns its own tiny capture layer. The icon is
                 // composed once; the outer alpha fades only its on-screen copy while
                 // layerBackdrop records the un-faded pixels for the moving lens.
-                // One capture for the complete icon row. The row is composed once;
-                // the lens samples these already-rendered pixels instead of creating
-                // five independent per-icon capture layers.
-                val iconsBackdrop = if (uiStyle.glassSurface && backdrop != null) {
-                    rememberLayerBackdrop()
+                // Each icon has one tiny source layer so its visible alpha can fade
+                // beneath the moving lens while the lens still samples the un-faded glyph.
+                // This is five small local captures, not a duplicated Compose icon row.
+                val iconBackdrops = if (uiStyle.glassSurface && backdrop != null) {
+                    listOf(rememberLayerBackdrop(), rememberLayerBackdrop(), rememberLayerBackdrop(),
+                        rememberLayerBackdrop(), rememberLayerBackdrop())
+                } else emptyList()
+                val iconsBackdrop = if (iconBackdrops.isNotEmpty()) {
+                    rememberCombinedBackdrop(*iconBackdrops.toTypedArray())
                 } else null
-                val indicatorBackdrop = if (iconsBackdrop != null && backdrop != null) {
-                    rememberCombinedBackdrop(backdrop, iconsBackdrop)
-                } else backdrop
+                val indicatorBackdrop = iconsBackdrop ?: backdrop
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
@@ -1494,11 +1491,7 @@ private fun BottomNav(
                         )
                     }
                 }
-                Row(
-                    Modifier.fillMaxWidth()
-                        .then(if (iconsBackdrop != null) Modifier.layerBackdrop(iconsBackdrop) else Modifier),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Page.values().forEach { item ->
                         val selected = item == current
                         val tint by animateColorAsState(
@@ -1547,7 +1540,7 @@ private fun BottomNav(
                                 // graphicsLayer is outside layerBackdrop: the captured source
                                 // keeps the full icon while only the visible pixels fade under glass.
                                 .graphicsLayer { alpha = navGlyphAlpha }
-                                .then(Modifier)
+                                .then(if (iconBackdrops.isNotEmpty()) Modifier.layerBackdrop(iconBackdrops[item.ordinal]) else Modifier)
                                 .mathFlowClickable {
                                     if (!selected) onSelect(item)
                                 },
