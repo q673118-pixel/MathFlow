@@ -1338,9 +1338,11 @@ private fun BottomNav(
     val springStiffness = bottomNavSpringStiffness(duration)
     Box(
         Modifier.fillMaxWidth()
-            // Intentionally draw the capsule into the system navigation inset.
-            // The user wants no reserved strip or background underneath the panel.
-            .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 0.dp),
+            // Keep the capsule at its normal position above Android's system
+            // navigation area. This is spacing only: do not draw a themed surface
+            // or an extra container behind the capsule.
+            .navigationBarsPadding()
+            .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
