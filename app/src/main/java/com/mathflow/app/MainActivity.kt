@@ -3535,6 +3535,7 @@ private fun SettingsPage(
             SettingsSection.NAVIGATION -> PageColumn("Нижняя панель") {
                 Text("Настрой внешний вид панели отдельно от анимации кнопок.", color = p.muted, fontSize = 13.sp, lineHeight = 19.sp)
                 Panel {
+                    Text("ПОВЕДЕНИЕ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Row(
                         Modifier.fillMaxWidth().toggleable(
                             value = pendingNavAnimationSettings.enabled,
@@ -3558,6 +3559,9 @@ private fun SettingsPage(
                             onCheckedChange = null
                         )
                     }
+                }
+                Panel {
+                    Text("МАТЕРИАЛ ПАНЕЛИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Text("Материал нижней панели", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     BottomNavSurfaceMaterial.entries.forEach { material ->
                         val selected = pendingNavAnimationSettings.surfaceMaterial == material
@@ -3576,6 +3580,9 @@ private fun SettingsPage(
                             Text(material.description, color = p.muted, fontSize = 11.sp, lineHeight = 15.sp)
                         }
                     }
+                }
+                Panel {
+                    Text("МАТОВЫЕ ПОВЕРХНОСТИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Text("Матовое стекло · общие поверхности", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                     Text("Эти параметры влияют на карточки, кнопки и элементы настроек только в стиле Liquid Glass. Капля остаётся жидким стеклом.",
                         color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
@@ -3614,6 +3621,9 @@ private fun SettingsPage(
                         valueRange = 0f..1f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
+                }
+                Panel {
+                    Text("АНИМАЦИЯ И ФОРМА", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     BottomNavAnimationStyle.values().forEach { style ->
                         val selected = pendingNavAnimationSettings.style == style
                         val shape = RoundedCornerShape(LocalMathFlowUiStyle.current.cardRadiusDp.dp)
@@ -3632,6 +3642,9 @@ private fun SettingsPage(
                             Text(tx(style.descriptionKey), color = p.muted, fontSize = 11.sp, lineHeight = 15.sp)
                         }
                     }
+                }
+                Panel {
+                    Text("ПРЕДПРОСМОТР", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     val navPreviewBackdrop = rememberLayerBackdrop()
                     Panel {
                         Text(tx("nav_preview"), color = p.muted, fontSize = 13.sp)
