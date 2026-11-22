@@ -1363,28 +1363,13 @@ private fun BottomNav(
                 if (tabsBackdrop != null && backdrop != null) {
                     // Mirror the complete visible glass tab row into a dedicated backdrop:
                     // panel material + icon glyphs. The moving lens samples this composite.
+                    // Capture only the glyphs for the selected lens. The real panel is
+                    // already drawn by the visible Surface above; duplicating its backdrop
+                    // here creates the unwanted rectangular underlay below the navigation bar.
                     Row(
                         Modifier.fillMaxWidth().height(48.dp)
                             .graphicsLayer { alpha = 0f }
-                            .layerBackdrop(tabsBackdrop)
-                            .drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { RoundedCornerShape(35.dp) },
-                                effects = {
-                                    vibrancy()
-                                    blur((if (navLiquidPanel) settings.glassBlur else settings.matteBlur).dp.toPx())
-                                    if (navLiquidPanel) {
-                                        val panelLens = (8f + settings.refractionStrength * 16f).dp.toPx()
-                                        lens(panelLens, panelLens)
-                                    }
-                                },
-                                highlight = {
-                                    Highlight.Default.copy(alpha = if (navLiquidPanel) settings.highlightStrength else settings.matteHighlight)
-                                },
-                                onDrawSurface = {
-                                    drawRect(p.surface.copy(alpha = if (navLiquidPanel) 0.22f * settings.opacity else settings.matteOpacity))
-                                }
-                            ),
+                            .layerBackdrop(tabsBackdrop),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Page.values().forEach { item ->
@@ -1547,6 +1532,19 @@ private fun BottomNav(
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavSoftFocusAlpha"
                         )
+                        val navGlyphAlpha = if (uiStyle.glassSurface && backdrop != null) {
+                            val itemVisualIndex = if (layoutDirection == LayoutDirection.Rtl) {
+                                Page.values().lastIndex - item.ordinal
+                            } else item.ordinal
+                            val itemCenter = with(density) {
+                                itemWidth.toPx() * (itemVisualIndex + 0.5f)
+                            }
+                            val dropletCenter = indicatorOffset + with(density) { indicatorWidth.toPx() * 0.5f }
+                            val coverage = (1f - abs(dropletCenter - itemCenter) /
+                                (with(density) { itemWidth.toPx() } * 0.58f)).coerceIn(0f, 1f)
+                            val smoothCoverage = coverage * coverage * (3f - 2f * coverage)
+                            1f - smoothCoverage
+                        } else 1f
                         Box(
                             Modifier.weight(1f).height(48.dp).mathFlowClickable {
                                 if (!selected) onSelect(item)
@@ -1561,20 +1559,19 @@ private fun BottomNav(
                                         .background(p.navActive)
                                 )
                             }
-                            // In glass mode the selected glyph is rendered only through
-                            // the droplet's backdrop. Drawing it again here creates a sharp,
-                            // un-refracted duplicate beneath the lens.
-                            if (!(uiStyle.glassSurface && backdrop != null && selected)) {
-                                AppIcon(
-                                    glyph = item.glyph,
-                                    contentDescription = displayText(item.title),
-                                    tint = tint,
-                                    modifier = Modifier.size(26.dp).graphicsLayer {
-                                        scaleX = iconScale
-                                        scaleY = iconScale * morphY
-                                    }
-                                )
-                            }
+                            // Fade the sharp glyph according to the moving droplet's actual
+                            // overlap. This crossfades continuously instead of removing it
+                            // as soon as the destination tab becomes selected.
+                            AppIcon(
+                                glyph = item.glyph,
+                                contentDescription = displayText(item.title),
+                                tint = tint,
+                                modifier = Modifier.size(26.dp).graphicsLayer {
+                                    scaleX = iconScale
+                                    scaleY = iconScale * morphY
+                                    alpha = navGlyphAlpha
+                                }
+                            )
                         }
                     }
                 }
@@ -4249,9 +4246,10 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            AppIcon(AppGlyph.CHECK, contentDescription = null, tint = p.onKeyEquals, modifier = Modifier.size(18.dp))
+            val applyContentColor = if (uiStyle.glassSurface) p.text else p.onKeyEquals
+            AppIcon(AppGlyph.CHECK, contentDescription = null, tint = applyContentColor, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(9.dp))
-            Text(tx("apply"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = p.onKeyEquals)
+            Text(tx("apply"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = applyContentColor)
         }
     }
 }
