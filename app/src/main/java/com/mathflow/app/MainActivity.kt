@@ -700,7 +700,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth()
                                             .clipToBounds()
-                                            .then(if (MathFlowUiStyle.fromId(uiStyleId).glassSurface) Modifier.layerBackdrop(backdrop) else Modifier)
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
                                                 translationX = (1f - enterProgress.value) * 3.dp.toPx()
@@ -1034,9 +1033,14 @@ private fun FirstLaunchWelcome(
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp).heightIn(max = 760.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 9.dp).heightIn(max = 760.dp)
+                .clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp))
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(p.surface.copy(alpha = 0.88f), p.surface.copy(alpha = 0.74f))
+                ))
+                .border(1.dp, p.text.copy(alpha = 0.12f), RoundedCornerShape(uiStyle.cardRadiusDp.dp)),
             shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-            color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            color = Color.Transparent,
             contentColor = p.text,
             shadowElevation = 14.dp
         ) {
@@ -1220,9 +1224,14 @@ private fun FirstLaunchWelcome(
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(max = 620.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).heightIn(max = 620.dp)
+                    .clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp))
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(p.surface.copy(alpha = 0.90f), p.surface.copy(alpha = 0.76f))
+                    ))
+                    .border(1.dp, p.text.copy(alpha = 0.12f), RoundedCornerShape(uiStyle.cardRadiusDp.dp)),
                 shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-                color = p.surface,
+                color = Color.Transparent,
                 contentColor = p.text
             ) {
                 Column(Modifier.padding(17.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
@@ -4063,9 +4072,15 @@ private fun SettingsPage(
         val previewThemeOption = ThemeOptions.firstOrNull { it.id == previewTheme } ?: ThemeOptions.first()
         Dialog(onDismissRequest = { pendingImportedProfile = null }) {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.cardRadiusDp).dp))
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(p.surface.copy(alpha = 0.90f), p.surface.copy(alpha = 0.76f))
+                    ))
+                    .border(1.dp, p.text.copy(alpha = 0.12f),
+                        RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.cardRadiusDp).dp)),
                 shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.cardRadiusDp).dp),
-                color = p.surface,
+                color = Color.Transparent,
                 contentColor = p.text
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
