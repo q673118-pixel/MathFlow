@@ -1198,17 +1198,18 @@ private fun FirstLaunchWelcome(
                 }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth().mathFlowClickable {
-                        if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
-                        onConfirm()
-                    },
-                    shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
-                    color = Color.Transparent,
-                    modifier = Modifier.clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                         .background(androidx.compose.ui.graphics.Brush.verticalGradient(
                             listOf(p.accent.copy(alpha = 0.94f), p.accent.copy(alpha = 0.72f))
                         ))
                         .border(1.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+                        .mathFlowClickable {
+                            if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
+                            onConfirm()
+                        },
+                    shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
+                    color = Color.Transparent
                 ) {
                     Row(Modifier.padding(horizontal = 18.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(measurementText("continue", language), modifier = Modifier.weight(1f), color = if (p.dark) Color(0xFF17131F) else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
