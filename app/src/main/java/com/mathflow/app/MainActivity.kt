@@ -1338,7 +1338,9 @@ private fun BottomNav(
     Box(
         Modifier.fillMaxWidth()
             .then(if (preview) Modifier else Modifier.navigationBarsPadding())
-                        .padding(horizontal = 28.dp, vertical = 8.dp),
+            // No decorative gap below the capsule; retain only Android's
+            // mandatory system-navigation inset to avoid overlapping system controls.
+            .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 0.dp),
         contentAlignment = Alignment.Center
     ) {
         val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
