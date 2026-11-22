@@ -1360,7 +1360,9 @@ private fun BottomNav(
                 ),
             shape = panelShape,
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (navLiquidPanel) (settings.shadowStrength * 3f).dp else if (navFrostedPanel) (settings.matteDepth * 6f + settings.matteShadow * 3f).dp else uiStyle.elevationDp.dp
+            // Keep the floating glass capsule clean: the panel itself must not cast
+            // a broad grey halo. The selected droplet retains its own local depth.
+            shadowElevation = if (navLiquidPanel || navFrostedPanel) 0.dp else uiStyle.elevationDp.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
@@ -2083,7 +2085,10 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
             else -> uiStyle.elevationDp.dp
         }
     ) {
-        Box {
+        // Clip every child layer to the exact user-selected corner radius.
+        // This prevents rectangular child highlights/backgrounds from escaping
+        // the rounded settings card when its radius changes.
+        Box(Modifier.clip(shape)) {
             if (frosted && glass.matteHighlight > 0f) {
                 Box(
                     Modifier.fillMaxWidth().height(28.dp)
