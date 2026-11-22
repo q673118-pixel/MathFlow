@@ -1363,17 +1363,11 @@ private fun BottomNav(
                 // Each visible icon owns its own tiny capture layer. The icon is
                 // composed once; the outer alpha fades only its on-screen copy while
                 // layerBackdrop records the un-faded pixels for the moving lens.
-                val iconBackdrops = if (uiStyle.glassSurface && backdrop != null) {
-                    listOf(
-                        rememberLayerBackdrop(),
-                        rememberLayerBackdrop(),
-                        rememberLayerBackdrop(),
-                        rememberLayerBackdrop(),
-                        rememberLayerBackdrop()
-                    )
-                } else emptyList()
-                val iconsBackdrop = if (iconBackdrops.isNotEmpty()) {
-                    rememberCombinedBackdrop(*iconBackdrops.toTypedArray())
+                // One capture for the complete icon row. The row is composed once;
+                // the lens samples these already-rendered pixels instead of creating
+                // five independent per-icon capture layers.
+                val iconsBackdrop = if (uiStyle.glassSurface && backdrop != null) {
+                    rememberLayerBackdrop()
                 } else null
                 val indicatorBackdrop = if (iconsBackdrop != null && backdrop != null) {
                     rememberCombinedBackdrop(backdrop, iconsBackdrop)
@@ -1500,7 +1494,11 @@ private fun BottomNav(
                         )
                     }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .then(if (iconsBackdrop != null) Modifier.layerBackdrop(iconsBackdrop) else Modifier),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Page.values().forEach { item ->
                         val selected = item == current
                         val tint by animateColorAsState(
@@ -1549,7 +1547,7 @@ private fun BottomNav(
                                 // graphicsLayer is outside layerBackdrop: the captured source
                                 // keeps the full icon while only the visible pixels fade under glass.
                                 .graphicsLayer { alpha = navGlyphAlpha }
-                                .then(if (iconBackdrops.isNotEmpty()) Modifier.layerBackdrop(iconBackdrops[item.ordinal]) else Modifier)
+                                .then(Modifier)
                                 .mathFlowClickable {
                                     if (!selected) onSelect(item)
                                 },
@@ -2036,19 +2034,17 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         frosted -> p.text.copy(alpha = 0.12f + glass.matteHighlight * 0.18f)
         else -> p.text.copy(alpha = outline)
     }
-    val backdrop = LocalMathFlowBackdrop.current
-    val glassLayer = if (frosted && backdrop != null) {
-        Modifier.clip(shape).drawBackdrop(
-            backdrop = backdrop,
-            shape = { shape },
-            effects = { vibrancy(); blur(10.dp.toPx()) },
-            highlight = {
-                Highlight(width = 0.9.dp, blurRadius = 2.dp,
-                    alpha = glass.matteHighlight.coerceIn(0f, 0.8f))
-            },
-            onDrawSurface = {
-                drawRect(p.surface.copy(alpha = (glass.matteOpacity * 0.52f).coerceIn(0.12f, 0.48f)))
-            }
+    // Matte glass for content cards: a tinted translucent material with a
+    // restrained top reflection. Avoid per-card backdrop captures; they were
+    // producing rectangular capture artifacts and multiplying GPU work.
+    val glassLayer = if (frosted) {
+        Modifier.clip(shape).background(
+            androidx.compose.ui.graphics.Brush.verticalGradient(
+                listOf(
+                    p.surface.copy(alpha = (glass.matteOpacity * 0.76f).coerceIn(0.18f, 0.62f)),
+                    p.surface.copy(alpha = (glass.matteOpacity * 0.58f).coerceIn(0.14f, 0.52f))
+                )
+            )
         )
     } else Modifier
     Surface(
@@ -2058,8 +2054,7 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
                 Modifier.border(if (frosted) 0.8.dp else borderWidth, borderColor, shape)
             } else Modifier),
         shape = shape,
-        color = if (frosted && backdrop != null) Color.Transparent
-            else if (frosted) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        color = if (frosted) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
         shadowElevation = when {
             frosted -> (0.8f + glass.matteDepth * 2.2f + glass.matteShadow * 1.4f).dp
             skeuo -> 7.dp
@@ -2160,15 +2155,7 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp)
     val backdrop = LocalMathFlowBackdrop.current
-    val buttonGlass = if (uiStyle.glassSurface && backdrop != null) {
-        Modifier.clip(shape).drawBackdrop(
-            backdrop = backdrop,
-            shape = { shape },
-            effects = { vibrancy(); blur(7.dp.toPx()) },
-            highlight = { Highlight(width = 1.dp, blurRadius = 2.dp, alpha = glass.matteHighlight * 0.72f) },
-            onDrawSurface = { drawRect(p.accent.copy(alpha = 0.10f)) }
-        )
-    } else Modifier
+    val buttonGlass = Modifier
     var pressed by remember { mutableStateOf(false) }
     val pressScale by animateFloatAsState(
         targetValue = if (pressed) 0.975f else 1f,
@@ -2178,7 +2165,11 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     Surface(
         modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .then(buttonGlass)
+            .then(if (uiStyle.glassSurface) Modifier
+                .clip(shape)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(p.accent.copy(alpha = 0.17f), p.surface.copy(alpha = 0.54f))
+                )) else Modifier)
             .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.30f), shape) else Modifier)
             .pointerInput(onClick) {
                 detectTapGestures(onPress = {
@@ -4337,20 +4328,15 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
         animationSpec = spring(dampingRatio = 0.68f, stiffness = 560f),
         label = "SettingsApplyGlassPress"
     )
-    val applyGlass = if (uiStyle.glassSurface && backdrop != null) {
-        Modifier.clip(shape).drawBackdrop(
-            backdrop = backdrop,
-            shape = { shape },
-            effects = { vibrancy(); blur(9.dp.toPx()) },
-            highlight = { Highlight(width = 1.2.dp, blurRadius = 2.4.dp, alpha = glass.matteHighlight * 0.88f) },
-            shadow = { Shadow(radius = 16.dp, alpha = 0.22f) },
-            onDrawSurface = { drawRect(p.accent.copy(alpha = 0.16f)) }
-        )
-    } else Modifier
+    val applyGlass = Modifier
     Surface(
         modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .then(applyGlass)
+            .then(if (uiStyle.glassSurface) Modifier
+                .clip(shape)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(p.accent.copy(alpha = 0.24f), p.surface.copy(alpha = 0.58f))
+                )) else Modifier)
             .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.34f), shape) else Modifier)
             .pointerInput(onClick) {
                 detectTapGestures(onPress = {
