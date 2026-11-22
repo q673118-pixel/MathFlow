@@ -1658,12 +1658,18 @@ private fun BottomNav(
                                      val refraction = settings.refractionStrength
                                      if (refraction > 0f) {
                                          val motionEnergy = if (settings.enabled) (travelStretch.value - 1f).coerceIn(0f, 0.24f) else 0f
-                                         lens(
-                                             ((24f * refraction + motionEnergy * 18f * refraction).dp).toPx(),
-                                             ((42f * refraction + motionEnergy * 22f * refraction).dp).toPx(),
-                                             depthEffect = settings.glassDepth > 0f,
-                                             chromaticAberration = false
-                                         )
+                                         // Lens uses an SDF implementation that only accepts
+                                         // CornerBasedShape/RoundedRectangularShape. Keep a hard
+                                         // runtime guard so an unexpected shape from a saved style
+                                         // or library change cannot crash the entire navigation UI.
+                                         runCatching {
+                                             lens(
+                                                 ((24f * refraction + motionEnergy * 18f * refraction).dp).toPx(),
+                                                 ((42f * refraction + motionEnergy * 22f * refraction).dp).toPx(),
+                                                 depthEffect = settings.glassDepth > 0f,
+                                                 chromaticAberration = false
+                                             )
+                                         }
                                      }
                                 },
                                 highlight = {
