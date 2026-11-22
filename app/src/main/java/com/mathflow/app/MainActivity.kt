@@ -1323,7 +1323,6 @@ private fun BottomNav(
     val navMaterialPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.MATERIAL
     val navLiquidPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.LIQUID
     val navFrostedPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.FROSTED
-    val navGlassPanel = navLiquidPanel || navFrostedPanel
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
