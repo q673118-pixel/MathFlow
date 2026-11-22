@@ -81,6 +81,7 @@ internal enum class BottomNavAnimationStyle(val id: String, val title: String, v
 }
 
 internal enum class BottomNavSurfaceMaterial(val id: String, val title: String, val description: String) {
+    MATERIAL("material", "Material", "Цельная матовая поверхность без стеклянного размытия и преломления."),
     FROSTED("frosted", "Матовое стекло", "Рассеянное стекло без оптического преломления панели."),
     LIQUID("liquid", "Жидкое стекло", "Размытие, вибрация и стеклянная оптика панели.");
 
