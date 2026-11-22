@@ -105,6 +105,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
@@ -687,6 +688,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth()
+                                            .clipToBounds()
                                             .then(if (MathFlowUiStyle.fromId(uiStyleId).glassSurface) Modifier.layerBackdrop(backdrop) else Modifier)
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
@@ -1559,15 +1561,20 @@ private fun BottomNav(
                                         .background(p.navActive)
                                 )
                             }
-                            AppIcon(
-                                glyph = item.glyph,
-                                contentDescription = displayText(item.title),
-                                tint = tint,
-                                modifier = Modifier.size(26.dp).graphicsLayer {
-                                    scaleX = iconScale
-                                    scaleY = iconScale * morphY
-                                }
-                            )
+                            // In glass mode the selected glyph is rendered only through
+                            // the droplet's backdrop. Drawing it again here creates a sharp,
+                            // un-refracted duplicate beneath the lens.
+                            if (!(uiStyle.glassSurface && backdrop != null && selected)) {
+                                AppIcon(
+                                    glyph = item.glyph,
+                                    contentDescription = displayText(item.title),
+                                    tint = tint,
+                                    modifier = Modifier.size(26.dp).graphicsLayer {
+                                        scaleX = iconScale
+                                        scaleY = iconScale * morphY
+                                    }
+                                )
+                            }
                         }
                     }
                 }
