@@ -1323,7 +1323,6 @@ private fun BottomNav(
     val uiStyle = LocalMathFlowUiStyle.current
     val navMaterialPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.MATERIAL
     val navLiquidPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.LIQUID
-    val navFrostedPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.FROSTED
     // The preview is embedded in a settings card, not in the app window. It must
     // never consume Android system-bar insets or sample a rectangular page backdrop.
     val useRefractiveLens = uiStyle.glassSurface && backdrop != null && !preview
@@ -1418,10 +1417,14 @@ private fun BottomNav(
                 }
                 // The indicator always follows the duration slider. Spring-like character
                 // is retained by the stretch and icon-scale effects below.
-                val offsetSpec = tween<Float>(
-                    durationMillis = duration.coerceAtLeast(1),
-                    easing = FastOutSlowInEasing
-                )
+                val offsetSpec = if (springMotion) {
+                    spring<Float>(dampingRatio = 0.82f, stiffness = springStiffness)
+                } else {
+                    tween<Float>(
+                        durationMillis = duration.coerceAtLeast(1),
+                        easing = FastOutSlowInEasing
+                    )
+                }
                 val indicatorOffset by animateFloatAsState(
                     targetValue = targetOffset,
                     animationSpec = offsetSpec,
@@ -1489,7 +1492,11 @@ private fun BottomNav(
                         travelStretch.snapTo(1f + settings.intensity * stretchAmount)
                         travelStretch.animateTo(
                             1f,
-                            tween(durationMillis = duration.coerceAtLeast(1), easing = FastOutSlowInEasing)
+                            if (springMotion) {
+                                spring<Float>(dampingRatio = 0.72f, stiffness = springStiffness * 0.72f)
+                            } else {
+                                tween(durationMillis = duration.coerceAtLeast(1), easing = FastOutSlowInEasing)
+                            }
                         )
                     } else {
                         travelStretch.snapTo(1f)
