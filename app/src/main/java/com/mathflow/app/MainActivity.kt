@@ -3528,7 +3528,7 @@ private fun SettingsPage(
                         onClick = { onAnimationSettingsApplied(pendingAnimationSettings.normalized()) }
                     )
                 }
-
+            }
 
             SettingsSection.NAVIGATION -> PageColumn("Нижняя панель") {
                 Text("Настрой внешний вид панели отдельно от анимации кнопок.", color = p.muted, fontSize = 13.sp, lineHeight = 19.sp)
@@ -3693,7 +3693,6 @@ private fun SettingsPage(
                         onClick = { onNavAnimationSettingsApplied(pendingNavAnimationSettings.normalized()) }
                     )
                 }
-            }
             }
 
             SettingsSection.FONTS -> PageColumn(tx("fonts")) {
