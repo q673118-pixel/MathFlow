@@ -1203,7 +1203,12 @@ private fun FirstLaunchWelcome(
                         onConfirm()
                     },
                     shape = RoundedCornerShape(uiStyle.controlRadiusDp.dp),
-                    color = p.accent
+                    color = Color.Transparent,
+                    modifier = Modifier.clip(RoundedCornerShape(uiStyle.controlRadiusDp.dp))
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(p.accent.copy(alpha = 0.94f), p.accent.copy(alpha = 0.72f))
+                        ))
+                        .border(1.dp, Color.White.copy(alpha = 0.24f), RoundedCornerShape(uiStyle.controlRadiusDp.dp))
                 ) {
                     Row(Modifier.padding(horizontal = 18.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(measurementText("continue", language), modifier = Modifier.weight(1f), color = if (p.dark) Color(0xFF17131F) else Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
@@ -1842,9 +1847,14 @@ private fun CalculatorHome(
         val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
         Surface(
             Modifier.fillMaxWidth().weight(1f)
-                .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), displayShape) else Modifier),
+                .then(if (uiStyle.glassSurface) Modifier
+                .clip(displayShape)
+                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(p.surface.copy(alpha = 0.66f), p.surface.copy(alpha = 0.48f))
+                ))
+                .border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), displayShape) else Modifier),
             shape = displayShape,
-            color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
             shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 4f + glass.matteShadow * 3f).dp else uiStyle.elevationDp.dp
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -1979,7 +1989,14 @@ private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
     Box(
         Modifier.height(32.dp).clip(chipShape)
             .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.16f), chipShape) else Modifier)
-            .background(if (active) p.navActive.copy(alpha = if (uiStyle.glassSurface) glass.matteOpacity else 1f) else if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key)
+            .background(
+                if (uiStyle.glassSurface) androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(
+                        (if (active) p.accent else p.surface).copy(alpha = if (active) 0.20f else 0.42f),
+                        p.surface.copy(alpha = if (active) 0.30f else 0.58f)
+                    )
+                ) else androidx.compose.ui.graphics.SolidColor(if (active) p.navActive else p.key)
+            )
             .mathFlowClickable(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
