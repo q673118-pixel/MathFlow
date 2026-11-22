@@ -1323,6 +1323,9 @@ private fun BottomNav(
     val navMaterialPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.MATERIAL
     val navLiquidPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.LIQUID
     val navFrostedPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.FROSTED
+    // The preview is embedded in a settings card, not in the app window. It must
+    // never consume Android system-bar insets or sample a rectangular page backdrop.
+    val useRefractiveLens = useRefractiveLens && !preview
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -1338,10 +1341,9 @@ private fun BottomNav(
     val springStiffness = bottomNavSpringStiffness(duration)
     Box(
         Modifier.fillMaxWidth()
-            // Keep the capsule at its normal position above Android's system
-            // navigation area. This is spacing only: do not draw a themed surface
-            // or an extra container behind the capsule.
-            .navigationBarsPadding()
+            // Only the real app navigation observes the Android system inset.
+            // A preview lives inside a bounded card and must remain self-contained.
+            .then(if (preview) Modifier else Modifier.navigationBarsPadding())
             .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -1382,14 +1384,14 @@ private fun BottomNav(
                 // Each icon has one tiny source layer so its visible alpha can fade
                 // beneath the moving lens while the lens still samples the un-faded glyph.
                 // This is five small local captures, not a duplicated Compose icon row.
-                val iconBackdrops = if (uiStyle.glassSurface && backdrop != null) {
+                val iconBackdrops = if (useRefractiveLens) {
                     listOf(rememberLayerBackdrop(), rememberLayerBackdrop(), rememberLayerBackdrop(),
                         rememberLayerBackdrop(), rememberLayerBackdrop())
                 } else emptyList()
                 val iconsBackdrop = if (iconBackdrops.isNotEmpty()) {
                     rememberCombinedBackdrop(*iconBackdrops.toTypedArray())
                 } else null
-                val indicatorBackdrop = iconsBackdrop ?: backdrop
+                val indicatorBackdrop = if (useRefractiveLens) iconsBackdrop ?: backdrop else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
@@ -1492,7 +1494,7 @@ private fun BottomNav(
                         travelStretch.snapTo(1f)
                     }
                 }
-                if (!(uiStyle.glassSurface && backdrop != null) &&
+                if (!(useRefractiveLens) &&
                     (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled)) {
                     Box(
                         Modifier.align(Alignment.CenterStart)
@@ -1522,7 +1524,7 @@ private fun BottomNav(
                         )
                         val iconScale by animateFloatAsState(
                             targetValue = when {
-                                uiStyle.glassSurface && backdrop != null && selected -> 1.12f
+                                useRefractiveLens && selected -> 1.12f
                                 settings.enabled && selected -> 1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
                                 else -> 1f
                             },
@@ -1543,7 +1545,7 @@ private fun BottomNav(
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavSoftFocusAlpha"
                         )
-                        val navGlyphAlpha = if (uiStyle.glassSurface && backdrop != null) {
+                        val navGlyphAlpha = if (useRefractiveLens) {
                             val itemVisualIndex = if (layoutDirection == LayoutDirection.Rtl) {
                                 Page.values().lastIndex - item.ordinal
                             } else item.ordinal
@@ -1590,7 +1592,7 @@ private fun BottomNav(
                         }
                     }
                 }
-                if (uiStyle.glassSurface && backdrop != null) {
+                if (useRefractiveLens) {
                     // The active item is a clean refractive glass droplet.
                     // Its custom contour morphs with the selected navigation animation style.
                     Box(
@@ -3645,19 +3647,18 @@ private fun SettingsPage(
                 }
                 Panel {
                     Text("ПРЕДПРОСМОТР", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    val navPreviewBackdrop = rememberLayerBackdrop()
                     Panel {
                         Text(tx("nav_preview"), color = p.muted, fontSize = 13.sp)
-                        Box(Modifier.fillMaxWidth().height(80.dp)) {
-                            Box(
-                                Modifier.fillMaxSize()
-                                    .background(p.background)
-                                    .layerBackdrop(navPreviewBackdrop)
-                            )
+                        Box(
+                            Modifier.fillMaxWidth().height(80.dp)
+                                .clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
+                                .background(p.background),
+                            contentAlignment = Alignment.Center
+                        ) {
                             BottomNav(
                                 navPreviewPage,
                                 pendingNavAnimationSettings,
-                                backdrop = navPreviewBackdrop,
+                                backdrop = null,
                                 preview = true
                             ) { navPreviewPage = it }
                         }
