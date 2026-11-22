@@ -1337,9 +1337,8 @@ private fun BottomNav(
     val springStiffness = bottomNavSpringStiffness(duration)
     Box(
         Modifier.fillMaxWidth()
-            .then(if (preview) Modifier else Modifier.navigationBarsPadding())
-            // No decorative gap below the capsule; retain only Android's
-            // mandatory system-navigation inset to avoid overlapping system controls.
+            // Intentionally draw the capsule into the system navigation inset.
+            // The user wants no reserved strip or background underneath the panel.
             .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 0.dp),
         contentAlignment = Alignment.Center
     ) {
