@@ -2055,7 +2055,6 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
     val shape = RoundedCornerShape(
         (if (neo || skeuo || retro) uiStyle.cardRadiusDp else settingsRadius ?: uiStyle.cardRadiusDp).dp
     )
-    val outline = uiStyle.outlineAlpha
     val borderWidth = when {
         neo -> 2.dp
         retro -> 1.5.dp
@@ -2066,51 +2065,32 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         retro -> p.accent.copy(alpha = 0.78f)
         skeuo -> p.text.copy(alpha = 0.14f)
         frosted -> p.text.copy(alpha = 0.12f + glass.matteHighlight * 0.18f)
-        else -> p.text.copy(alpha = outline)
+        else -> p.text.copy(alpha = uiStyle.outlineAlpha)
     }
-    // Matte glass for content cards: a tinted translucent material with a
-    // restrained top reflection. Avoid per-card backdrop captures; they were
-    // producing rectangular capture artifacts and multiplying GPU work.
-    val glassLayer = if (frosted) {
-        Modifier.clip(shape).background(
-            androidx.compose.ui.graphics.Brush.verticalGradient(
-                listOf(
-                    p.surface.copy(alpha = (glass.matteOpacity * 0.76f).coerceIn(0.18f, 0.62f)),
-                    p.surface.copy(alpha = (glass.matteOpacity * 0.58f).coerceIn(0.14f, 0.52f))
-                )
-            )
-        )
-    } else Modifier
+    val panelColor = if (frosted) {
+        p.surface.copy(alpha = (glass.matteOpacity * 0.68f).coerceIn(0.16f, 0.68f))
+    } else {
+        p.surface.copy(alpha = uiStyle.surfaceAlpha)
+    }
     Surface(
-        modifier.animateContentSize(tween(180)).fillMaxWidth()
-            .then(glassLayer)
-            .then(if (neo || retro || skeuo || outline > 0f || frosted) {
+        modifier = modifier.fillMaxWidth()
+            .then(if (neo || retro || skeuo || uiStyle.outlineAlpha > 0f || frosted) {
                 Modifier.border(if (frosted) 0.8.dp else borderWidth, borderColor, shape)
             } else Modifier),
         shape = shape,
-        color = if (frosted) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+        color = panelColor,
         shadowElevation = when {
             frosted -> (0.8f + glass.matteDepth * 2.2f + glass.matteShadow * 1.4f).dp
             skeuo -> 7.dp
             else -> uiStyle.elevationDp.dp
         }
     ) {
-        // Clip every child layer to the exact user-selected corner radius.
-        // This prevents rectangular child highlights/backgrounds from escaping
-        // the rounded settings card when its radius changes.
-        Box(Modifier.clip(shape)) {
-            if (frosted && glass.matteHighlight > 0f) {
-                Box(
-                    Modifier.fillMaxWidth().height(28.dp)
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(p.text.copy(alpha = glass.matteHighlight * 0.075f), Color.Transparent)
-                            )
-                        )
-                )
-            }
+        // Surface owns the single clipping boundary. Drawing the tint inside its
+        // content avoids a second rectangular background layer escaping rounded
+        // corners when settings radii are changed at runtime.
+        Box(Modifier.fillMaxWidth()) {
             Column(
-                Modifier.padding(when {
+                Modifier.fillMaxWidth().padding(when {
                     neo -> 13.dp
                     retro -> 11.dp
                     skeuo -> 16.dp
@@ -2119,9 +2099,20 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
                 }),
                 verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)
             ) { content() }
+            if (frosted && glass.matteHighlight > 0f) {
+                Box(
+                    Modifier.align(Alignment.TopCenter).fillMaxWidth().height(28.dp)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(p.text.copy(alpha = glass.matteHighlight * 0.075f), Color.Transparent)
+                            )
+                        )
+                )
+            }
         }
     }
 }
+
 @Composable
 private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
     val p = LocalPalette.current
@@ -4170,7 +4161,9 @@ private fun SettingsEntry(
     val controlRadius = (settingsRadius ?: uiStyle.controlRadiusDp).dp
     val tileShape = RoundedCornerShape(controlRadius)
     Row(
-        Modifier.fillMaxWidth().clip(tileShape).mathFlowClickable(onClick = onClick).padding(vertical = 8.dp),
+        Modifier.fillMaxWidth().heightIn(min = 68.dp)
+            .clip(tileShape).mathFlowClickable(onClick = onClick)
+            .padding(horizontal = 1.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -4182,9 +4175,26 @@ private fun SettingsEntry(
         ) {
             AppIcon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text(displayText(title), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.text)
-            Text(displayText(subtitle), fontSize = 12.sp, color = p.muted, lineHeight = 16.sp)
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                displayText(title),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = p.text,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                displayText(subtitle),
+                fontSize = 12.sp,
+                color = p.muted,
+                lineHeight = 16.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Text("›", color = p.muted, fontSize = 27.sp)
     }
