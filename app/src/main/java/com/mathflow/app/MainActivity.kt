@@ -3019,6 +3019,7 @@ private fun SettingsPage(
     var pendingThemeId by rememberSaveable(selectedThemeId) { mutableStateOf(selectedThemeId) }
     var pendingUiStyleId by rememberSaveable(selectedUiStyleId) { mutableStateOf(selectedUiStyleId) }
     var pendingIconPackId by rememberSaveable(selectedIconPackId) { mutableStateOf(selectedIconPackId) }
+    var pendingSettingsCornerRadiusDp by remember(settingsCornerRadiusDp) { mutableStateOf(settingsCornerRadiusDp) }
     var pendingFontScale by remember(fontScale) { mutableFloatStateOf(fontScale) }
     var pendingLanguage by remember(selectedLanguage) { mutableStateOf(selectedLanguage) }
     var pendingMeasurementSystem by remember(selectedMeasurementSystem) { mutableStateOf(selectedMeasurementSystem) }
@@ -3177,6 +3178,7 @@ private fun SettingsPage(
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
 
     val hasPendingChanges =
+        pendingSettingsCornerRadiusDp != settingsCornerRadiusDp ||
         pendingFontScale != fontScale ||
         pendingIconId != selectedIconId ||
         pendingThemeId != selectedThemeId ||
@@ -3267,9 +3269,9 @@ private fun SettingsPage(
                                 Text("Скругление элементов", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = p.text)
                                 Text("Радиус углов карточек и элементов настроек", fontSize = 12.sp, color = p.muted)
                             }
-                            Text("$settingsCornerRadiusDp dp", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.accent)
+                            Text("$pendingSettingsCornerRadiusDp dp", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = p.accent)
                         }
-                        Slider(value = settingsCornerRadiusDp.toFloat(), onValueChange = { onSettingsCornerRadiusChange(it.toInt().coerceIn(0, 40)) },
+                        Slider(value = pendingSettingsCornerRadiusDp.toFloat(), onValueChange = { pendingSettingsCornerRadiusDp = it.toInt().coerceIn(0, 40) },
                             valueRange = 0f..40f, steps = 19,
                             colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key,
                                 activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent))
@@ -4054,6 +4056,9 @@ private fun SettingsPage(
             androidx.compose.animation.slideOutVertically(tween(180, easing = FastOutSlowInEasing)) { it }
     ) {
         SettingsApplyBar {
+            if (pendingSettingsCornerRadiusDp != settingsCornerRadiusDp) {
+                onSettingsCornerRadiusChange(pendingSettingsCornerRadiusDp)
+            }
             if (pendingFontScale != fontScale) onFontScale(pendingFontScale)
             if (pendingIconId != selectedIconId) onIconSelected(pendingIconId)
             if (pendingThemeId != selectedThemeId) onThemeSelected(pendingThemeId)
