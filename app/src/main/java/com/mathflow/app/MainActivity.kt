@@ -129,9 +129,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
@@ -430,7 +428,6 @@ private fun animatePalette(target: Palette): Palette {
 }
 
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
-private val LocalMathFlowBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
 internal val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
 internal val LocalBottomNavGlassSettings = androidx.compose.runtime.staticCompositionLocalOf { BottomNavAnimationSettings() }
 
@@ -636,7 +633,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalAppIconPack provides AppIconPack.fromId(iconPackId),
         LocalBottomNavGlassSettings provides bottomNavAnimationSettings,
-        LocalMathFlowBackdrop provides backdrop,
         // One persisted radius controls settings controls and calculator keys consistently.
         LocalSettingsCornerRadius provides settingsCornerRadiusDp,
         LocalKeyAnimationSettings provides keyAnimationSettings,
@@ -2156,8 +2152,6 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     val uiStyle = LocalMathFlowUiStyle.current
     val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp)
-    val backdrop = LocalMathFlowBackdrop.current
-    val buttonGlass = Modifier
     var pressed by remember { mutableStateOf(false) }
     val pressScale by animateFloatAsState(
         targetValue = if (pressed) 0.975f else 1f,
@@ -4329,14 +4323,12 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
     val uiStyle = LocalMathFlowUiStyle.current
     val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp)
-    val backdrop = LocalMathFlowBackdrop.current
     var pressed by remember { mutableStateOf(false) }
     val pressScale by animateFloatAsState(
         targetValue = if (pressed) 0.965f else 1f,
         animationSpec = spring(dampingRatio = 0.68f, stiffness = 560f),
         label = "SettingsApplyGlassPress"
     )
-    val applyGlass = Modifier
     Surface(
         modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
