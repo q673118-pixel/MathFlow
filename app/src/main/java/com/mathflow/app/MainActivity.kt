@@ -1320,8 +1320,10 @@ private fun BottomNav(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
+    val navMaterialPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.MATERIAL
     val navLiquidPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.LIQUID
     val navFrostedPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.FROSTED
+    val navGlassPanel = navLiquidPanel || navFrostedPanel
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -1347,12 +1349,16 @@ private fun BottomNav(
             modifier = Modifier
                 .clip(panelShape)
                 .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(
-                            p.surface.copy(alpha = if (navLiquidPanel) 0.46f * settings.opacity else settings.matteOpacity),
-                            p.surface.copy(alpha = if (navLiquidPanel) 0.30f * settings.opacity else settings.matteOpacity * 0.84f)
+                    if (navMaterialPanel) {
+                        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.surface, p.surface))
+                    } else {
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(
+                                p.surface.copy(alpha = if (navLiquidPanel) 0.46f * settings.opacity else settings.matteOpacity),
+                                p.surface.copy(alpha = if (navLiquidPanel) 0.30f * settings.opacity else settings.matteOpacity * 0.84f)
+                            )
                         )
-                    )
+                    }
                 )
                 .border(
                     if (navLiquidPanel) 0.8.dp else 1.dp,
@@ -1363,7 +1369,7 @@ private fun BottomNav(
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
             // Keep the floating glass capsule clean: the panel itself must not cast
             // a broad grey halo. The selected droplet retains its own local depth.
-            shadowElevation = if (navLiquidPanel || navFrostedPanel) 0.dp else uiStyle.elevationDp.dp
+            shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
