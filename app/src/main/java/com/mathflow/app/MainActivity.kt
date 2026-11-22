@@ -4035,8 +4035,9 @@ private fun SettingsPage(
     }
     androidx.compose.animation.AnimatedVisibility(
         visible = hasPendingChanges,
-        modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding()
-            .padding(bottom = 28.dp).offset(y = 32.dp),
+        // Settings content already sits above the app's bottom navigation.
+        // Do not apply system-bar insets a second time or push the action below the viewport.
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
         enter = androidx.compose.animation.fadeIn(tween(170)) +
             androidx.compose.animation.slideInVertically(tween(240, easing = FastOutSlowInEasing)) { it },
         exit = androidx.compose.animation.fadeOut(tween(120)) +
