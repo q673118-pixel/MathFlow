@@ -129,6 +129,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
@@ -1671,6 +1672,8 @@ private fun BottomNav(
                                      RoundedCornerShape(percent = (settings.dropletRoundness * 50f).toInt().coerceIn(40, 50))
                                 },
                                 effects = {
+                                    // Backdrop blur affects the captured background and no-ops below API 31.
+                                    if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
                                     // A selected tab is a real refractive lens, not a
                                     // colored capsule: dispersion makes edges bend light.
                                      val refraction = settings.refractionStrength
@@ -3579,20 +3582,13 @@ private fun SettingsPage(
                 Panel {
                     Text("МАТОВЫЕ ПОВЕРХНОСТИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Text("Матовое стекло · общие поверхности", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Эти параметры влияют на карточки, кнопки и элементы настроек только в стиле Liquid Glass. Капля остаётся жидким стеклом.",
+                    Text("Эти параметры управляют непрозрачностью, глубиной, бликами и тенями матовых поверхностей. Капля на панели настраивается отдельно.",
                         color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
                     Text("Непрозрачность: ${(pendingNavAnimationSettings.matteOpacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.matteOpacity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteOpacity = it) },
                         valueRange = 0.25f..0.96f,
-                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
-                    )
-                    Text("Размытие панели: ${pendingNavAnimationSettings.matteBlur.toInt()} dp", color = p.text, fontSize = 13.sp)
-                    Slider(
-                        value = pendingNavAnimationSettings.matteBlur,
-                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteBlur = it) },
-                        valueRange = 0f..24f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
                     Text("Глубина: ${(pendingNavAnimationSettings.matteDepth * 100).toInt()}%", color = p.text, fontSize = 13.sp)
