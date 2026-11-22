@@ -2182,8 +2182,7 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
                 })
             },
         shape = shape,
-        color = if (uiStyle.glassSurface && backdrop != null) Color.Transparent
-            else if (uiStyle.glassSurface) p.accent.copy(alpha = 0.16f) else p.keyEquals,
+        color = if (uiStyle.glassSurface) Color.Transparent else p.keyEquals,
         shadowElevation = if (uiStyle.glassSurface) (1.5f + glass.matteDepth * 3f).dp else 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -4353,8 +4352,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
                 })
             },
         shape = shape,
-        color = if (uiStyle.glassSurface && backdrop != null) Color.Transparent
-            else if (uiStyle.glassSurface) p.accent.copy(alpha = 0.20f) else p.keyEquals,
+        color = if (uiStyle.glassSurface) Color.Transparent else p.keyEquals,
         shadowElevation = if (uiStyle.glassSurface) (2f + glass.matteDepth * 3f + glass.matteShadow * 2f).dp else 10.dp
     ) {
         Row(
