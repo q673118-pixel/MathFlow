@@ -1325,7 +1325,7 @@ private fun BottomNav(
     val navFrostedPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.FROSTED
     // The preview is embedded in a settings card, not in the app window. It must
     // never consume Android system-bar insets or sample a rectangular page backdrop.
-    val useRefractiveLens = useRefractiveLens && !preview
+    val useRefractiveLens = uiStyle.glassSurface && backdrop != null && !preview
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
