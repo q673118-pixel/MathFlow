@@ -1455,17 +1455,8 @@ private fun BottomNav(
                     animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
                     label = "MathFlowDropletPressScale"
                 )
-                val idleFloat = remember { Animatable(0f) }
-                LaunchedEffect(isDragging, isPressed) {
-                    if (!isDragging && !isPressed) {
-                        while (true) {
-                            idleFloat.animateTo(0.85f, tween(1650, easing = FastOutSlowInEasing))
-                            idleFloat.animateTo(-0.85f, tween(1650, easing = FastOutSlowInEasing))
-                        }
-                    } else {
-                        idleFloat.animateTo(0f, tween(120))
-                    }
-                }
+                // Resting glass stays spatially stable. Motion is reserved for
+                // touch, drag, and the existing navigation transition.
                 val indicatorScaleX by animateFloatAsState(
                     targetValue = when {
                         !settings.enabled -> 1f
@@ -1619,7 +1610,6 @@ private fun BottomNav(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 translationX = indicatorPositionPx
-                                translationY = with(density) { idleFloat.value.dp.toPx() }
                                 val styleWidth = when (style) {
                                     BottomNavAnimationStyle.RIPPLE_BLOOM -> bloom.value
                                     BottomNavAnimationStyle.EXPAND -> bloom.value
