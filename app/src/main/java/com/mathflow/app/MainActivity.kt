@@ -2187,7 +2187,9 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
     val neo = uiStyle.id == "neo"
     val skeuo = uiStyle.id == "skeuomorphic"
     val retro = uiStyle.id == "retro_grid"
-    val frosted = uiStyle.glassSurface
+    // In the focused Liquid Glass style, only the calculator display and navigation are glass.
+    // Settings panels stay native Material surfaces.
+    val frosted = false
     val shape = RoundedCornerShape(
         (if (neo || skeuo || retro) uiStyle.cardRadiusDp else settingsRadius ?: uiStyle.cardRadiusDp).dp
     )
@@ -4334,8 +4336,7 @@ private fun SettingsEntry(
     ) {
         Box(
             Modifier.size(44.dp).clip(tileShape)
-                .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), tileShape) else Modifier)
-                .background(if (uiStyle.glassSurface) p.surface.copy(alpha = (glass.matteOpacity * 0.18f).coerceIn(0.035f, 0.12f)) else p.key),
+                .background(p.key),
             contentAlignment = Alignment.Center
         ) {
             AppIcon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
