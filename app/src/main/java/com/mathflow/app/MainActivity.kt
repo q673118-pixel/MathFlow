@@ -460,7 +460,6 @@ private fun typographyFor(family: FontFamily): Typography {
 private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled: () -> Unit = {}) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE) }
-    val backdrop = rememberLayerBackdrop()
     var themeId by remember {
         mutableStateOf(prefs.getString("app_theme", if (prefs.getBoolean("dark_mode", true)) "vanilla" else "white") ?: "vanilla")
     }
@@ -559,6 +558,14 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     val pageStateHolder = rememberSaveableStateHolder()
     val targetPalette = themeFor(themeId).palette
     val palette = animatePalette(targetPalette)
+    // Record an opaque page backdrop, including the theme background. Without
+    // this base fill, transparent pixels bypass blur and remain razor-sharp.
+    val backdropBackground = palette.background
+    val backdropDraw: androidx.compose.ui.graphics.drawscope.ContentDrawScope.() -> Unit =
+        remember(backdropBackground) {
+            { drawRect(backdropBackground); drawContent() }
+        }
+    val backdrop = rememberLayerBackdrop(onDraw = backdropDraw)
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
@@ -696,6 +703,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                     Box(
                                         Modifier.weight(1f).fillMaxWidth()
+                                            .layerBackdrop(backdrop)
                                             .clipToBounds()
                                             .graphicsLayer {
                                                 alpha = enterProgress.value
@@ -1350,16 +1358,40 @@ private fun BottomNav(
         val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
         Surface(
             modifier = Modifier
-                .clip(panelShape)
-                .background(
-                    if (navMaterialPanel) {
-                        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.surface, p.surface))
+                .then(
+                    if (navLiquidPanel && useRefractiveLens) {
+                        Modifier.drawBackdrop(
+                            backdrop = backdrop!!,
+                            shape = { panelShape },
+                            effects = {
+                                if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && settings.refractionStrength > 0f) {
+                                    lens(
+                                        (24f * settings.refractionStrength).dp.toPx(),
+                                        (42f * settings.refractionStrength).dp.toPx(),
+                                        depthEffect = settings.glassDepth > 0f,
+                                        chromaticAberration = false
+                                    )
+                                }
+                            },
+                            highlight = { Highlight.Default.copy(alpha = settings.highlightStrength) },
+                            shadow = { Shadow(radius = 18.dp, alpha = settings.shadowStrength) },
+                            onDrawSurface = {
+                                drawRect(p.surface.copy(alpha = 0.28f * settings.opacity))
+                            }
+                        )
                     } else {
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(
-                                p.surface.copy(alpha = if (navLiquidPanel) 0.46f * settings.opacity else settings.matteOpacity),
-                                p.surface.copy(alpha = if (navLiquidPanel) 0.30f * settings.opacity else settings.matteOpacity * 0.84f)
-                            )
+                        Modifier.clip(panelShape).background(
+                            if (navMaterialPanel) {
+                                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.surface, p.surface))
+                            } else {
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(
+                                        p.surface.copy(alpha = if (navLiquidPanel) 0.46f * settings.opacity else settings.matteOpacity),
+                                        p.surface.copy(alpha = if (navLiquidPanel) 0.30f * settings.opacity else settings.matteOpacity * 0.84f)
+                                    )
+                                )
+                            }
                         )
                     }
                 )
@@ -1391,7 +1423,11 @@ private fun BottomNav(
                 val iconsBackdrop = if (iconBackdrops.isNotEmpty()) {
                     rememberCombinedBackdrop(*iconBackdrops.toTypedArray())
                 } else null
-                val indicatorBackdrop = if (useRefractiveLens) iconsBackdrop ?: backdrop else null
+                // Combine the live page with the icon-only capture: the page supplies
+                // the refracted scene while the local capture keeps the glyph legible.
+                val indicatorBackdrop = if (useRefractiveLens) {
+                    if (iconsBackdrop != null) rememberCombinedBackdrop(backdrop!!, iconsBackdrop) else backdrop
+                } else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
@@ -2044,7 +2080,7 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 30.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = if (uiStyle.glassSurface) 112.dp else 30.dp),
         verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 12.dp)
     ) {
         Text(displayText(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
@@ -2098,7 +2134,7 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         // Surface owns the single clipping boundary. Drawing the tint inside its
         // content avoids a second rectangular background layer escaping rounded
         // corners when settings radii are changed at runtime.
-        Box(Modifier.fillMaxWidth()) {
+        Box(Modifier.fillMaxWidth().clip(shape)) {
             Column(
                 Modifier.fillMaxWidth().padding(when {
                     neo -> 13.dp
