@@ -1413,23 +1413,12 @@ private fun BottomNav(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
                 val itemWidth = maxWidth / Page.values().size
-                // Each visible icon owns its own tiny capture layer. The icon is
-                // composed once; the outer alpha fades only its on-screen copy while
-                // layerBackdrop records the un-faded pixels for the moving lens.
-                // Each icon has one tiny source layer so its visible alpha can fade
-                // beneath the moving lens while the lens still samples the un-faded glyph.
-                // This is five small local captures, not a duplicated Compose icon row.
-                val iconBackdrops = if (useRefractiveLens) {
-                    listOf(rememberLayerBackdrop(), rememberLayerBackdrop(), rememberLayerBackdrop(),
-                        rememberLayerBackdrop(), rememberLayerBackdrop())
-                } else emptyList()
-                val iconsBackdrop = if (iconBackdrops.isNotEmpty()) {
-                    rememberCombinedBackdrop(*iconBackdrops.toTypedArray())
-                } else null
-                // Combine the live page with the icon-only capture: the page supplies
-                // the refracted scene while the local capture keeps the glyph legible.
-                val indicatorBackdrop = if (useRefractiveLens) {
-                    if (iconsBackdrop != null) rememberCombinedBackdrop(backdrop!!, iconsBackdrop) else backdrop
+                // One capture for the complete tab row replaces five per-icon
+                // captures. The lens samples the glyphs as a single layer, matching
+                // RX Playa's composition with substantially less render-target work.
+                val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
+                val indicatorBackdrop = if (useRefractiveLens && tabRowBackdrop != null) {
+                    rememberCombinedBackdrop(backdrop!!, tabRowBackdrop)
                 } else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
@@ -1561,7 +1550,12 @@ private fun BottomNav(
                         )
                     }
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth().then(
+                        if (tabRowBackdrop != null) Modifier.layerBackdrop(tabRowBackdrop) else Modifier
+                    ),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Page.values().forEach { item ->
                         val selected = item == current
                         val tint by animateColorAsState(
@@ -1592,25 +1586,8 @@ private fun BottomNav(
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavSoftFocusAlpha"
                         )
-                        val navGlyphAlpha = if (useRefractiveLens) {
-                            val itemVisualIndex = if (layoutDirection == LayoutDirection.Rtl) {
-                                Page.values().lastIndex - item.ordinal
-                            } else item.ordinal
-                            val itemCenter = with(density) {
-                                itemWidth.toPx() * (itemVisualIndex + 0.5f)
-                            }
-                            val dropletCenter = indicatorPositionPx + with(density) { indicatorWidth.toPx() * 0.5f }
-                            val coverage = (1f - abs(dropletCenter - itemCenter) /
-                                (with(density) { itemWidth.toPx() } * 0.58f)).coerceIn(0f, 1f)
-                            val smoothCoverage = coverage * coverage * (3f - 2f * coverage)
-                            1f - smoothCoverage
-                        } else 1f
                         Box(
                             Modifier.weight(1f).height(48.dp)
-                                // graphicsLayer is outside layerBackdrop: the captured source
-                                // keeps the full icon while only the visible pixels fade under glass.
-                                .graphicsLayer { alpha = navGlyphAlpha }
-                                .then(if (iconBackdrops.isNotEmpty()) Modifier.layerBackdrop(iconBackdrops[item.ordinal]) else Modifier)
                                 .mathFlowClickable {
                                     if (!selected) onSelect(item)
                                 },
