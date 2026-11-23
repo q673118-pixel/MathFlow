@@ -1453,28 +1453,24 @@ private fun BottomNav(
                         easing = FastOutSlowInEasing
                     )
                 }
-                val indicatorOffset by animateFloatAsState(
+                val indicatorOffset = animateFloatAsState(
                     targetValue = targetOffset,
                     animationSpec = offsetSpec,
                     label = "MathFlowNavIndicatorPosition"
                 )
                 val dragOffset = remember { Animatable(0f) }
-                val indicatorPositionPx = (indicatorOffset + dragOffset.value).coerceIn(
-                    0f,
-                    with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
-                )
                 val latestIndicatorOffset = rememberUpdatedState(indicatorOffset)
                 val navScope = rememberCoroutineScope()
                 var isDragging by remember { mutableStateOf(false) }
                 var isPressed by remember { mutableStateOf(false) }
-                val pressedScale by animateFloatAsState(
+                val pressedScale = animateFloatAsState(
                     targetValue = if (isDragging || isPressed) 1.085f else 1f,
                     animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
                     label = "MathFlowDropletPressScale"
                 )
                 // Resting glass stays spatially stable. Motion is reserved for
                 // touch, drag, and the existing navigation transition.
-                val indicatorScaleX by animateFloatAsState(
+                val indicatorScaleX = animateFloatAsState(
                     targetValue = when {
                         !settings.enabled -> 1f
                         style == BottomNavAnimationStyle.EXPAND -> 1f + settings.intensity * 0.12f
@@ -1484,7 +1480,7 @@ private fun BottomNav(
                     animationSpec = tween(duration, easing = FastOutSlowInEasing),
                     label = "MathFlowNavIndicatorScale"
                 )
-                val indicatorAlpha by animateFloatAsState(
+                val indicatorAlpha = animateFloatAsState(
                     targetValue = if (style == BottomNavAnimationStyle.SOFT_FOCUS) {
                         settings.opacity * 0.62f
                     } else settings.opacity,
@@ -1535,9 +1531,9 @@ private fun BottomNav(
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
-                                translationX = indicatorOffset
-                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX * travelStretch.value
-                                alpha = indicatorAlpha
+                                translationX = indicatorOffset.value
+                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX.value * travelStretch.value
+                                alpha = indicatorAlpha.value
                             }
                             .size(
                                 width = indicatorWidth,
@@ -1622,14 +1618,14 @@ private fun BottomNav(
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
-                                translationX = indicatorPositionPx
+                                translationX = indicatorOffset.value + dragOffset.value
                                 val styleWidth = when (style) {
                                     BottomNavAnimationStyle.RIPPLE_BLOOM -> bloom.value
                                     BottomNavAnimationStyle.EXPAND -> bloom.value
                                     else -> 1f
                                 }
-                                scaleX = indicatorScaleX * travelStretch.value * styleWidth * pressedScale
-                                scaleY = (1f / (1f + (travelStretch.value - 1f) * 0.42f)) * pressedScale *
+                                scaleX = indicatorScaleX * travelStretch.value * styleWidth * pressedScale.value
+                                scaleY = (1f / (1f + (travelStretch.value - 1f) * 0.42f)) * pressedScale.value *
                                     when (style) {
                                         BottomNavAnimationStyle.MORPH -> 0.94f + (travelStretch.value - 1f) * 0.12f
                                         BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.92f + bloom.value * 0.08f
@@ -1651,7 +1647,7 @@ private fun BottomNav(
                                         val itemWidthPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                                         val indicatorWidthPx = with(density) { indicatorWidth.toPx() }
                                         val maxOffsetPx = with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
-                                        val absoluteOffset = (latestIndicatorOffset.value + dragOffset.value).coerceIn(0f, maxOffsetPx)
+                                        val absoluteOffset = (latestIndicatorOffset.value.value + dragOffset.value).coerceIn(0f, maxOffsetPx)
                                         val visualIndex = ((absoluteOffset + indicatorWidthPx * 0.5f) / itemWidthPx)
                                             .toInt().coerceIn(0, Page.values().lastIndex)
                                         val logicalIndex = if (layoutDirection == LayoutDirection.Rtl) {
@@ -1675,7 +1671,7 @@ private fun BottomNav(
                                     onHorizontalDrag = { change, dragAmount ->
                                         change.consume()
                                         navScope.launch {
-                                            val base = latestIndicatorOffset.value
+                                            val base = latestIndicatorOffset.value.value
                                             val maxOffsetPx = with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
                                             dragOffset.snapTo((dragOffset.value + dragAmount).coerceIn(-base, maxOffsetPx - base))
                                         }
