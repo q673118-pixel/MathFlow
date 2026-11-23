@@ -377,7 +377,7 @@ internal class LiquidGlassPillMotion(
         const val MAX_SQUASH = 0.12
         const val SQUASH_RESPONSE_TIME = 0.18
 
-        const val SAMPLE_CAPACITY = 24
+        const val SAMPLE_CAPACITY = 48
         const val MAX_FRAME_DELTA = 0.05
         const val MAX_PHYSICS_STEP = 1.0 / 240.0
     }
