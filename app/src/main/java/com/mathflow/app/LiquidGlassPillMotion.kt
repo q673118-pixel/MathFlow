@@ -42,6 +42,7 @@ internal class LiquidGlassPillMotion(
 
     /** Width of one navigation cell in pixels; updated from measured layout. */
     var tabStepPx: Float = 0f
+    var reduceMotion: Boolean = false
 
     private var targetIndex = initialIndex.toDouble()
     private var travelPosition = targetIndex
@@ -76,6 +77,10 @@ internal class LiquidGlassPillMotion(
     private var generation = 0
 
     fun animateTo(index: Int, durationMs: Int) {
+        if (reduceMotion) {
+            snapTo(index)
+            return
+        }
         if (index.toDouble() == targetIndex && !dragging) return
         targetIndex = index.toDouble()
         travelStart = travelPosition
@@ -118,7 +123,7 @@ internal class LiquidGlassPillMotion(
     fun startDrag() {
         dragging = true
         travelActive = false
-        lifted = true
+        lifted = !reduceMotion
         travelVelocity = 0.0
         dragPosition = travelPosition
         dragTarget = dragPosition
@@ -129,11 +134,18 @@ internal class LiquidGlassPillMotion(
     }
 
     fun dragTo(indexPosition: Float) {
-        if (dragging) dragTarget = indexPosition.toDouble()
+        if (dragging) {
+            dragTarget = indexPosition.toDouble()
+            if (reduceMotion) dragPosition = dragTarget
+        }
     }
 
     fun release(index: Int, durationMs: Int) {
         if (!dragging) return
+        if (reduceMotion) {
+            snapTo(index)
+            return
+        }
         dragging = false
         targetIndex = index.toDouble()
         travelPosition = dragPosition
@@ -184,8 +196,12 @@ internal class LiquidGlassPillMotion(
         }
 
         if (dragging) {
-            val follow = 1.0 - exp(-dt / DRAG_FOLLOW_TIME)
-            dragPosition += (dragTarget - dragPosition) * follow
+            if (reduceMotion) {
+                dragPosition = dragTarget
+            } else {
+                val follow = 1.0 - exp(-dt / DRAG_FOLLOW_TIME)
+                dragPosition += (dragTarget - dragPosition) * follow
+            }
         }
 
         if (!dragging && (travelSettled || travelProgress() >= LIFT_RELEASE_POINT)) {
