@@ -1464,6 +1464,7 @@ private fun BottomNav(
                 )
                 val navScope = rememberCoroutineScope()
                 val pillMotion = remember { LiquidGlassPillMotion(navScope, current.ordinal) }
+                pillMotion.reduceMotion = !settings.enabled
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                 pillMotion.tabStepPx = tabStepPx
                 LaunchedEffect(current, useRefractiveLens, settings.enabled, duration) {
@@ -1575,9 +1576,47 @@ private fun BottomNav(
                     )
                 }
                 Row(
-                    Modifier.fillMaxWidth().then(
-                        if (tabRowBackdrop != null) Modifier.layerBackdrop(tabRowBackdrop) else Modifier
-                    ),
+                    Modifier.fillMaxWidth()
+                        .then(if (tabRowBackdrop != null) Modifier.layerBackdrop(tabRowBackdrop) else Modifier)
+                        .then(
+                            if (useRefractiveLens) {
+                                Modifier.pointerInput(current, duration, maxWidth, layoutDirection) {
+                                    var dragStartIndex = current.ordinal.toFloat()
+                                    var dragDistance = 0f
+                                    detectHorizontalDragGestures(
+                                        onDragStart = {
+                                            isDragging = true
+                                            isPressed = true
+                                            dragStartIndex = pillMotion.position
+                                            dragDistance = 0f
+                                            pillMotion.startDrag()
+                                        },
+                                        onDragEnd = {
+                                            isDragging = false
+                                            isPressed = false
+                                            val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
+                                                .roundToInt().coerceIn(0, Page.values().lastIndex)
+                                            pillMotion.release(logicalIndex, duration.coerceAtLeast(100))
+                                            if (logicalIndex != current.ordinal) onSelect(Page.values()[logicalIndex])
+                                        },
+                                        onDragCancel = {
+                                            isDragging = false
+                                            isPressed = false
+                                            pillMotion.release(current.ordinal, duration.coerceAtLeast(100))
+                                        },
+                                        onHorizontalDrag = { change, dragAmount ->
+                                            change.consume()
+                                            val logicalDirection = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f
+                                            dragDistance += dragAmount * logicalDirection
+                                            pillMotion.dragTo(
+                                                (dragStartIndex + dragDistance / tabStepPx)
+                                                    .coerceIn(0f, Page.values().lastIndex.toFloat())
+                                            )
+                                        }
+                                    )
+                                }
+                            } else Modifier
+                        ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Page.values().forEach { item ->
@@ -1662,41 +1701,6 @@ private fun BottomNav(
                                 scaleY = (1f + (growFactor - 1f) * pillMotion.liftY) *
                                     (1f - pillMotion.deviation) * pressedScale.value
                                 alpha = indicatorAlpha.value
-                            }
-                            .pointerInput(current, duration, maxWidth, layoutDirection) {
-                                var dragStartIndex = current.ordinal.toFloat()
-                                var dragDistance = 0f
-                                detectHorizontalDragGestures(
-                                    onDragStart = {
-                                        isDragging = true
-                                        isPressed = true
-                                        dragStartIndex = pillMotion.position
-                                        dragDistance = 0f
-                                        pillMotion.startDrag()
-                                    },
-                                    onDragEnd = {
-                                        isDragging = false
-                                        isPressed = false
-                                        val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
-                                            .roundToInt().coerceIn(0, Page.values().lastIndex)
-                                        pillMotion.release(logicalIndex, duration.coerceAtLeast(100))
-                                        if (logicalIndex != current.ordinal) onSelect(Page.values()[logicalIndex])
-                                    },
-                                    onDragCancel = {
-                                        isDragging = false
-                                        isPressed = false
-                                        pillMotion.release(current.ordinal, duration.coerceAtLeast(100))
-                                    },
-                                    onHorizontalDrag = { change, dragAmount ->
-                                        change.consume()
-                                        val logicalDirection = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f
-                                        dragDistance += dragAmount * logicalDirection
-                                        pillMotion.dragTo(
-                                            (dragStartIndex + dragDistance / tabStepPx)
-                                                .coerceIn(0f, Page.values().lastIndex.toFloat())
-                                        )
-                                    }
-                                )
                             }
                             .pointerInput(current) {
                                 detectTapGestures(onPress = {
