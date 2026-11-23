@@ -1339,7 +1339,7 @@ private fun BottomNav(
     // The preview is embedded in a settings card, not in the app window. It must
     // never consume Android system-bar insets or sample a rectangular page backdrop.
     val useRefractiveLens = uiStyle.glassSurface && backdrop != null && !preview
-    val barGlassBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
+    val barGlassBackdrop = if (navLiquidPanel && useRefractiveLens) rememberLayerBackdrop() else null
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -1385,6 +1385,7 @@ private fun BottomNav(
                             onDrawSurface = {
                                 drawRect(p.surface.copy(alpha = 0.28f * settings.opacity))
                             }
+                             ,exportedBackdrop = barGlassBackdrop
                         )
                     } else {
                         Modifier.clip(panelShape).background(
@@ -1401,7 +1402,6 @@ private fun BottomNav(
                         )
                     }
                 )
-                .then(if (barGlassBackdrop != null) Modifier.layerBackdrop(barGlassBackdrop) else Modifier)
                 .border(
                     if (navLiquidPanel) 0.8.dp else 1.dp,
                     p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
@@ -1421,8 +1421,12 @@ private fun BottomNav(
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
                 val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
-                val indicatorBackdrop = if (useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null) {
-                    rememberCombinedBackdrop(backdrop!!, barGlassBackdrop, tabRowBackdrop)
+                val indicatorBackdrop = if (useRefractiveLens && tabRowBackdrop != null) {
+                    if (barGlassBackdrop != null) {
+                        rememberCombinedBackdrop(backdrop!!, barGlassBackdrop, tabRowBackdrop)
+                    } else {
+                        rememberCombinedBackdrop(backdrop!!, tabRowBackdrop)
+                    }
                 } else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
