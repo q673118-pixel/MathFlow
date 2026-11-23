@@ -1741,12 +1741,6 @@ private fun BottomNav(
                                          alpha = pillMotion.material * pillMotion.glassPresence * settings.shadowStrength
                                      )
                                  },
-                                 innerShadow = {
-                                     InnerShadow(
-                                         radius = 7.dp,
-                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.glassDepth * 0.16f
-                                     )
-                                 },
                                  onDrawSurface = {
                                     drawRect(p.accent.copy(alpha = 0.035f))
                                 }
