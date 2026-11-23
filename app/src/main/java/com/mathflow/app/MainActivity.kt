@@ -431,6 +431,7 @@ private fun animatePalette(target: Palette): Palette {
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 internal val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
 internal val LocalBottomNavGlassSettings = androidx.compose.runtime.staticCompositionLocalOf { BottomNavAnimationSettings() }
+internal val LocalPageBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
@@ -641,6 +642,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalAppIconPack provides AppIconPack.fromId(iconPackId),
         LocalBottomNavGlassSettings provides bottomNavAnimationSettings,
+        LocalPageBackdrop provides backdrop,
         // One persisted radius controls settings controls and calculator keys consistently.
         LocalSettingsCornerRadius provides settingsCornerRadiusDp,
         LocalKeyAnimationSettings provides keyAnimationSettings,
@@ -2093,6 +2095,7 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     val glass = LocalBottomNavGlassSettings.current
+    val pageBackdrop = LocalPageBackdrop.current
     val settingsRadius = LocalSettingsCornerRadius.current
     val neo = uiStyle.id == "neo"
     val skeuo = uiStyle.id == "skeuomorphic"
@@ -2113,20 +2116,55 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         frosted -> p.text.copy(alpha = 0.12f + glass.matteHighlight * 0.18f)
         else -> p.text.copy(alpha = uiStyle.outlineAlpha)
     }
+    val liquidBackdrop = frosted && pageBackdrop != null
     val panelColor = if (frosted) {
-        p.surface.copy(alpha = (glass.matteOpacity * 0.68f).coerceIn(0.16f, 0.68f))
+        // Keep only a restrained glass tint; the page image must remain visible
+        // through the surface instead of being replaced by an opaque matte fill.
+        p.surface.copy(alpha = (glass.matteOpacity * 0.22f).coerceIn(0.06f, 0.22f))
     } else {
         p.surface.copy(alpha = uiStyle.surfaceAlpha)
     }
     Surface(
         modifier = modifier.fillMaxWidth()
+            .then(
+                if (liquidBackdrop) {
+                    Modifier.drawBackdrop(
+                        backdrop = pageBackdrop!!,
+                        shape = { shape },
+                        effects = {
+                            if (glass.matteBlur > 0f) blur(glass.matteBlur.dp.toPx())
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                                glass.matteDepth > 0f
+                            ) {
+                                lens(
+                                    (10f * glass.matteDepth).dp.toPx(),
+                                    (18f * glass.matteDepth).dp.toPx(),
+                                    depthEffect = true,
+                                    chromaticAberration = false
+                                )
+                            }
+                        },
+                        highlight = {
+                            Highlight.Default.copy(alpha = glass.matteHighlight.coerceIn(0f, 1f) * 0.55f)
+                        },
+                        shadow = {
+                            Shadow(radius = (8f + glass.matteShadow * 12f).dp, alpha = glass.matteShadow.coerceIn(0f, 1f) * 0.45f)
+                        },
+                        onDrawSurface = {
+                            drawRect(panelColor)
+                        }
+                    )
+                } else {
+                    Modifier.background(panelColor, shape)
+                }
+            )
             .then(if (neo || retro || skeuo || uiStyle.outlineAlpha > 0f || frosted) {
                 Modifier.border(if (frosted) 0.8.dp else borderWidth, borderColor, shape)
             } else Modifier),
         shape = shape,
-        color = panelColor,
+        color = if (liquidBackdrop) Color.Transparent else panelColor,
         shadowElevation = when {
-            frosted -> (0.8f + glass.matteDepth * 2.2f + glass.matteShadow * 1.4f).dp
+            frosted -> (0.8f + glass.matteDepth * 1.4f + glass.matteShadow).dp
             skeuo -> 7.dp
             else -> uiStyle.elevationDp.dp
         }
