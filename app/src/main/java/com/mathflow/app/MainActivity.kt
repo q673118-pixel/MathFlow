@@ -1,5 +1,7 @@
 package com.mathflow.app
 
+import kotlin.math.roundToInt
+
 import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
@@ -1337,6 +1339,7 @@ private fun BottomNav(
     // The preview is embedded in a settings card, not in the app window. It must
     // never consume Android system-bar insets or sample a rectangular page backdrop.
     val useRefractiveLens = uiStyle.glassSurface && backdrop != null && !preview
+    val barGlassBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -1398,6 +1401,7 @@ private fun BottomNav(
                         )
                     }
                 )
+                .then(if (barGlassBackdrop != null) Modifier.layerBackdrop(barGlassBackdrop) else Modifier)
                 .border(
                     if (navLiquidPanel) 0.8.dp else 1.dp,
                     p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
@@ -1417,8 +1421,8 @@ private fun BottomNav(
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
                 val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
-                val indicatorBackdrop = if (useRefractiveLens && tabRowBackdrop != null) {
-                    rememberCombinedBackdrop(backdrop!!, tabRowBackdrop)
+                val indicatorBackdrop = if (useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null) {
+                    rememberCombinedBackdrop(backdrop!!, barGlassBackdrop, tabRowBackdrop)
                 } else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
@@ -1458,9 +1462,17 @@ private fun BottomNav(
                     animationSpec = offsetSpec,
                     label = "MathFlowNavIndicatorPosition"
                 )
-                val dragOffset = remember { Animatable(0f) }
-                val latestIndicatorOffset = rememberUpdatedState(indicatorOffset)
                 val navScope = rememberCoroutineScope()
+                val pillMotion = remember { LiquidGlassPillMotion(navScope, current.ordinal) }
+                val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
+                pillMotion.tabStepPx = tabStepPx
+                LaunchedEffect(current, useRefractiveLens, settings.enabled, duration) {
+                    if (useRefractiveLens && settings.enabled) {
+                        pillMotion.animateTo(current.ordinal, duration.coerceAtLeast(100))
+                    } else {
+                        pillMotion.snapTo(current.ordinal)
+                    }
+                }
                 var isDragging by remember { mutableStateOf(false) }
                 var isPressed by remember { mutableStateOf(false) }
                 val pressedScale = animateFloatAsState(
@@ -1511,8 +1523,8 @@ private fun BottomNav(
                     BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.18f
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface) {
-                    if (settings.enabled && stretchAmount > 0f) {
+                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface, useRefractiveLens) {
+                    if (!useRefractiveLens && settings.enabled && stretchAmount > 0f) {
                         travelStretch.snapTo(1f + settings.intensity * stretchAmount)
                         travelStretch.animateTo(
                             1f,
@@ -1526,7 +1538,7 @@ private fun BottomNav(
                         travelStretch.snapTo(1f)
                     }
                 }
-                if (!(useRefractiveLens) &&
+                if (!useRefractiveLens &&
                     (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled)) {
                     Box(
                         Modifier.align(Alignment.CenterStart)
@@ -1545,6 +1557,22 @@ private fun BottomNav(
                                 .background(p.navActive)
                         )
                     }
+                }
+                if (useRefractiveLens && pillMotion.isFlat) {
+                    Box(
+                        Modifier.align(Alignment.CenterStart)
+                            .graphicsLayer {
+                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
+                                    Page.values().lastIndex - pillMotion.position
+                                } else pillMotion.position
+                                val cellWidthPx = with(density) { itemWidth.toPx() }
+                                val pillWidthPx = with(density) { indicatorWidth.toPx() }
+                                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
+                            }
+                            .size(width = indicatorWidth, height = indicatorHeight)
+                            .clip(RoundedCornerShape(percent = 50))
+                            .background(p.navActive)
+                    )
                 }
                 Row(
                     Modifier.fillMaxWidth().then(
@@ -1612,69 +1640,61 @@ private fun BottomNav(
                         }
                     }
                 }
-                if (useRefractiveLens) {
-                    // The active item is a clean refractive glass droplet.
-                    // Its custom contour morphs with the selected navigation animation style.
+                if (useRefractiveLens && !pillMotion.isFlat) {
                     Box(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
-                                translationX = indicatorOffset.value + dragOffset.value
+                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
+                                    Page.values().lastIndex - pillMotion.position
+                                } else pillMotion.position
+                                val cellWidthPx = with(density) { itemWidth.toPx() }
+                                val pillWidthPx = with(density) { indicatorWidth.toPx() }
+                                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
+                                val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
+                                val growFactor = (restHeightPx + with(density) { 12.dp.toPx() }) / restHeightPx
                                 val styleWidth = when (style) {
-                                    BottomNavAnimationStyle.RIPPLE_BLOOM -> bloom.value
+                                    BottomNavAnimationStyle.RIPPLE_BLOOM,
                                     BottomNavAnimationStyle.EXPAND -> bloom.value
                                     else -> 1f
                                 }
-                                scaleX = indicatorScaleX * travelStretch.value * styleWidth * pressedScale.value
-                                scaleY = (1f / (1f + (travelStretch.value - 1f) * 0.42f)) * pressedScale.value *
-                                    when (style) {
-                                        BottomNavAnimationStyle.MORPH -> 0.94f + (travelStretch.value - 1f) * 0.12f
-                                        BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.92f + bloom.value * 0.08f
-                                        BottomNavAnimationStyle.EXPAND -> 0.94f + bloom.value * 0.06f
-                                        else -> 1f
-                                    }
-                                alpha = indicatorAlpha
+                                scaleX = (1f + (growFactor - 1f) * pillMotion.liftX) *
+                                    (1f + pillMotion.deviation) * indicatorScaleX.value * styleWidth * pressedScale.value
+                                scaleY = (1f + (growFactor - 1f) * pillMotion.liftY) *
+                                    (1f - pillMotion.deviation) * pressedScale.value
+                                alpha = indicatorAlpha.value
                             }
-                            .pointerInput(current, duration, maxWidth) {
+                            .pointerInput(current, duration, maxWidth, layoutDirection) {
+                                var dragStartIndex = current.ordinal.toFloat()
+                                var dragDistance = 0f
                                 detectHorizontalDragGestures(
                                     onDragStart = {
                                         isDragging = true
                                         isPressed = true
-                                        navScope.launch { dragOffset.stop() }
+                                        dragStartIndex = pillMotion.position
+                                        dragDistance = 0f
+                                        pillMotion.startDrag()
                                     },
                                     onDragEnd = {
                                         isDragging = false
                                         isPressed = false
-                                        val itemWidthPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
-                                        val indicatorWidthPx = with(density) { indicatorWidth.toPx() }
-                                        val maxOffsetPx = with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
-                                        val absoluteOffset = (latestIndicatorOffset.value.value + dragOffset.value).coerceIn(0f, maxOffsetPx)
-                                        val visualIndex = ((absoluteOffset + indicatorWidthPx * 0.5f) / itemWidthPx)
-                                            .toInt().coerceIn(0, Page.values().lastIndex)
-                                        val logicalIndex = if (layoutDirection == LayoutDirection.Rtl) {
-                                            Page.values().lastIndex - visualIndex
-                                        } else visualIndex
-                                        onSelect(Page.values()[logicalIndex])
-                                        navScope.launch {
-                                            dragOffset.animateTo(
-                                                0f,
-                                                tween(durationMillis = duration.coerceAtLeast(120), easing = FastOutSlowInEasing)
-                                            )
-                                        }
+                                        val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
+                                            .roundToInt().coerceIn(0, Page.values().lastIndex)
+                                        pillMotion.release(logicalIndex, duration.coerceAtLeast(100))
+                                        if (logicalIndex != current.ordinal) onSelect(Page.values()[logicalIndex])
                                     },
                                     onDragCancel = {
                                         isDragging = false
                                         isPressed = false
-                                        navScope.launch {
-                                            dragOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = 420f))
-                                        }
+                                        pillMotion.release(current.ordinal, duration.coerceAtLeast(100))
                                     },
                                     onHorizontalDrag = { change, dragAmount ->
                                         change.consume()
-                                        navScope.launch {
-                                            val base = latestIndicatorOffset.value.value
-                                            val maxOffsetPx = with(density) { (maxWidth - indicatorWidth).toPx() }.coerceAtLeast(0f)
-                                            dragOffset.snapTo((dragOffset.value + dragAmount).coerceIn(-base, maxOffsetPx - base))
-                                        }
+                                        val logicalDirection = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f
+                                        dragDistance += dragAmount * logicalDirection
+                                        pillMotion.dragTo(
+                                            (dragStartIndex + dragDistance / tabStepPx)
+                                                .coerceIn(0f, Page.values().lastIndex.toFloat())
+                                        )
                                     }
                                 )
                             }
@@ -1691,43 +1711,35 @@ private fun BottomNav(
                                      RoundedCornerShape(percent = (settings.dropletRoundness * 50f).toInt().coerceIn(40, 50))
                                 },
                                 effects = {
-                                    // Backdrop blur affects the captured background and no-ops below API 31.
-                                    if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
-                                    // A selected tab is a real refractive lens, not a
-                                    // colored capsule: dispersion makes edges bend light.
+                                     if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
                                      val refraction = settings.refractionStrength
-                                     if (refraction > 0f) {
-                                         val motionEnergy = if (settings.enabled) (travelStretch.value - 1f).coerceIn(0f, 0.24f) else 0f
-                                         // Lens uses an SDF implementation that only accepts
-                                         // CornerBasedShape/RoundedRectangularShape. Keep a hard
-                                         // runtime guard so an unexpected shape from a saved style
-                                         // or library change cannot crash the entire navigation UI.
-                                         runCatching {
-                                             lens(
-                                                 ((24f * refraction + motionEnergy * 18f * refraction).dp).toPx(),
-                                                 ((42f * refraction + motionEnergy * 22f * refraction).dp).toPx(),
-                                                 depthEffect = settings.glassDepth > 0f,
-                                                 chromaticAberration = false
-                                             )
-                                         }
+                                     if (refraction > 0f && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                         lens(
+                                             (12f * refraction * pillMotion.glassPresence).dp.toPx(),
+                                             (14f * refraction * pillMotion.material).dp.toPx(),
+                                             depthEffect = settings.glassDepth > 0f,
+                                             chromaticAberration = true
+                                         )
                                      }
-                                },
-                                highlight = {
-                                    val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
-                                        .coerceIn(0.55f, 1f)
-                                    Highlight.Default.copy(alpha = energy * settings.highlightStrength)
-                                },
-                                shadow = {
-                                    val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
-                                        .coerceIn(0.55f, 1f)
-                                    Shadow(radius = 18.dp, alpha = settings.shadowStrength * energy)
-                                },
-                                innerShadow = {
-                                    val energy = (0.72f + (travelStretch.value - 1f) * 0.8f)
-                                        .coerceIn(0.55f, 1f)
-                                    InnerShadow(radius = 7.dp, alpha = settings.glassDepth * 0.16f * energy)
-                                },
-                                onDrawSurface = {
+                                 },
+                                 highlight = {
+                                     Highlight.Default.copy(
+                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.highlightStrength
+                                     )
+                                 },
+                                 shadow = {
+                                     Shadow(
+                                         radius = 12.dp,
+                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.shadowStrength
+                                     )
+                                 },
+                                 innerShadow = {
+                                     InnerShadow(
+                                         radius = 7.dp,
+                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.glassDepth * 0.16f
+                                     )
+                                 },
+                                 onDrawSurface = {
                                     drawRect(p.accent.copy(alpha = 0.035f))
                                 }
                             )
