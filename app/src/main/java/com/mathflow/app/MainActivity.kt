@@ -4248,7 +4248,7 @@ private fun SettingsEntry(
         Box(
             Modifier.size(44.dp).clip(tileShape)
                 .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), tileShape) else Modifier)
-                .background(if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key),
+                .background(if (uiStyle.glassSurface) p.surface.copy(alpha = (glass.matteOpacity * 0.18f).coerceIn(0.035f, 0.12f)) else p.key),
             contentAlignment = Alignment.Center
         ) {
             AppIcon(icon, contentDescription = null, tint = p.accent, modifier = Modifier.size(23.dp))
