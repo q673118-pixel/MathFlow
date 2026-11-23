@@ -1906,17 +1906,33 @@ private fun CalculatorHome(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
+        val calculatorBackdrop = LocalPageBackdrop.current
+        val liquidDisplay = uiStyle.glassSurface && calculatorBackdrop != null
         Surface(
             Modifier.fillMaxWidth().weight(1f)
-                .then(if (uiStyle.glassSurface) Modifier
-                .clip(displayShape)
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(p.surface.copy(alpha = 0.66f), p.surface.copy(alpha = 0.48f))
-                ))
-                .border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), displayShape) else Modifier),
+                .then(
+                    if (liquidDisplay) Modifier.drawBackdrop(
+                        backdrop = calculatorBackdrop!!,
+                        shape = { displayShape },
+                        effects = {
+                            if (glass.matteBlur > 0f) blur((glass.matteBlur * 0.75f).dp.toPx())
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && glass.matteDepth > 0f) {
+                                lens((8f * glass.matteDepth).dp.toPx(), (14f * glass.matteDepth).dp.toPx(),
+                                    depthEffect = true, chromaticAberration = false)
+                            }
+                        },
+                        highlight = { Highlight.Default.copy(alpha = glass.matteHighlight * 0.72f) },
+                        shadow = { Shadow(radius = 18.dp, alpha = glass.matteShadow * 0.55f) },
+                        onDrawSurface = { drawRect(p.surface.copy(alpha = 0.10f)) }
+                    ) else if (uiStyle.glassSurface) Modifier
+                        .clip(displayShape)
+                        .background(p.surface.copy(alpha = 0.12f))
+                        .border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), displayShape)
+                    else Modifier
+                ),
             shape = displayShape,
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 4f + glass.matteShadow * 3f).dp else uiStyle.elevationDp.dp
+            shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 2f + glass.matteShadow).dp else uiStyle.elevationDp.dp
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
@@ -1942,13 +1958,24 @@ private fun CalculatorHome(
                 val decimalFormatLabel = tx("decimal_format")
                 val fractionFormatLabel = tx("fraction_format")
                 Box(Modifier.align(Alignment.TopStart).padding(top = 54.dp).width(220.dp)) {
-                    Segmented(
-                        listOf(decimalFormatLabel, fractionFormatLabel),
-                        if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
-                    ) { selected ->
-                        val selectedFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
-                        onResultFormatChange(selectedFormat)
-                        result = if (selectedFormat == "decimal") decimalResult else fractionResult
+                    val selectedLabel = if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
+                    if (liquidDisplay) {
+                        GlassFormatSelector(
+                            first = decimalFormatLabel,
+                            second = fractionFormatLabel,
+                            selectedSecond = resultFormat != "decimal",
+                            backdrop = calculatorBackdrop!!,
+                            onSelect = { selectedFormat ->
+                                onResultFormatChange(selectedFormat)
+                                result = if (selectedFormat == "decimal") decimalResult else fractionResult
+                            }
+                        )
+                    } else {
+                        Segmented(listOf(decimalFormatLabel, fractionFormatLabel), selectedLabel) { selected ->
+                            val selectedFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
+                            onResultFormatChange(selectedFormat)
+                            result = if (selectedFormat == "decimal") decimalResult else fractionResult
+                        }
                     }
                 }
                 Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
@@ -2062,6 +2089,66 @@ private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Text(displayText(label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (active) p.accent else p.muted)
+    }
+}
+
+@Composable
+private fun GlassFormatSelector(
+    first: String,
+    second: String,
+    selectedSecond: Boolean,
+    backdrop: Backdrop,
+    onSelect: (String) -> Unit
+) {
+    val p = LocalPalette.current
+    val shape = RoundedCornerShape(28.dp)
+    val selectedIndex = if (selectedSecond) 1 else 0
+    val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = selectedIndex.toFloat(),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f),
+        label = "GlassFormatSelection"
+    )
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().height(48.dp)
+            .clip(shape)
+            .background(p.surface.copy(alpha = 0.10f))
+            .border(1.dp, p.text.copy(alpha = 0.12f), shape)
+            .padding(3.dp)
+    ) {
+        val segmentWidth = maxWidth / 2
+        Box(
+            Modifier.offset(x = segmentWidth * animatedIndex)
+                .width(segmentWidth).fillMaxHeight()
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { RoundedCornerShape(25.dp) },
+                    effects = {
+                        blur(7.dp.toPx())
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            lens(7.dp.toPx(), 12.dp.toPx(), depthEffect = true, chromaticAberration = false)
+                        }
+                    },
+                    highlight = { Highlight.Default.copy(alpha = 0.72f) },
+                    shadow = { Shadow(radius = 9.dp, alpha = 0.22f) },
+                    onDrawSurface = { drawRect(p.accent.copy(alpha = 0.13f)) }
+                )
+        )
+        Row(Modifier.fillMaxSize()) {
+            listOf(first to "decimal", second to "fraction").forEachIndexed { index, pair ->
+                Box(
+                    Modifier.weight(1f).fillMaxHeight()
+                        .mathFlowClickable { onSelect(pair.second) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        displayText(pair.first),
+                        fontSize = 14.sp,
+                        fontWeight = if (index == selectedIndex) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (index == selectedIndex) p.accent else p.muted
+                    )
+                }
+            }
+        }
     }
 }
 
