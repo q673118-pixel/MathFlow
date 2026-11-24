@@ -66,7 +66,6 @@ internal class LiquidGlassPillMotion(
     private var squashValue = 0.0
     private var travelDirection = 0.0
     private var easedDirection = 0.0
-    private var speedScale = 1.0
 
     private val samplePositions = DoubleArray(SAMPLE_CAPACITY)
     private val sampleTimes = DoubleArray(SAMPLE_CAPACITY)
@@ -76,7 +75,7 @@ internal class LiquidGlassPillMotion(
     private var frameJob: Job? = null
     private var generation = 0
 
-    fun animateTo(index: Int, durationMs: Int) {
+    fun animateTo(index: Int) {
         if (reduceMotion) {
             snapTo(index)
             return
@@ -87,7 +86,6 @@ internal class LiquidGlassPillMotion(
         travelActive = true
         lifted = true
         travelDirection = directionOf(targetIndex - travelStart)
-        speedScale = (280.0 / durationMs.coerceIn(100, 1000)).coerceIn(0.35, 2.8)
         isFlat = false
         startFrames()
     }
@@ -140,7 +138,7 @@ internal class LiquidGlassPillMotion(
         }
     }
 
-    fun release(index: Int, durationMs: Int) {
+    fun release(index: Int) {
         if (!dragging) return
         if (reduceMotion) {
             snapTo(index)
@@ -153,7 +151,6 @@ internal class LiquidGlassPillMotion(
         travelStart = travelPosition
         travelActive = true
         travelDirection = directionOf(targetIndex - travelStart)
-        speedScale = (280.0 / durationMs.coerceIn(100, 1000)).coerceIn(0.35, 2.8)
         startFrames()
     }
 
@@ -182,8 +179,8 @@ internal class LiquidGlassPillMotion(
         if (travelActive) {
             val result = springAxis(
                 travelPosition, travelVelocity, targetIndex, dt,
-                TRAVEL_STIFFNESS * speedScale * speedScale,
-                TRAVEL_DAMPING * speedScale
+                TRAVEL_STIFFNESS,
+                TRAVEL_DAMPING
             )
             travelPosition = result.first
             travelVelocity = result.second
