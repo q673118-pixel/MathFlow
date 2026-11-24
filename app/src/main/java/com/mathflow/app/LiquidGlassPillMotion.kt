@@ -67,10 +67,9 @@ internal class LiquidGlassPillMotion(
     private var travelDirection = 0.0
     private var easedDirection = 0.0
 
-    private val samplePositions = DoubleArray(SAMPLE_CAPACITY)
-    private val sampleTimes = DoubleArray(SAMPLE_CAPACITY)
-    private var sampleStart = 0
-    private var sampleCount = 0
+    // Keep the complete 300 ms window at every refresh rate. A fixed 48-frame
+    // ring silently shortened this window on 240 Hz displays.
+    private val sampleHistory = ArrayList<Pair<Double, Double>>()
 
     private var frameJob: Job? = null
     private var generation = 0
@@ -265,53 +264,39 @@ internal class LiquidGlassPillMotion(
         return (1.0 - abs(targetIndex - travelPosition) / distance).coerceIn(0.0, 1.0)
     }
 
-    private fun recordSample(positionPx: Double, time: Double) {
-        if (sampleCount == SAMPLE_CAPACITY) {
-            sampleStart = (sampleStart + 1) % SAMPLE_CAPACITY
-            sampleCount--
-        }
-        val index = (sampleStart + sampleCount) % SAMPLE_CAPACITY
-        samplePositions[index] = positionPx
-        sampleTimes[index] = time
-        sampleCount++
+    private fun recordSample(positionDp: Double, time: Double) {
+        sampleHistory.add(positionDp to time)
         val cutoff = time - ACCELERATION_WINDOW
-        while (sampleCount > 2 && sampleTimes[sampleStart] < cutoff) {
-            sampleStart = (sampleStart + 1) % SAMPLE_CAPACITY
-            sampleCount--
-        }
+        sampleHistory.removeAll { it.second < cutoff }
     }
 
     private fun averageAcceleration(): Double {
-        if (sampleCount < 3) return 0.0
-        var previousVelocity = 0.0
-        var previousMidpoint = 0.0
-        var hasVelocity = false
+        if (sampleHistory.size < 3) return 0.0
+        val velocities = ArrayList<Pair<Double, Double>>(sampleHistory.size)
+        for (i in 1 until sampleHistory.size) {
+            val previous = sampleHistory[i - 1]
+            val current = sampleHistory[i]
+            val elapsed = current.second - previous.second
+            if (elapsed <= 0.0) continue
+            velocities.add(
+                (current.first - previous.first) / elapsed to
+                    (current.second + previous.second) * 0.5
+            )
+        }
+        if (velocities.size < 2) return 0.0
         var totalAcceleration = 0.0
         var count = 0
-        for (i in 1 until sampleCount) {
-            val a = (sampleStart + i - 1) % SAMPLE_CAPACITY
-            val b = (sampleStart + i) % SAMPLE_CAPACITY
-            val elapsed = sampleTimes[b] - sampleTimes[a]
-            if (elapsed <= 0.000001) continue
-            val velocity = (samplePositions[b] - samplePositions[a]) / elapsed
-            val midpoint = (sampleTimes[b] + sampleTimes[a]) * 0.5
-            if (hasVelocity) {
-                val span = midpoint - previousMidpoint
-                if (span > 0.000001) {
-                    totalAcceleration += (velocity - previousVelocity) / span
-                    count++
-                }
-            }
-            previousVelocity = velocity
-            previousMidpoint = midpoint
-            hasVelocity = true
+        for (i in 1 until velocities.size) {
+            val elapsed = velocities[i].second - velocities[i - 1].second
+            if (elapsed <= 0.0) continue
+            totalAcceleration += (velocities[i].first - velocities[i - 1].first) / elapsed
+            count++
         }
         return if (count == 0) 0.0 else totalAcceleration / count
     }
 
     private fun clearSamples() {
-        sampleStart = 0
-        sampleCount = 0
+        sampleHistory.clear()
     }
 
     private fun publish() {
@@ -334,26 +319,16 @@ internal class LiquidGlassPillMotion(
         stiffness: Double,
         damping: Double
     ): Pair<Double, Double> {
-        var remaining = elapsed
-        var x = position
-        var v = velocity
-        while (remaining > 0.0) {
-            val step = minOf(remaining, MAX_PHYSICS_STEP)
-            val acceleration = -stiffness * (x - target) - damping * v
-            v += acceleration * step
-            x += v * step
-            remaining -= step
-        }
-        return x to v
+        return LiquidGlassPillPhysics.springStep(
+            position, velocity, target, elapsed, stiffness, damping
+        )
     }
 
     private fun snapAxis(
         result: Pair<Double, Double>,
         target: Double
     ): Pair<Double, Double> =
-        if (abs(result.first - target) < 0.0008 && abs(result.second) < 0.01) {
-            target to 0.0
-        } else result
+        LiquidGlassPillPhysics.stepLift(result, target)
 
     private companion object {
         const val TRAVEL_STIFFNESS = 280.0
@@ -374,8 +349,6 @@ internal class LiquidGlassPillMotion(
         const val MAX_SQUASH = 0.12
         const val SQUASH_RESPONSE_TIME = 0.18
 
-        const val SAMPLE_CAPACITY = 48
         const val MAX_FRAME_DELTA = 0.05
-        const val MAX_PHYSICS_STEP = 1.0 / 240.0
     }
 }
