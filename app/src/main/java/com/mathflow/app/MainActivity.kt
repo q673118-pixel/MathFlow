@@ -1349,12 +1349,12 @@ private fun BottomNav(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    // Every navigation panel with the droplet indicator uses Liquid Glass, independent
-    // of the selected app-wide UI style. Other Material surfaces are untouched.
-    val navLiquidPanel = true
-    // The preview is embedded in a settings card, not in the app window. It must
-    // never consume Android system-bar insets or sample a rectangular page backdrop.
-    val useRefractiveLens = backdrop != null
+    // Liquid Glass navigation is active only when Liquid Glass is the global UI style.
+    // Every other style keeps its own existing navigation surface and indicator.
+    val navLiquidPanel = uiStyle.glassSurface
+    // The preview uses the same global style gate as the real navigation bar.
+    // It receives a backdrop only to render Liquid Glass when that style is selected.
+    val useRefractiveLens = uiStyle.glassSurface && backdrop != null
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -3783,9 +3783,13 @@ private fun SettingsPage(
                     }
                 }
                 Panel {
-                    Text("LIQUID GLASS", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text("СТИЛЬ ПАНЕЛИ НАВИГАЦИИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Text(
-                        "Все панели с каплевидной навигацией используют Liquid Glass. Остальные поверхности приложения остаются Material.",
+                        if (uiStyle.glassSurface) {
+                            "Используется Liquid Glass: преломление, размытие и физика капли."
+                        } else {
+                            "Панель и индикатор используют оформление выбранного глобального стиля: ${uiStyle.title}."
+                        },
                         color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
                     )
                 }
@@ -3875,7 +3879,10 @@ private fun SettingsPage(
                         valueRange = 100f..1000f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("Эластичность капли: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text(
+                        "${if (uiStyle.glassSurface) "Эластичность капли" else "Интенсивность анимации"}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%",
+                        color = p.text, fontSize = 13.sp
+                    )
                     Slider(
                         value = pendingNavAnimationSettings.intensity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(intensity = it) },
