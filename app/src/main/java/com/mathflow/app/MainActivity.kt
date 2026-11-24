@@ -156,6 +156,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1421,10 +1422,13 @@ private fun BottomNav(
                         )
                     }
                 )
-                .border(
-                    if (navLiquidPanel) 0.8.dp else 1.dp,
-                    p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
-                    panelShape
+                .then(
+                    if (useRefractiveLens) Modifier
+                    else Modifier.border(
+                        if (navLiquidPanel) 0.8.dp else 1.dp,
+                        p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
+                        panelShape
+                    )
                 )
                 .fillMaxWidth()
                 .height(58.dp)
@@ -1731,15 +1735,13 @@ private fun BottomNav(
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
                                 shape = {
-                                     RoundedCornerShape(percent = (settings.dropletRoundness * 50f).toInt().coerceIn(40, 50))
+                                     RoundedCornerShape(percent = 50)
                                 },
                                 effects = {
-                                     val refraction = settings.refractionStrength
-                                     if (refraction > 0f && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                                          lens(
-                                             (12f * refraction * pillMotion.glassPresence).dp.toPx(),
-                                             (14f * refraction * pillMotion.material).dp.toPx(),
-                                             depthEffect = settings.glassDepth > 0f,
+                                             12.dp.toPx() * pillMotion.glassPresence,
+                                             14.dp.toPx() * pillMotion.material,
                                              chromaticAberration = true
                                          )
                                      }
