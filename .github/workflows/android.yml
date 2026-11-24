@@ -3,7 +3,7 @@ name: MathFlow Android build
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "redesign-ui", "liquid-glass-rx-parity" ]
+    branches: [ "main", "redesign-ui" ]
   pull_request:
     branches: [ "redesign-ui" ]
 
@@ -60,7 +60,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: MathFlow-v1.6.0-${{ github.ref_name }}-build-${{ github.run_number }}-test-reports
+          name: MathFlow-v1.6.0-${{ github.event.pull_request.head.ref || github.ref_name }}-build-${{ github.run_number }}-test-reports
           path: app/build/reports/tests/testDebugUnitTest/
           if-no-files-found: warn
 
@@ -70,7 +70,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: MathFlow-v1.6.0-${{ github.ref_name }}-build-${{ github.run_number }}-apk
+          name: MathFlow-v1.6.0-${{ github.event.pull_request.head.ref || github.ref_name }}-build-${{ github.run_number }}-apk
           path: app/build/outputs/apk/debug/MathFlow-v1.6.0.apk
           if-no-files-found: error
           retention-days: 7
