@@ -1508,7 +1508,7 @@ private fun BottomNav(
                 } else null
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                 pillMotion.tabStepDp = itemWidth.value
-                LaunchedEffect(current, useRefractiveLens, settings.enabled, duration) {
+                LaunchedEffect(current, useRefractiveLens, settings.enabled) {
                     if (useRefractiveLens && settings.enabled) {
                         pillMotion.animateTo(current.ordinal)
                     } else {
@@ -1519,7 +1519,7 @@ private fun BottomNav(
                 // touch, drag, and the existing navigation transition.
                 val indicatorScaleX = animateFloatAsState(
                     targetValue = when {
-                        !settings.enabled -> 1f
+                        useRefractiveLens || !settings.enabled -> 1f
                         style == BottomNavAnimationStyle.EXPAND -> 1f + settings.intensity * 0.12f
                         style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f
                         else -> 1f
@@ -1528,15 +1528,15 @@ private fun BottomNav(
                     label = "MathFlowNavIndicatorScale"
                 )
                 val indicatorAlpha = animateFloatAsState(
-                    targetValue = if (style == BottomNavAnimationStyle.SOFT_FOCUS) {
+                    targetValue = if (useRefractiveLens) 1f else if (style == BottomNavAnimationStyle.SOFT_FOCUS) {
                         settings.opacity * 0.62f
                     } else settings.opacity,
                     animationSpec = tween(duration),
                     label = "MathFlowNavIndicatorAlpha"
                 )
                 val bloom = remember(current, style) { Animatable(0.72f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity) {
-                    if (settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
+                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, useRefractiveLens) {
+                    if (!useRefractiveLens && settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
                         bloom.snapTo(
                             if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.08f + settings.intensity * 0.34f
                             else 0.38f + settings.intensity * 0.36f
