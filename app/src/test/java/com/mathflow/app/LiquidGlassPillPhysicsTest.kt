@@ -23,6 +23,31 @@ class LiquidGlassPillPhysicsTest {
     }
 
     @Test
+    fun allocationFreeStepperMatchesReferenceIntegrator() {
+        var reference = 0.0 to 0.0
+        val inPlace = SpringState(0.0, 0.0)
+        repeat(120) {
+            reference = LiquidGlassPillPhysics.springStep(
+                reference.first, reference.second, 1.0, 1.0 / 120.0, 280.0, 31.4
+            )
+            LiquidGlassPillPhysics.springStepInPlace(
+                inPlace, 1.0, 1.0 / 120.0, 280.0, 31.4
+            )
+        }
+        assertEquals(reference.first, inPlace.position, 1e-10)
+        assertEquals(reference.second, inPlace.velocity, 1e-10)
+    }
+
+    @Test
+    fun allocationFreeLiftSnapMatchesReferenceSnap() {
+        val reference = LiquidGlassPillPhysics.stepLift(0.9995 to 0.005, 1.0)
+        val inPlace = SpringState(0.9995, 0.005)
+        LiquidGlassPillPhysics.stepLiftInPlace(inPlace, 1.0)
+        assertEquals(reference.first, inPlace.position, 0.0)
+        assertEquals(reference.second, inPlace.velocity, 0.0)
+    }
+
+    @Test
     fun travelSpringConvergesWithoutNonFiniteValues() {
         var state = 0.0 to 0.0
         repeat(180) {
