@@ -20,7 +20,7 @@ class MathFlowUiStyleTest {
         MathFlowUiStyle.entries.forEach { style ->
             assertFalse(style.usesRefractiveNavigation(backdropAvailable = false))
         }
-        assertTrue(MathFlowUiStyle.LIQUID_GLASS.glassSurface)
+        assertTrue(MathFlowUiStyle.LIQUID_GLASS.liquidGlassNavigation)
     }
 
     private fun assertEqualsExpected(expected: Boolean, actual: Boolean) {
