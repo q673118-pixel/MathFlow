@@ -2,6 +2,7 @@ package com.mathflow.app
 
 import kotlin.math.roundToInt
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
@@ -131,6 +132,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -1355,7 +1359,7 @@ private fun BottomNav(
     val navLiquidPanel = uiStyle.glassSurface
     // The preview uses the same global style gate as the real navigation bar.
     // It receives a backdrop only to render Liquid Glass when that style is selected.
-    val useRefractiveLens = uiStyle.glassSurface && backdrop != null
+    val useRefractiveLens = uiStyle.usesRefractiveNavigation(backdrop != null)
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -1479,7 +1483,7 @@ private fun BottomNav(
                 )
                 val navScope = rememberCoroutineScope()
                 val pillMotion = remember { LiquidGlassPillMotion(navScope, current.ordinal) }
-                pillMotion.reduceMotion = !settings.enabled
+                pillMotion.reduceMotion = !settings.enabled || !ValueAnimator.areAnimatorsEnabled()
                 // Match RX's compositing order without re-recording the parent page:
                 // page -> glass panel -> selected fill -> glyph row.
                 val indicatorBackdrop = if (
@@ -1662,6 +1666,10 @@ private fun BottomNav(
                         )
                         Box(
                             Modifier.weight(1f).height(48.dp)
+                                .semantics {
+                                    role = Role.Tab
+                                    selected = selected
+                                }
                                 .mathFlowClickable {
                                     if (!selected) onSelect(item)
                                 },
