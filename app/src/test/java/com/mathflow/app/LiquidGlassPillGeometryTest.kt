@@ -26,6 +26,34 @@ class LiquidGlassPillGeometryTest {
     }
 
     @Test
+    fun dragMapsPhysicalDistanceToLogicalTabsInBothDirections() {
+        assertEquals(
+            2f,
+            LiquidGlassPillGeometry.dragTargetIndex(1f, 48f, 48f, 5, false),
+            0f
+        )
+        assertEquals(
+            0f,
+            LiquidGlassPillGeometry.dragTargetIndex(1f, 48f, 48f, 5, true),
+            0f
+        )
+        assertEquals(
+            4f,
+            LiquidGlassPillGeometry.dragTargetIndex(3.5f, 96f, 48f, 5, false),
+            0f
+        )
+    }
+
+    @Test
+    fun dragWithInvalidStepDoesNotDivideByZero() {
+        assertEquals(
+            4f,
+            LiquidGlassPillGeometry.dragTargetIndex(2f, 100f, 0f, 5, false),
+            0f
+        )
+    }
+
+    @Test
     fun zeroHeightDoesNotDivideByZero() {
         assertEquals(30f to 0f, LiquidGlassPillGeometry.liftedSize(30f, 0f, 5f, 5f, 9f))
     }
