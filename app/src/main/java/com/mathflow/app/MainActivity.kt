@@ -1984,33 +1984,11 @@ private fun CalculatorHome(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
-        val calculatorBackdrop = LocalPageBackdrop.current
-        val liquidDisplay = uiStyle.glassSurface && calculatorBackdrop != null
         Surface(
-            Modifier.fillMaxWidth().weight(1f)
-                .then(
-                    if (liquidDisplay) Modifier.drawBackdrop(
-                        backdrop = calculatorBackdrop!!,
-                        shape = { displayShape },
-                        effects = {
-                            if (glass.matteBlur > 0f) blur((glass.matteBlur * 0.75f).dp.toPx())
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && glass.matteDepth > 0f) {
-                                lens((8f * glass.matteDepth).dp.toPx(), (14f * glass.matteDepth).dp.toPx(),
-                                    depthEffect = true, chromaticAberration = false)
-                            }
-                        },
-                        highlight = { Highlight.Default.copy(alpha = glass.matteHighlight * 0.72f) },
-                        shadow = { Shadow(radius = 18.dp, alpha = glass.matteShadow * 0.55f) },
-                        onDrawSurface = { drawRect(p.surface.copy(alpha = 0.10f)) }
-                    ) else if (uiStyle.glassSurface) Modifier
-                        .clip(displayShape)
-                        .background(p.surface.copy(alpha = 0.12f))
-                        .border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), displayShape)
-                    else Modifier
-                ),
+            Modifier.fillMaxWidth().weight(1f),
             shape = displayShape,
-            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 2f + glass.matteShadow).dp else uiStyle.elevationDp.dp
+            color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            shadowElevation = uiStyle.elevationDp.dp
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
@@ -2037,23 +2015,10 @@ private fun CalculatorHome(
                 val fractionFormatLabel = tx("fraction_format")
                 Box(Modifier.align(Alignment.TopStart).padding(top = 54.dp).width(220.dp)) {
                     val selectedLabel = if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
-                    if (liquidDisplay) {
-                        GlassFormatSelector(
-                            first = decimalFormatLabel,
-                            second = fractionFormatLabel,
-                            selectedSecond = resultFormat != "decimal",
-                            backdrop = calculatorBackdrop!!,
-                            onSelect = { selectedFormat ->
-                                onResultFormatChange(selectedFormat)
-                                result = if (selectedFormat == "decimal") decimalResult else fractionResult
-                            }
-                        )
-                    } else {
-                        Segmented(listOf(decimalFormatLabel, fractionFormatLabel), selectedLabel) { selected ->
-                            val selectedFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
-                            onResultFormatChange(selectedFormat)
-                            result = if (selectedFormat == "decimal") decimalResult else fractionResult
-                        }
+                    Segmented(listOf(decimalFormatLabel, fractionFormatLabel), selectedLabel) { selected ->
+                        val selectedFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
+                        onResultFormatChange(selectedFormat)
+                        result = if (selectedFormat == "decimal") decimalResult else fractionResult
                     }
                 }
                 Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
@@ -2116,11 +2081,10 @@ private fun CalculatorHome(
                 androidx.compose.animation.shrinkVertically(tween(110))
         ) {
             Surface(
-                Modifier.fillMaxWidth().heightIn(max = 96.dp)
-                    .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), RoundedCornerShape(uiStyle.cardRadiusDp.dp)) else Modifier),
+                Modifier.fillMaxWidth().heightIn(max = 96.dp),
                 shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-                color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-                shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f + glass.matteShadow * 2f).dp else 0.dp
+                color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+                shadowElevation = uiStyle.elevationDp.dp
             ) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
                     steps.forEachIndexed { index, step ->
@@ -2150,94 +2114,15 @@ private fun CalculatorHome(
 private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val chipShape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
     Box(
         Modifier.height(32.dp).clip(chipShape)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.16f), chipShape) else Modifier)
-            .background(
-                if (uiStyle.glassSurface) androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(
-                        (if (active) p.accent else p.surface).copy(alpha = if (active) 0.20f else 0.42f),
-                        p.surface.copy(alpha = if (active) 0.30f else 0.58f)
-                    )
-                ) else androidx.compose.ui.graphics.SolidColor(if (active) p.navActive else p.key)
-            )
+            .background(if (active) p.navActive else p.key)
             .mathFlowClickable(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(displayText(label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (active) p.accent else p.muted)
     }
-}
-
-@Composable
-private fun GlassFormatSelector(
-    first: String,
-    second: String,
-    selectedSecond: Boolean,
-    backdrop: Backdrop,
-    onSelect: (String) -> Unit
-) {
-    val p = LocalPalette.current
-    val shape = RoundedCornerShape(28.dp)
-    val selectedIndex = if (selectedSecond) 1 else 0
-    val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = selectedIndex.toFloat(),
-        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f),
-        label = "GlassFormatSelection"
-    )
-    BoxWithConstraints(
-        Modifier.fillMaxWidth().height(48.dp)
-            .clip(shape)
-            .background(p.surface.copy(alpha = 0.10f))
-            .border(1.dp, p.text.copy(alpha = 0.12f), shape)
-            .padding(3.dp)
-    ) {
-        val segmentWidth = maxWidth / 2
-        Box(
-            Modifier.offset(x = segmentWidth * animatedIndex)
-                .width(segmentWidth).fillMaxHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(25.dp) },
-                    effects = {
-                        blur(7.dp.toPx())
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                            lens(7.dp.toPx(), 12.dp.toPx(), depthEffect = true, chromaticAberration = false)
-                        }
-                    },
-                    highlight = { Highlight.Default.copy(alpha = 0.72f) },
-                    shadow = { Shadow(radius = 9.dp, alpha = 0.22f) },
-                    onDrawSurface = { drawRect(p.accent.copy(alpha = 0.13f)) }
-                )
-        )
-        Row(Modifier.fillMaxSize()) {
-            listOf(first to "decimal", second to "fraction").forEachIndexed { index, pair ->
-                Box(
-                    Modifier.weight(1f).fillMaxHeight()
-                        .mathFlowClickable { onSelect(pair.second) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        displayText(pair.first),
-                        fontSize = 14.sp,
-                        fontWeight = if (index == selectedIndex) FontWeight.SemiBold else FontWeight.Medium,
-                        color = if (index == selectedIndex) p.accent else p.muted
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalcKey(key: String, modifier: Modifier, compact: Boolean, onClick: () -> Unit) {
-    MathFlowKeyButton(
-        label = key,
-        modifier = modifier,
-        compact = compact,
-        onClick = onClick
-    )
 }
 
 // ---------------------------------------------------------------- shared pieces
@@ -2368,12 +2253,10 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
 private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val segmentShape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
     BoxWithConstraints(
         Modifier.fillMaxWidth().clip(segmentShape)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), segmentShape) else Modifier)
-            .background(if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key).padding(3.dp)
+            .background(p.key).padding(3.dp)
     ) {
         val itemWidth = maxWidth / options.size
         val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
@@ -2388,13 +2271,13 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
                 .graphicsLayer { translationX = indicatorOffset }
                 .size(width = itemWidth, height = 38.dp)
                 .clip(RoundedCornerShape(uiStyle.buttonRadiusDp.dp))
-                .background(if (uiStyle.glassSurface) p.surface.copy(alpha = (glass.matteOpacity + 0.14f).coerceAtMost(1f)) else p.keyEquals)
+                .background(p.keyEquals)
         )
         Row(Modifier.fillMaxWidth()) {
             options.forEach { option ->
                 val active = option == selected
                 val tint by animateColorAsState(
-                    targetValue = if (active) (if (uiStyle.glassSurface) p.accent else p.onKeyEquals) else p.muted,
+                    targetValue = if (active) p.onKeyEquals else p.muted,
                     animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
                     label = "SegmentedLabelColor"
                 )
@@ -2431,7 +2314,6 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
 private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp)
     var pressed by remember { mutableStateOf(false) }
     val pressScale by animateFloatAsState(
@@ -2442,12 +2324,7 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     Surface(
         modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .then(if (uiStyle.glassSurface) Modifier
-                .clip(shape)
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(p.accent.copy(alpha = 0.17f), p.surface.copy(alpha = 0.54f))
-                )) else Modifier)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.30f), shape) else Modifier)
+
             .pointerInput(onClick) {
                 detectTapGestures(onPress = {
                     pressed = true
@@ -2457,8 +2334,8 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
                 })
             },
         shape = shape,
-        color = if (uiStyle.glassSurface) Color.Transparent else p.keyEquals,
-        shadowElevation = if (uiStyle.glassSurface) (1.5f + glass.matteDepth * 3f).dp else 0.dp
+        color = p.keyEquals,
+        shadowElevation = 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(displayText(text), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
@@ -2470,16 +2347,12 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
 private fun ResultBox(text: String, error: String?) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val resultShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
     Surface(
-        Modifier.fillMaxWidth().then(
-            if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.20f), resultShape)
-            else Modifier
-        ),
+        Modifier.fillMaxWidth(),
         shape = resultShape,
-        color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key,
-        shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f).dp else 0.dp
+        color = p.key,
+        shadowElevation = 0.dp
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             androidx.compose.animation.AnimatedVisibility(
@@ -2905,7 +2778,6 @@ private fun EquationSolverPage() {
 @Composable
 private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
     val p = LocalPalette.current
-    val glass = LocalBottomNavGlassSettings.current
     val uiStyle = LocalMathFlowUiStyle.current
     // Compose only visible history rows instead of building the full list at once.
     LazyColumn(
@@ -2925,13 +2797,10 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
             items(entries, key = { it.id }) { entry ->
                 var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
                 Surface(
-                    modifier = Modifier.fillMaxWidth().then(
-                        if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), RoundedCornerShape(uiStyle.cardRadiusDp.dp))
-                        else Modifier
-                    ),
+                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-                    color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-                    shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 3f + glass.matteShadow * 2f).dp else uiStyle.elevationDp.dp
+                    color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+                    shadowElevation = uiStyle.elevationDp.dp
                 ) {
                     Column(
                         Modifier.fillMaxWidth()
@@ -4595,7 +4464,6 @@ private fun ApplySelectionButton(text: String, enabled: Boolean, onClick: () -> 
 private fun SettingsApplyBar(onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp)
     var pressed by remember { mutableStateOf(false) }
     val pressScale by animateFloatAsState(
@@ -4606,12 +4474,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
     Surface(
         modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .then(if (uiStyle.glassSurface) Modifier
-                .clip(shape)
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(p.accent.copy(alpha = 0.24f), p.surface.copy(alpha = 0.58f))
-                )) else Modifier)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.34f), shape) else Modifier)
+
             .pointerInput(onClick) {
                 detectTapGestures(onPress = {
                     pressed = true
@@ -4621,19 +4484,15 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
                 })
             },
         shape = shape,
-        color = if (uiStyle.glassSurface) Color.Transparent else p.keyEquals,
-        shadowElevation = if (uiStyle.glassSurface) (2f + glass.matteDepth * 3f + glass.matteShadow * 2f).dp else 10.dp
+        color = p.keyEquals,
+        shadowElevation = 10.dp
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Palette text animates between themes; choose a stable contrast color from
-            // the target theme so the label never flashes black on a dark glass surface.
-            val applyContentColor = if (uiStyle.glassSurface) {
-                if (p.dark) Color.White else Color(0xFF17131F)
-            } else p.onKeyEquals
+            val applyContentColor = p.onKeyEquals
             AppIcon(AppGlyph.CHECK, contentDescription = null, tint = applyContentColor, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(9.dp))
             Text(tx("apply"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = applyContentColor)
