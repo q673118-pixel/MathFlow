@@ -1736,7 +1736,6 @@ private fun BottomNav(
                                     )
                                 }
                             )
-                            .graphicsLayer { alpha = indicatorAlpha.value }
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
                                 shape = {
