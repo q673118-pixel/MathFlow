@@ -163,7 +163,11 @@ internal class LiquidGlassPillMotion(
                     val frame = withFrameNanos { it }
                     val rawDelta = if (previousFrame == 0L) 0.0 else (frame - previousFrame) / 1_000_000_000.0
                     previousFrame = frame
-                    val delta = rawDelta.coerceIn(0.0, MAX_FRAME_DELTA)
+                    // Preserve RX timing for normal and dropped frames. If the frame
+                    // clock resumes after a long lifecycle pause, skip that suspended
+                    // interval instead of integrating thousands of stale substeps.
+                    val delta = if (rawDelta > MAX_RESUMED_FRAME_GAP) 0.0
+                        else rawDelta.coerceAtLeast(0.0)
                     if (!advance(delta, frame / 1_000_000_000.0)) break
                 }
             } finally {
@@ -349,6 +353,6 @@ internal class LiquidGlassPillMotion(
         const val MAX_SQUASH = 0.12
         const val SQUASH_RESPONSE_TIME = 0.18
 
-        const val MAX_FRAME_DELTA = 0.05
+        const val MAX_RESUMED_FRAME_GAP = 0.25
     }
 }
