@@ -1618,8 +1618,14 @@ private fun BottomNav(
                         .then(if (tabRowBackdrop != null) Modifier.layerBackdrop(tabRowBackdrop) else Modifier)
                         .then(
                             if (useRefractiveLens) {
-                                Modifier.pointerInput(current, duration, maxWidth, layoutDirection) {
-                                    var dragStartIndex = current.ordinal.toFloat()
+                                // RX keeps the gesture detector alive for the whole row.
+                                // Updated values flow through state holders, so a page
+                                // recomposition cannot cancel a drag midway through.
+                                val currentSelectedIndex by rememberUpdatedState(current.ordinal)
+                                val currentLayoutDirection by rememberUpdatedState(layoutDirection)
+                                val currentOnSelect by rememberUpdatedState(onSelect)
+                                Modifier.pointerInput(Unit) {
+                                    var dragStartIndex = currentSelectedIndex.toFloat()
                                     var dragDistance = 0f
                                     detectHorizontalDragGestures(
                                         onDragStart = {
@@ -1628,21 +1634,32 @@ private fun BottomNav(
                                             pillMotion.startDrag()
                                         },
                                         onDragEnd = {
-                                            val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
-                                                .roundToInt().coerceIn(0, Page.entries.lastIndex)
+                                            val logicalIndex = LiquidGlassPillGeometry.dragTargetIndex(
+                                                startIndex = dragStartIndex,
+                                                dragDistancePx = dragDistance,
+                                                tabStepPx = currentTabStepPx,
+                                                tabCount = Page.entries.size,
+                                                isRtl = currentLayoutDirection == LayoutDirection.Rtl
+                                            ).roundToInt()
                                             pillMotion.release(logicalIndex)
-                                            if (logicalIndex != current.ordinal) onSelect(Page.entries[logicalIndex])
+                                            if (logicalIndex != currentSelectedIndex) {
+                                                currentOnSelect(Page.entries[logicalIndex])
+                                            }
                                         },
                                         onDragCancel = {
-                                            pillMotion.release(current.ordinal)
+                                            pillMotion.release(currentSelectedIndex)
                                         },
                                         onHorizontalDrag = { change, dragAmount ->
                                             change.consume()
-                                            val logicalDirection = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f
-                                            dragDistance += dragAmount * logicalDirection
+                                            dragDistance += dragAmount
                                             pillMotion.dragTo(
-                                                (dragStartIndex + dragDistance / tabStepPx)
-                                                    .coerceIn(0f, Page.entries.lastIndex.toFloat())
+                                                LiquidGlassPillGeometry.dragTargetIndex(
+                                                    startIndex = dragStartIndex,
+                                                    dragDistancePx = dragDistance,
+                                                    tabStepPx = currentTabStepPx,
+                                                    tabCount = Page.entries.size,
+                                                    isRtl = currentLayoutDirection == LayoutDirection.Rtl
+                                                )
                                             )
                                         }
                                     )
