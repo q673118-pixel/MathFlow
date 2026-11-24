@@ -443,7 +443,6 @@ private fun animatePalette(target: Palette): Palette {
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 internal val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
 internal val LocalBottomNavGlassSettings = androidx.compose.runtime.staticCompositionLocalOf { BottomNavAnimationSettings() }
-internal val LocalPageBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
@@ -582,9 +581,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     // The full page capture is only consumed by the Liquid Glass navigation.
     // Avoid recording the entire page for every other global visual style.
     val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).glassSurface
-    // The calculator display samples a separate background-only source.
-    // It must never read the full-page layer that is currently recording HOME.
-    val homeBackdrop = rememberLayerBackdrop()
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
@@ -658,7 +654,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalAppIconPack provides AppIconPack.fromId(iconPackId),
         LocalBottomNavGlassSettings provides bottomNavAnimationSettings,
-        LocalPageBackdrop provides homeBackdrop,
         // One persisted radius controls settings controls and calculator keys consistently.
         LocalSettingsCornerRadius provides settingsCornerRadiusDp,
         LocalKeyAnimationSettings provides keyAnimationSettings,
@@ -1867,7 +1862,6 @@ private fun CalculatorHome(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val calculationScope = rememberCoroutineScope()
     var calculationJob by remember { mutableStateOf<Job?>(null) }
     var expression by rememberSaveable { mutableStateOf("") }
@@ -2144,15 +2138,10 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
-    val pageBackdrop = LocalPageBackdrop.current
     val settingsRadius = LocalSettingsCornerRadius.current
     val neo = uiStyle.id == "neo"
     val skeuo = uiStyle.id == "skeuomorphic"
     val retro = uiStyle.id == "retro_grid"
-    // In the focused Liquid Glass style, only the calculator display and navigation are glass.
-    // Settings panels stay native Material surfaces.
-    val frosted = false
     val shape = RoundedCornerShape(
         (if (neo || skeuo || retro) uiStyle.cardRadiusDp else settingsRadius ?: uiStyle.cardRadiusDp).dp
     )
@@ -2165,65 +2154,19 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         neo -> p.accent
         retro -> p.accent.copy(alpha = 0.78f)
         skeuo -> p.text.copy(alpha = 0.14f)
-        frosted -> p.text.copy(alpha = 0.12f + glass.matteHighlight * 0.18f)
         else -> p.text.copy(alpha = uiStyle.outlineAlpha)
     }
-    val liquidBackdrop = frosted && pageBackdrop != null
-    val panelColor = if (frosted) {
-        // Keep only a restrained glass tint; the page image must remain visible
-        // through the surface instead of being replaced by an opaque matte fill.
-        p.surface.copy(alpha = (glass.matteOpacity * 0.22f).coerceIn(0.06f, 0.22f))
-    } else {
-        p.surface.copy(alpha = uiStyle.surfaceAlpha)
-    }
+    val panelColor = p.surface.copy(alpha = uiStyle.surfaceAlpha)
     Surface(
         modifier = modifier.fillMaxWidth()
-            .then(
-                if (liquidBackdrop) {
-                    Modifier.drawBackdrop(
-                        backdrop = pageBackdrop!!,
-                        shape = { shape },
-                        effects = {
-                            if (glass.matteBlur > 0f) blur(glass.matteBlur.dp.toPx())
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
-                                glass.matteDepth > 0f
-                            ) {
-                                lens(
-                                    (10f * glass.matteDepth).dp.toPx(),
-                                    (18f * glass.matteDepth).dp.toPx(),
-                                    depthEffect = true,
-                                    chromaticAberration = false
-                                )
-                            }
-                        },
-                        highlight = {
-                            Highlight.Default.copy(alpha = glass.matteHighlight.coerceIn(0f, 1f) * 0.55f)
-                        },
-                        shadow = {
-                            Shadow(radius = (8f + glass.matteShadow * 12f).dp, alpha = glass.matteShadow.coerceIn(0f, 1f) * 0.45f)
-                        },
-                        onDrawSurface = {
-                            drawRect(panelColor)
-                        }
-                    )
-                } else {
-                    Modifier.background(panelColor, shape)
-                }
-            )
-            .then(if (neo || retro || skeuo || uiStyle.outlineAlpha > 0f || frosted) {
-                Modifier.border(if (frosted) 0.8.dp else borderWidth, borderColor, shape)
+            .background(panelColor, shape)
+            .then(if (neo || retro || skeuo || uiStyle.outlineAlpha > 0f) {
+                Modifier.border(borderWidth, borderColor, shape)
             } else Modifier),
         shape = shape,
-        color = if (liquidBackdrop) Color.Transparent else panelColor,
-        shadowElevation = when {
-            frosted -> (0.8f + glass.matteDepth * 1.4f + glass.matteShadow).dp
-            skeuo -> 7.dp
-            else -> uiStyle.elevationDp.dp
-        }
+        color = panelColor,
+        shadowElevation = if (skeuo) 7.dp else uiStyle.elevationDp.dp
     ) {
-        // Surface owns the single clipping boundary. Drawing the tint inside its
-        // content avoids a second rectangular background layer escaping rounded
-        // corners when settings radii are changed at runtime.
         Box(Modifier.fillMaxWidth().clip(shape)) {
             Column(
                 Modifier.fillMaxWidth().padding(when {
@@ -2235,16 +2178,6 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
                 }),
                 verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)
             ) { content() }
-            if (frosted && glass.matteHighlight > 0f) {
-                Box(
-                    Modifier.align(Alignment.TopCenter).fillMaxWidth().height(28.dp)
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(p.text.copy(alpha = glass.matteHighlight * 0.075f), Color.Transparent)
-                            )
-                        )
-                )
-            }
         }
     }
 }
@@ -4270,7 +4203,6 @@ private fun SettingsEntry(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val settingsRadius = LocalSettingsCornerRadius.current
     val controlRadius = (settingsRadius ?: uiStyle.controlRadiusDp).dp
     val tileShape = RoundedCornerShape(controlRadius)
