@@ -1349,16 +1349,18 @@ private fun BottomNav(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val navMaterialPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.MATERIAL
-    val navLiquidPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.LIQUID
+    val navMaterialPanel = false
+    // Every navigation panel with the droplet indicator uses Liquid Glass, independent
+    // of the selected app-wide UI style. Other Material surfaces are untouched.
+    val navLiquidPanel = true
     // The preview is embedded in a settings card, not in the app window. It must
     // never consume Android system-bar insets or sample a rectangular page backdrop.
-    val useRefractiveLens = uiStyle.glassSurface && backdrop != null && !preview
+    val useRefractiveLens = backdrop != null
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
     val springMotion = settings.enabled && (
-        uiStyle.glassSurface || style in setOf(
+        useRefractiveLens || style in setOf(
             BottomNavAnimationStyle.FLUID_PILL,
             BottomNavAnimationStyle.SPRING_MOTION,
             BottomNavAnimationStyle.ELASTIC_SLIDE
@@ -1375,7 +1377,7 @@ private fun BottomNav(
             .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
+        val panelShape = RoundedCornerShape(if (navLiquidPanel) 35.dp else uiStyle.cardRadiusDp.dp)
         val barGlassBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
         // The panel and its content are siblings: the moving lens must not inherit
         // Surface's rounded clipping and must be able to rise above the panel.
@@ -1428,10 +1430,10 @@ private fun BottomNav(
                 .height(58.dp)
                 .then(if (barGlassBackdrop != null) Modifier.layerBackdrop(barGlassBackdrop) else Modifier),
             shape = panelShape,
-            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            color = if (navLiquidPanel) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
             // Keep the floating glass capsule clean: the panel itself must not cast
             // a broad grey halo. The selected droplet retains its own local depth.
-            shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
+            shadowElevation = if (navLiquidPanel) 0.dp else uiStyle.elevationDp.dp
         ) { }
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
@@ -1448,15 +1450,15 @@ private fun BottomNav(
                 } else current.ordinal
                 val indicatorWidth = minOf(
                     when {
-                        uiStyle.glassSurface -> itemWidth
+                        navLiquidPanel -> itemWidth
                         style == BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
                         style == BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
                         else -> 72.dp
                     },
-                    itemWidth * if (uiStyle.glassSurface) 1f else 0.92f
+                    itemWidth * if (navLiquidPanel) 1f else 0.92f
                 )
                 val indicatorHeight = when {
-                    uiStyle.glassSurface -> 48.dp
+                    navLiquidPanel -> 48.dp
                     style == BottomNavAnimationStyle.MORPH -> 38.dp
                     style == BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
                     else -> 42.dp
@@ -1543,7 +1545,7 @@ private fun BottomNav(
                     BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.18f
                 }
                 val travelStretch = remember(current, style) { Animatable(1f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface, useRefractiveLens) {
+                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, useRefractiveLens) {
                     if (!useRefractiveLens && settings.enabled && stretchAmount > 0f) {
                         travelStretch.snapTo(1f + settings.intensity * stretchAmount)
                         travelStretch.animateTo(
@@ -1649,7 +1651,7 @@ private fun BottomNav(
                             label = "MathFlowNavigationIconScale"
                         )
                         val morphY by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && !uiStyle.glassSurface && style == BottomNavAnimationStyle.MORPH) {
+                            targetValue = if (settings.enabled && selected && !useRefractiveLens && style == BottomNavAnimationStyle.MORPH) {
                                 1f - settings.iconScale * (0.18f + settings.intensity * 0.22f)
                             } else 1f,
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
@@ -3246,6 +3248,7 @@ private fun SettingsPage(
     var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
     var pendingNavAnimationSettings by remember(appliedNavAnimationSettings) { mutableStateOf(appliedNavAnimationSettings) }
     var navPreviewPage by rememberSaveable { mutableStateOf(Page.HOME) }
+    val navPreviewBackdrop = rememberLayerBackdrop()
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var savedFonts by remember {
         mutableStateOf<List<Pair<String, String>>>(
@@ -3785,25 +3788,11 @@ private fun SettingsPage(
                     }
                 }
                 Panel {
-                    Text("МАТЕРИАЛ ПАНЕЛИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    Text("Материал нижней панели", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    BottomNavSurfaceMaterial.entries.forEach { material ->
-                        val selected = pendingNavAnimationSettings.surfaceMaterial == material
-                        Column(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                                .background(if (selected) p.navActive else p.surface)
-                                .border(1.dp, if (selected) p.accent else p.key, RoundedCornerShape(16.dp))
-                                .mathFlowClickable {
-                                    pendingNavAnimationSettings = pendingNavAnimationSettings.copy(surfaceMaterial = material)
-                                }
-                                .padding(13.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Text(material.title, color = if (selected) p.accent else p.text,
-                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Text(material.description, color = p.muted, fontSize = 11.sp, lineHeight = 15.sp)
-                        }
-                    }
+                    Text("LIQUID GLASS", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text(
+                        "Все панели с каплевидной навигацией используют Liquid Glass. Остальные поверхности приложения остаются Material.",
+                        color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
+                    )
                 }
                 Panel {
                     Text("МАТОВЫЕ ПОВЕРХНОСТИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
@@ -3866,14 +3855,20 @@ private fun SettingsPage(
                         Text(tx("nav_preview"), color = p.muted, fontSize = 13.sp)
                         Box(
                             Modifier.fillMaxWidth().height(80.dp)
-                                .clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
-                                .background(p.background),
+                                .clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)),
                             contentAlignment = Alignment.Center
                         ) {
+                            // Capture only the preview's static background. The glass
+                            // navigation is a sibling and never samples itself.
+                            Box(
+                                Modifier.matchParentSize()
+                                    .background(p.background)
+                                    .layerBackdrop(navPreviewBackdrop)
+                            )
                             BottomNav(
                                 navPreviewPage,
                                 pendingNavAnimationSettings,
-                                backdrop = null,
+                                backdrop = navPreviewBackdrop,
                                 preview = true
                             ) { navPreviewPage = it }
                         }
@@ -3885,7 +3880,7 @@ private fun SettingsPage(
                         valueRange = 100f..1000f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("${if (uiStyle.glassSurface) "Эластичность капли" else tx("animation_intensity")}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${"Эластичность капли"}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.intensity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(intensity = it) },
