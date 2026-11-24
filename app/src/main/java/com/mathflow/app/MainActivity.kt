@@ -687,8 +687,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                         // This layer contains only the page base, never the display itself.
                         Box(
                             Modifier.fillMaxSize()
-                                .background(backdropBackground)
                                 .layerBackdrop(homeBackdrop)
+                                .background(backdropBackground)
                         )
                         Canvas(Modifier.fillMaxSize()) {
                             val progress = themeBloom.value
@@ -1349,7 +1349,6 @@ private fun BottomNav(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val navMaterialPanel = false
     // Every navigation panel with the droplet indicator uses Liquid Glass, independent
     // of the selected app-wide UI style. Other Material surfaces are untouched.
     val navLiquidPanel = true
@@ -1408,16 +1407,12 @@ private fun BottomNav(
                         )
                     } else {
                         Modifier.clip(panelShape).background(
-                            if (navMaterialPanel) {
-                                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.surface, p.surface))
-                            } else {
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    listOf(
-                                        p.surface.copy(alpha = if (navLiquidPanel) 0.46f * settings.opacity else settings.matteOpacity),
-                                        p.surface.copy(alpha = if (navLiquidPanel) 0.30f * settings.opacity else settings.matteOpacity * 0.84f)
-                                    )
+                            androidx.compose.ui.graphics.Brush.verticalGradient(
+                                listOf(
+                                    p.surface.copy(alpha = 0.46f * settings.opacity),
+                                    p.surface.copy(alpha = 0.30f * settings.opacity)
                                 )
-                            }
+                            )
                         )
                     }
                 )
@@ -3862,8 +3857,8 @@ private fun SettingsPage(
                             // navigation is a sibling and never samples itself.
                             Box(
                                 Modifier.matchParentSize()
-                                    .background(p.background)
                                     .layerBackdrop(navPreviewBackdrop)
+                                    .background(p.background)
                             )
                             BottomNav(
                                 navPreviewPage,
@@ -3880,7 +3875,7 @@ private fun SettingsPage(
                         valueRange = 100f..1000f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("${"Эластичность капли"}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("Эластичность капли: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.intensity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(intensity = it) },
