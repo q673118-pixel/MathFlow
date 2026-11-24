@@ -570,6 +570,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             { drawRect(backdropBackground); drawContent() }
         }
     val backdrop = rememberLayerBackdrop(onDraw = backdropDraw)
+    // The calculator display must not sample the same GraphicsLayer that records
+    // the whole page. Doing so creates a self-referential RenderNode on HOME.
+    // It samples the stable page base instead; the navigation still samples the
+    // full page capture above.
+    val homeBackdropDraw: androidx.compose.ui.graphics.drawscope.ContentDrawScope.() -> Unit =
+        remember(backdropBackground) { { drawRect(backdropBackground) } }
+    val homeBackdrop = rememberLayerBackdrop(onDraw = homeBackdropDraw)
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
@@ -645,7 +652,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalAppIconPack provides AppIconPack.fromId(iconPackId),
         LocalBottomNavGlassSettings provides bottomNavAnimationSettings,
-        LocalPageBackdrop provides backdrop,
+        LocalPageBackdrop provides homeBackdrop,
         // One persisted radius controls settings controls and calculator keys consistently.
         LocalSettingsCornerRadius provides settingsCornerRadiusDp,
         LocalKeyAnimationSettings provides keyAnimationSettings,
@@ -1361,6 +1368,10 @@ private fun BottomNav(
         contentAlignment = Alignment.Center
     ) {
         val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
+        val barGlassBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
+        // The panel and its content are siblings: the moving lens must not inherit
+        // Surface's rounded clipping and must be able to rise above the panel.
+        Box {
         Surface(
             modifier = Modifier
                 .then(
@@ -1404,13 +1415,15 @@ private fun BottomNav(
                     if (navLiquidPanel) 0.8.dp else 1.dp,
                     p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
                     panelShape
-                ),
+                )
+                .height(58.dp)
+                .then(if (barGlassBackdrop != null) Modifier.layerBackdrop(barGlassBackdrop) else Modifier),
             shape = panelShape,
             color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
             // Keep the floating glass capsule clean: the panel itself must not cast
             // a broad grey halo. The selected droplet retains its own local depth.
             shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
-        ) {
+        ) { }
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
@@ -1419,12 +1432,11 @@ private fun BottomNav(
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
                 val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
-                // The indicator samples only the page and the tab-row capture.
-                // Do not feed the panel's exported layer back into a child of that
-                // same panel: on some Android RenderThreads this creates a cyclic
-                // RenderNode display list and overflows the native render stack.
-                val indicatorBackdrop = if (useRefractiveLens && tabRowBackdrop != null) {
-                    rememberCombinedBackdrop(backdrop!!, tabRowBackdrop)
+                // RX Playa's ordering: page -> refractive panel -> moving fill -> tab row.
+                val indicatorBackdrop = if (
+                    useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null
+                ) {
+                    rememberCombinedBackdrop(backdrop!!, barGlassBackdrop, tabRowBackdrop)
                 } else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
@@ -1433,15 +1445,15 @@ private fun BottomNav(
                 } else current.ordinal
                 val indicatorWidth = minOf(
                     when {
-                        uiStyle.glassSurface -> 66.dp
+                        uiStyle.glassSurface -> itemWidth
                         style == BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
                         style == BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
                         else -> 72.dp
                     },
-                    itemWidth * if (uiStyle.glassSurface) 0.84f else 0.92f
+                    itemWidth * if (uiStyle.glassSurface) 1f else 0.92f
                 )
                 val indicatorHeight = when {
-                    uiStyle.glassSurface -> 44.dp
+                    uiStyle.glassSurface -> 48.dp
                     style == BottomNavAnimationStyle.MORPH -> 38.dp
                     style == BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
                     else -> 42.dp
@@ -1468,7 +1480,7 @@ private fun BottomNav(
                 val pillMotion = remember { LiquidGlassPillMotion(navScope, current.ordinal) }
                 pillMotion.reduceMotion = !settings.enabled
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
-                pillMotion.tabStepPx = tabStepPx
+                pillMotion.tabStepDp = itemWidth.value
                 LaunchedEffect(current, useRefractiveLens, settings.enabled, duration) {
                     if (useRefractiveLens && settings.enabled) {
                         pillMotion.animateTo(current.ordinal, duration.coerceAtLeast(100))
@@ -1692,7 +1704,7 @@ private fun BottomNav(
                                 val pillWidthPx = with(density) { indicatorWidth.toPx() }
                                 translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
                                 val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
-                                val growFactor = (restHeightPx + with(density) { 12.dp.toPx() }) / restHeightPx
+                                val growFactor = (restHeightPx + with(density) { 19.dp.toPx() }) / restHeightPx
                                 val styleWidth = when (style) {
                                     BottomNavAnimationStyle.RIPPLE_BLOOM,
                                     BottomNavAnimationStyle.EXPAND -> bloom.value
@@ -1717,7 +1729,6 @@ private fun BottomNav(
                                      RoundedCornerShape(percent = (settings.dropletRoundness * 50f).toInt().coerceIn(40, 50))
                                 },
                                 effects = {
-                                     if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
                                      val refraction = settings.refractionStrength
                                      if (refraction > 0f && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                                          lens(
@@ -1729,18 +1740,20 @@ private fun BottomNav(
                                      }
                                  },
                                  highlight = {
+                                     val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
                                      Highlight.Default.copy(
-                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.highlightStrength
+                                         alpha = pillMotion.material * rim * settings.highlightStrength
                                      )
                                  },
                                  shadow = {
+                                     val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
                                      Shadow(
                                          radius = 12.dp,
-                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.shadowStrength
+                                         alpha = pillMotion.material * rim * settings.shadowStrength
                                      )
                                  },
                                  onDrawSurface = {
-                                    drawRect(p.accent.copy(alpha = 0.035f))
+                                    drawRect(p.navActive.copy(alpha = p.navActive.alpha * (1f - pillMotion.material)))
                                 }
                             )
                             .size(width = indicatorWidth, height = indicatorHeight)
