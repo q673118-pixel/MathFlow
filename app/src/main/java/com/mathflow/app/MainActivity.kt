@@ -558,7 +558,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         }
     }
 
-    var page by remember { mutableStateOf(Page.HOME) }
+    var page by rememberSaveable { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(emptyList<HistoryEntry>()) }
     val historyScope = rememberCoroutineScope()
     val historyMutex = remember { Mutex() }
@@ -589,8 +589,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
     }
     var splashFinished by remember { mutableStateOf(false) }
-    // The first page must be fully laid out behind the intro; only later tab changes animate.
-    var initialPageRendered by remember { mutableStateOf(false) }
 
     var customFont by remember { mutableStateOf<FontFamily?>(null) }
     LaunchedEffect(fontPath) {
@@ -712,31 +710,36 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                             }
                         }
                         Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                            // Keep only one full page tree composed on low-memory devices.
-                            key(page) {
-                                pageStateHolder.SaveableStateProvider(page) {
-                                    val enterProgress = remember { Animatable(0f) }
-                                    LaunchedEffect(Unit) {
-                                        if (!initialPageRendered) {
-                                            enterProgress.snapTo(1f)
-                                            initialPageRendered = true
-                                        } else {
-                                            enterProgress.animateTo(
-                                                targetValue = 1f,
-                                                animationSpec = tween(PAGE_ENTER_DURATION_MS, easing = FastOutSlowInEasing)
-                                            )
-                                        }
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = page,
+                                contentKey = { it },
+                                transitionSpec = {
+                                    val forward = targetState.ordinal > initialState.ordinal
+                                    if (!ValueAnimator.areAnimatorsEnabled()) {
+                                        androidx.compose.animation.EnterTransition.None togetherWith
+                                            androidx.compose.animation.ExitTransition.None
+                                    } else {
+                                        (
+                                            slideInHorizontally(
+                                                animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                                initialOffsetX = { width -> if (forward) width / 10 else -width / 10 }
+                                            ) + androidx.compose.animation.fadeIn(tween(150))
+                                        ) togetherWith (
+                                            slideOutHorizontally(
+                                                animationSpec = tween(200, easing = FastOutSlowInEasing),
+                                                targetOffsetX = { width -> if (forward) -width / 12 else width / 12 }
+                                            ) + androidx.compose.animation.fadeOut(tween(130))
+                                        )
                                     }
-                                    Box(
-                                        Modifier.weight(1f).fillMaxWidth()
-                                            .layerBackdrop(backdrop)
-                                            .clipToBounds()
-                                            .graphicsLayer {
-                                                alpha = enterProgress.value
-                                                translationX = (1f - enterProgress.value) * 3.dp.toPx()
-                                            }
-                                    ) {
-                                        when (page) {
+                                },
+                                modifier = Modifier.weight(1f).fillMaxWidth()
+                                    .layerBackdrop(backdrop)
+                                    .clipToBounds(),
+                                label = "MathFlowPageTransition"
+                            ) { destinationPage ->
+                                pageStateHolder.SaveableStateProvider(destinationPage) {
+                                    Box(Modifier.fillMaxSize()) {
+                                        when (destinationPage) {
                                             Page.HOME -> CalculatorHome(
                                                 resultFormat = calculatorResultFormat,
                                                 onResultFormatChange = { format ->
@@ -1343,7 +1346,6 @@ private fun FirstLaunchWelcome(
 }
 
 private const val NAV_TRANSITION_DURATION_MS = 180
-private const val PAGE_ENTER_DURATION_MS = 160
 
 @Composable
 private fun BottomNav(
