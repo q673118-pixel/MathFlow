@@ -1711,22 +1711,29 @@ private fun BottomNav(
                         Modifier.matchParentSize()
                             .pillPlacement(
                                 center = {
-                                    val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
-                                        Page.values().lastIndex - pillMotion.position
-                                    } else pillMotion.position
                                     val cellWidthPx = with(density) { itemWidth.toPx() }
                                     val restHeightPx = with(density) { indicatorHeight.toPx() }
-                                    Offset(
-                                        (visualPosition + 0.5f) * cellWidthPx,
-                                        restHeightPx * 0.5f
+                                    val center = LiquidGlassPillGeometry.center(
+                                        pillMotion.position,
+                                        cellWidthPx,
+                                        restHeightPx,
+                                        Page.values().size,
+                                        layoutDirection == LayoutDirection.Rtl
                                     )
+                                    Offset(center.first, center.second)
                                 },
                                 size = {
                                     val restWidthPx = with(density) { itemWidth.toPx() }
                                     val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
-                                    // RX's lifted height is row + 5dp top/bottom inset + 9dp.
-                                    val liftedHeightPx = restHeightPx + with(density) { 19.dp.toPx() }
-                                    val liftedWidthPx = liftedHeightPx * restWidthPx / restHeightPx
+                                    val lifted = LiquidGlassPillGeometry.liftedSize(
+                                        restWidthPx,
+                                        restHeightPx,
+                                        with(density) { 5.dp.toPx() },
+                                        with(density) { 5.dp.toPx() },
+                                        with(density) { 9.dp.toPx() }
+                                    )
+                                    val liftedWidthPx = lifted.first
+                                    val liftedHeightPx = lifted.second
                                     val width = restWidthPx + (liftedWidthPx - restWidthPx) * pillMotion.liftX
                                     val height = restHeightPx + (liftedHeightPx - restHeightPx) * pillMotion.liftY
                                     Size(
