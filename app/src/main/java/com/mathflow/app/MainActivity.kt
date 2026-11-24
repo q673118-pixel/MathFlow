@@ -1493,7 +1493,7 @@ private fun BottomNav(
                 pillMotion.tabStepDp = itemWidth.value
                 LaunchedEffect(current, useRefractiveLens, settings.enabled, duration) {
                     if (useRefractiveLens && settings.enabled) {
-                        pillMotion.animateTo(current.ordinal, duration.coerceAtLeast(100))
+                        pillMotion.animateTo(current.ordinal)
                     } else {
                         pillMotion.snapTo(current.ordinal)
                     }
@@ -1609,11 +1609,11 @@ private fun BottomNav(
                                         onDragEnd = {
                                             val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
                                                 .roundToInt().coerceIn(0, Page.values().lastIndex)
-                                            pillMotion.release(logicalIndex, duration.coerceAtLeast(100))
+                                            pillMotion.release(logicalIndex)
                                             if (logicalIndex != current.ordinal) onSelect(Page.values()[logicalIndex])
                                         },
                                         onDragCancel = {
-                                            pillMotion.release(current.ordinal, duration.coerceAtLeast(100))
+                                            pillMotion.release(current.ordinal)
                                         },
                                         onHorizontalDrag = { change, dragAmount ->
                                             change.consume()
