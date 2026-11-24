@@ -54,8 +54,7 @@ internal class LiquidGlassPillMotion(
     var reduceMotion: Boolean = false
 
     private var targetIndex = initialIndex.toDouble()
-    private var travelPosition = targetIndex
-    private var travelVelocity = 0.0
+    private val travelSpring = SpringState(targetIndex, 0.0)
     private var travelStart = targetIndex
     private var travelActive = false
 
@@ -64,12 +63,9 @@ internal class LiquidGlassPillMotion(
     private var dragPosition = targetIndex
 
     private var lifted = false
-    private var liftXPosition = 0.0
-    private var liftXVelocity = 0.0
-    private var liftYPosition = 0.0
-    private var liftYVelocity = 0.0
-    private var materialPosition = 0.0
-    private var materialVelocity = 0.0
+    private val liftXSpring = SpringState(0.0, 0.0)
+    private val liftYSpring = SpringState(0.0, 0.0)
+    private val materialSpring = SpringState(0.0, 0.0)
 
     private var handoff = 1.0
     private var squashValue = 0.0
@@ -94,7 +90,7 @@ internal class LiquidGlassPillMotion(
         }
         if (index.toDouble() == targetIndex && !dragging) return
         targetIndex = index.toDouble()
-        travelStart = travelPosition
+        travelStart = travelSpring.position
         travelActive = true
         lifted = true
         travelDirection = directionOf(targetIndex - travelStart)
@@ -107,20 +103,20 @@ internal class LiquidGlassPillMotion(
         frameJob?.cancel()
         frameJob = null
         targetIndex = index.toDouble()
-        travelPosition = targetIndex
-        travelVelocity = 0.0
+        travelSpring.position = targetIndex
+        travelSpring.velocity = 0.0
         travelStart = targetIndex
         travelActive = false
         dragging = false
         dragPosition = targetIndex
         dragTarget = targetIndex
         lifted = false
-        liftXPosition = 0.0
-        liftXVelocity = 0.0
-        liftYPosition = 0.0
-        liftYVelocity = 0.0
-        materialPosition = 0.0
-        materialVelocity = 0.0
+        liftXSpring.position = 0.0
+        liftXSpring.velocity = 0.0
+        liftYSpring.position = 0.0
+        liftYSpring.velocity = 0.0
+        materialSpring.position = 0.0
+        materialSpring.velocity = 0.0
         handoff = 1.0
         squashValue = 0.0
         travelDirection = 0.0
@@ -134,8 +130,8 @@ internal class LiquidGlassPillMotion(
         dragging = true
         travelActive = false
         lifted = !reduceMotion
-        travelVelocity = 0.0
-        dragPosition = travelPosition
+        travelSpring.velocity = 0.0
+        dragPosition = travelSpring.position
         dragTarget = dragPosition
         travelDirection = 0.0
         clearSamples()
@@ -158,9 +154,9 @@ internal class LiquidGlassPillMotion(
         }
         dragging = false
         targetIndex = index.toDouble()
-        travelPosition = dragPosition
-        travelVelocity = 0.0
-        travelStart = travelPosition
+        travelSpring.position = dragPosition
+        travelSpring.velocity = 0.0
+        travelStart = travelSpring.position
         travelActive = true
         travelDirection = directionOf(targetIndex - travelStart)
         startFrames()
@@ -193,18 +189,14 @@ internal class LiquidGlassPillMotion(
         val dt = deltaSeconds
         var travelSettled = !travelActive
         if (travelActive) {
-            val result = springAxis(
-                travelPosition, travelVelocity, targetIndex, dt,
-                TRAVEL_STIFFNESS,
-                TRAVEL_DAMPING
+            LiquidGlassPillPhysics.springStepInPlace(
+                travelSpring, targetIndex, dt, TRAVEL_STIFFNESS, TRAVEL_DAMPING
             )
-            travelPosition = result.first
-            travelVelocity = result.second
-            travelSettled = abs(travelPosition - targetIndex) < 0.003 &&
-                abs(travelVelocity) < 0.05
+            travelSettled = abs(travelSpring.position - targetIndex) < 0.003 &&
+                abs(travelSpring.velocity) < 0.05
             if (travelSettled) {
-                travelPosition = targetIndex
-                travelVelocity = 0.0
+                travelSpring.position = targetIndex
+                travelSpring.velocity = 0.0
             }
         }
 
@@ -222,27 +214,28 @@ internal class LiquidGlassPillMotion(
         }
 
         val liftTarget = if (lifted) 1.0 else 0.0
-        LiquidGlassPillPhysics.stepLift(
-            springAxis(liftXPosition, liftXVelocity, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_X),
-            liftTarget
-        ).also { liftXPosition = it.first; liftXVelocity = it.second }
-        LiquidGlassPillPhysics.stepLift(
-            springAxis(liftYPosition, liftYVelocity, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_Y),
-            liftTarget
-        ).also { liftYPosition = it.first; liftYVelocity = it.second }
-        LiquidGlassPillPhysics.stepLift(
-            springAxis(materialPosition, materialVelocity, liftTarget, dt, MATERIAL_STIFFNESS, MATERIAL_DAMPING),
-            liftTarget
-        ).also { materialPosition = it.first; materialVelocity = it.second }
+        LiquidGlassPillPhysics.springStepInPlace(
+            liftXSpring, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_X
+        )
+        LiquidGlassPillPhysics.stepLiftInPlace(liftXSpring, liftTarget)
+        LiquidGlassPillPhysics.springStepInPlace(
+            liftYSpring, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_Y
+        )
+        LiquidGlassPillPhysics.stepLiftInPlace(liftYSpring, liftTarget)
+        LiquidGlassPillPhysics.springStepInPlace(
+            materialSpring, liftTarget, dt, MATERIAL_STIFFNESS, MATERIAL_DAMPING
+        )
+        LiquidGlassPillPhysics.stepLiftInPlace(materialSpring, liftTarget)
 
         val liftSettled = !lifted &&
-            liftXPosition == 0.0 && liftYPosition == 0.0 && materialPosition == 0.0
+            liftXSpring.position == 0.0 && liftYSpring.position == 0.0 &&
+            materialSpring.position == 0.0
 
         if (travelActive && travelSettled && liftSettled && !dragging) {
             travelActive = false
         }
 
-        val drawnPosition = if (dragging) dragPosition else travelPosition
+        val drawnPosition = if (dragging) dragPosition else travelSpring.position
         if (tabStepDp > 0f) {
             recordSample(drawnPosition * tabStepDp, nowSeconds)
             val raw = (averageAcceleration() * ACCELERATION_GAIN)
@@ -284,7 +277,7 @@ internal class LiquidGlassPillMotion(
     private fun travelProgress(): Double {
         val distance = abs(targetIndex - travelStart)
         if (distance < 0.000001) return 1.0
-        return (1.0 - abs(targetIndex - travelPosition) / distance).coerceIn(0.0, 1.0)
+        return (1.0 - abs(targetIndex - travelSpring.position) / distance).coerceIn(0.0, 1.0)
     }
 
     private fun recordSample(positionDp: Double, time: Double) {
@@ -342,10 +335,10 @@ internal class LiquidGlassPillMotion(
 
     private fun publish() {
         frameState = FrameState(
-            position = (if (dragging) dragPosition else travelPosition).toFloat(),
-            liftX = liftXPosition.toFloat(),
-            liftY = liftYPosition.toFloat(),
-            material = materialPosition.coerceIn(0.0, 1.0).toFloat(),
+            position = (if (dragging) dragPosition else travelSpring.position).toFloat(),
+            liftX = liftXSpring.position.toFloat(),
+            liftY = liftYSpring.position.toFloat(),
+            material = materialSpring.position.coerceIn(0.0, 1.0).toFloat(),
             deviation = squashValue.toFloat(),
             glassPresence = (1.0 - handoff).coerceIn(0.0, 1.0).toFloat()
         )
@@ -353,19 +346,6 @@ internal class LiquidGlassPillMotion(
 
     private fun directionOf(distance: Double): Double =
         if (abs(distance) < 0.000001) 0.0 else sign(distance)
-
-    private fun springAxis(
-        position: Double,
-        velocity: Double,
-        target: Double,
-        elapsed: Double,
-        stiffness: Double,
-        damping: Double
-    ): Pair<Double, Double> {
-        return LiquidGlassPillPhysics.springStep(
-            position, velocity, target, elapsed, stiffness, damping
-        )
-    }
 
     private companion object {
         const val TRAVEL_STIFFNESS = 280.0
