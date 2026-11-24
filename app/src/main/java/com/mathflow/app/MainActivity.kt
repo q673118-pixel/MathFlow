@@ -1752,7 +1752,7 @@ private fun BottomNav(
                                  highlight = {
                                      val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
                                      Highlight.Default.copy(
-                                         alpha = pillMotion.material * rim * settings.highlightStrength
+                                         alpha = pillMotion.material * rim
                                      )
                                  },
                                  shadow = {
