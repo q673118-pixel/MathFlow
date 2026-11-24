@@ -25,18 +25,27 @@ internal class LiquidGlassPillMotion(
     private val scope: CoroutineScope,
     initialIndex: Int
 ) {
-    var position by mutableFloatStateOf(initialIndex.toFloat())
-        private set
-    var liftX by mutableFloatStateOf(0f)
-        private set
-    var liftY by mutableFloatStateOf(0f)
-        private set
-    var material by mutableFloatStateOf(0f)
-        private set
-    var deviation by mutableFloatStateOf(0f)
-        private set
-    var glassPresence by mutableFloatStateOf(0f)
-        private set
+    private data class FrameState(
+        val position: Float,
+        val liftX: Float,
+        val liftY: Float,
+        val material: Float,
+        val deviation: Float,
+        val glassPresence: Float
+    )
+
+    // Publish one immutable frame snapshot instead of six independent snapshot writes.
+    // This limits invalidation to the draw/layer nodes that actually consume motion.
+    private var frameState by mutableStateOf(
+        FrameState(initialIndex.toFloat(), 0f, 0f, 0f, 0f, 0f)
+    )
+    val position: Float get() = frameState.position
+    val liftX: Float get() = frameState.liftX
+    val liftY: Float get() = frameState.liftY
+    val material: Float get() = frameState.material
+    val deviation: Float get() = frameState.deviation
+    val glassPresence: Float get() = frameState.glassPresence
+
     var isFlat by mutableStateOf(true)
         private set
 
@@ -67,9 +76,13 @@ internal class LiquidGlassPillMotion(
     private var travelDirection = 0.0
     private var easedDirection = 0.0
 
-    // Keep the complete 300 ms window at every refresh rate. A fixed 48-frame
-    // ring silently shortened this window on 240 Hz displays.
-    private val sampleHistory = ArrayList<Pair<Double, Double>>()
+    // Primitive ring buffer: the acceleration window is sampled every frame.
+    // Avoid Pair/ArrayList allocation and removeAll scans on the animation hot path.
+    // 128 samples cover the full 300 ms window up to 426 Hz.
+    private val samplePositions = DoubleArray(SAMPLE_CAPACITY)
+    private val sampleTimes = DoubleArray(SAMPLE_CAPACITY)
+    private var sampleStart = 0
+    private var sampleCount = 0
 
     private var frameJob: Job? = null
     private var generation = 0
@@ -275,47 +288,67 @@ internal class LiquidGlassPillMotion(
     }
 
     private fun recordSample(positionDp: Double, time: Double) {
-        sampleHistory.add(positionDp to time)
+        if (sampleCount == SAMPLE_CAPACITY) {
+            sampleStart = (sampleStart + 1) % SAMPLE_CAPACITY
+            sampleCount--
+        }
+        val writeIndex = (sampleStart + sampleCount) % SAMPLE_CAPACITY
+        samplePositions[writeIndex] = positionDp
+        sampleTimes[writeIndex] = time
+        sampleCount++
+
         val cutoff = time - ACCELERATION_WINDOW
-        sampleHistory.removeAll { it.second < cutoff }
+        while (sampleCount > 0 && sampleTimes[sampleStart] < cutoff) {
+            sampleStart = (sampleStart + 1) % SAMPLE_CAPACITY
+            sampleCount--
+        }
     }
 
     private fun averageAcceleration(): Double {
-        if (sampleHistory.size < 3) return 0.0
-        val velocities = ArrayList<Pair<Double, Double>>(sampleHistory.size)
-        for (i in 1 until sampleHistory.size) {
-            val previous = sampleHistory[i - 1]
-            val current = sampleHistory[i]
-            val elapsed = current.second - previous.second
-            if (elapsed <= 0.0) continue
-            velocities.add(
-                (current.first - previous.first) / elapsed to
-                    (current.second + previous.second) * 0.5
-            )
-        }
-        if (velocities.size < 2) return 0.0
+        if (sampleCount < 3) return 0.0
+
+        var previousVelocity = 0.0
+        var previousMidpoint = 0.0
+        var hasPreviousVelocity = false
         var totalAcceleration = 0.0
-        var count = 0
-        for (i in 1 until velocities.size) {
-            val elapsed = velocities[i].second - velocities[i - 1].second
+        var accelerationCount = 0
+
+        for (i in 1 until sampleCount) {
+            val previousIndex = (sampleStart + i - 1) % SAMPLE_CAPACITY
+            val currentIndex = (sampleStart + i) % SAMPLE_CAPACITY
+            val elapsed = sampleTimes[currentIndex] - sampleTimes[previousIndex]
             if (elapsed <= 0.0) continue
-            totalAcceleration += (velocities[i].first - velocities[i - 1].first) / elapsed
-            count++
+
+            val velocity = (samplePositions[currentIndex] - samplePositions[previousIndex]) / elapsed
+            val midpoint = (sampleTimes[currentIndex] + sampleTimes[previousIndex]) * 0.5
+            if (hasPreviousVelocity) {
+                val velocityElapsed = midpoint - previousMidpoint
+                if (velocityElapsed > 0.0) {
+                    totalAcceleration += (velocity - previousVelocity) / velocityElapsed
+                    accelerationCount++
+                }
+            }
+            previousVelocity = velocity
+            previousMidpoint = midpoint
+            hasPreviousVelocity = true
         }
-        return if (count == 0) 0.0 else totalAcceleration / count
+        return if (accelerationCount == 0) 0.0 else totalAcceleration / accelerationCount
     }
 
     private fun clearSamples() {
-        sampleHistory.clear()
+        sampleStart = 0
+        sampleCount = 0
     }
 
     private fun publish() {
-        position = (if (dragging) dragPosition else travelPosition).toFloat()
-        liftX = liftXPosition.toFloat()
-        liftY = liftYPosition.toFloat()
-        material = materialPosition.coerceIn(0.0, 1.0).toFloat()
-        deviation = squashValue.toFloat()
-        glassPresence = (1.0 - handoff).coerceIn(0.0, 1.0).toFloat()
+        frameState = FrameState(
+            position = (if (dragging) dragPosition else travelPosition).toFloat(),
+            liftX = liftXPosition.toFloat(),
+            liftY = liftYPosition.toFloat(),
+            material = materialPosition.coerceIn(0.0, 1.0).toFloat(),
+            deviation = squashValue.toFloat(),
+            glassPresence = (1.0 - handoff).coerceIn(0.0, 1.0).toFloat()
+        )
     }
 
     private fun directionOf(distance: Double): Double =
@@ -354,5 +387,6 @@ internal class LiquidGlassPillMotion(
         const val SQUASH_RESPONSE_TIME = 0.18
 
         const val MAX_RESUMED_FRAME_GAP = 0.25
+        const val SAMPLE_CAPACITY = 128
     }
 }
