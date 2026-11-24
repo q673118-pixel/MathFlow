@@ -32,6 +32,7 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1418,6 +1419,7 @@ private fun BottomNav(
                     p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
                     panelShape
                 )
+                .fillMaxWidth()
                 .height(58.dp)
                 .then(if (barGlassBackdrop != null) Modifier.layerBackdrop(barGlassBackdrop) else Modifier),
             shape = panelShape,
