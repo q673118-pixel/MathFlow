@@ -1481,8 +1481,8 @@ private fun BottomNav(
                     useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null
                 ) {
                     rememberSelectionPillBackdrop(
-                        backdrop!!, barGlassBackdrop, tabRowBackdrop, p.navActive, pillMotion.material
-                    )
+                        backdrop!!, barGlassBackdrop, tabRowBackdrop, p.navActive
+                    ) { pillMotion.material }
                 } else null
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                 pillMotion.tabStepDp = itemWidth.value
@@ -1749,14 +1749,13 @@ private fun rememberSelectionPillBackdrop(
     panel: Backdrop,
     tabs: Backdrop,
     fillColor: Color,
-    material: Float
+    material: () -> Float
 ): Backdrop {
     val currentFill by rememberUpdatedState(fillColor)
-    val currentMaterial by rememberUpdatedState(material)
     return remember(page, panel, tabs) {
         SelectionPillBackdrop(page, panel, tabs) {
             val color = currentFill
-            color.copy(alpha = color.alpha * (1f - currentMaterial))
+            color.copy(alpha = color.alpha * (1f - material()))
         }
     }
 }
