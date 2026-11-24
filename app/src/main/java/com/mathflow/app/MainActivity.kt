@@ -129,6 +129,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
@@ -148,6 +149,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -1692,24 +1694,34 @@ private fun BottomNav(
                 }
                 if (useRefractiveLens && !pillMotion.isFlat) {
                     Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .graphicsLayer {
-                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
-                                    Page.values().lastIndex - pillMotion.position
-                                } else pillMotion.position
-                                val cellWidthPx = with(density) { itemWidth.toPx() }
-                                val pillWidthPx = with(density) { indicatorWidth.toPx() }
-                                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
-                                val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
-                                // RX's measured lifted size: row height + 5dp top/bottom
-                                // content padding + 9dp growth, with proportional width.
-                                val growFactor = (restHeightPx + with(density) { 19.dp.toPx() }) / restHeightPx
-                                scaleX = (1f + (growFactor - 1f) * pillMotion.liftX) *
-                                    (1f + pillMotion.deviation)
-                                scaleY = (1f + (growFactor - 1f) * pillMotion.liftY) *
-                                    (1f - pillMotion.deviation)
-                                alpha = indicatorAlpha.value
-                            }
+                        Modifier.matchParentSize()
+                            .pillPlacement(
+                                center = {
+                                    val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
+                                        Page.values().lastIndex - pillMotion.position
+                                    } else pillMotion.position
+                                    val cellWidthPx = with(density) { itemWidth.toPx() }
+                                    val restHeightPx = with(density) { indicatorHeight.toPx() }
+                                    Offset(
+                                        (visualPosition + 0.5f) * cellWidthPx,
+                                        restHeightPx * 0.5f
+                                    )
+                                },
+                                size = {
+                                    val restWidthPx = with(density) { itemWidth.toPx() }
+                                    val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
+                                    // RX's lifted height is row + 5dp top/bottom inset + 9dp.
+                                    val liftedHeightPx = restHeightPx + with(density) { 19.dp.toPx() }
+                                    val liftedWidthPx = liftedHeightPx * restWidthPx / restHeightPx
+                                    val width = restWidthPx + (liftedWidthPx - restWidthPx) * pillMotion.liftX
+                                    val height = restHeightPx + (liftedHeightPx - restHeightPx) * pillMotion.liftY
+                                    Size(
+                                        width * (1f + pillMotion.deviation),
+                                        height * (1f - pillMotion.deviation)
+                                    )
+                                }
+                            )
+                            .graphicsLayer { alpha = indicatorAlpha.value }
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
                                 shape = {
@@ -1740,11 +1752,27 @@ private fun BottomNav(
                                      )
                                  },
                             )
-                            .size(width = indicatorWidth, height = indicatorHeight)
                     )
                 }
             }
         }
+    }
+}
+
+private fun Modifier.pillPlacement(
+    center: () -> Offset,
+    size: () -> Size
+): Modifier = layout { measurable, constraints ->
+    val targetSize = size()
+    val width = targetSize.width.roundToInt().coerceAtLeast(1)
+    val height = targetSize.height.roundToInt().coerceAtLeast(1)
+    val placeable = measurable.measure(Constraints.fixed(width, height))
+    layout(constraints.minWidth, constraints.minHeight) {
+        val targetCenter = center()
+        placeable.place(
+            (targetCenter.x - width / 2f).roundToInt(),
+            (targetCenter.y - height / 2f).roundToInt()
+        )
     }
 }
 
