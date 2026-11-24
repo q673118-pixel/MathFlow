@@ -581,6 +581,9 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             { drawRect(backdropBackground); drawContent() }
         }
     val backdrop = rememberLayerBackdrop(onDraw = backdropDraw)
+    // The full page capture is only consumed by the Liquid Glass navigation.
+    // Avoid recording the entire page for every other global visual style.
+    val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).glassSurface
     // The calculator display samples a separate background-only source.
     // It must never read the full-page layer that is currently recording HOME.
     val homeBackdrop = rememberLayerBackdrop()
@@ -733,7 +736,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                 },
                                 modifier = Modifier.weight(1f).fillMaxWidth()
-                                    .layerBackdrop(backdrop)
+                                    .then(if (capturePageBackdrop) Modifier.layerBackdrop(backdrop) else Modifier)
                                     .clipToBounds(),
                                 label = "MathFlowPageTransition"
                             ) { destinationPage ->
