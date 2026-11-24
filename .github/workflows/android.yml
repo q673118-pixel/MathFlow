@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [ "main", "redesign-ui", "liquid-glass-rx-parity" ]
+  pull_request:
+    branches: [ "redesign-ui" ]
 
 permissions:
   contents: read
