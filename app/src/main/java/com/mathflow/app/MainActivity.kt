@@ -1339,7 +1339,6 @@ private fun BottomNav(
     // The preview is embedded in a settings card, not in the app window. It must
     // never consume Android system-bar insets or sample a rectangular page backdrop.
     val useRefractiveLens = uiStyle.glassSurface && backdrop != null && !preview
-    val barGlassBackdrop = if (navLiquidPanel && useRefractiveLens) rememberLayerBackdrop() else null
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
 
@@ -1385,7 +1384,6 @@ private fun BottomNav(
                             onDrawSurface = {
                                 drawRect(p.surface.copy(alpha = 0.28f * settings.opacity))
                             }
-                             ,exportedBackdrop = barGlassBackdrop
                         )
                     } else {
                         Modifier.clip(panelShape).background(
@@ -1421,12 +1419,12 @@ private fun BottomNav(
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
                 val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
+                // The indicator samples only the page and the tab-row capture.
+                // Do not feed the panel's exported layer back into a child of that
+                // same panel: on some Android RenderThreads this creates a cyclic
+                // RenderNode display list and overflows the native render stack.
                 val indicatorBackdrop = if (useRefractiveLens && tabRowBackdrop != null) {
-                    if (barGlassBackdrop != null) {
-                        rememberCombinedBackdrop(backdrop!!, barGlassBackdrop, tabRowBackdrop)
-                    } else {
-                        rememberCombinedBackdrop(backdrop!!, tabRowBackdrop)
-                    }
+                    rememberCombinedBackdrop(backdrop!!, tabRowBackdrop)
                 } else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
