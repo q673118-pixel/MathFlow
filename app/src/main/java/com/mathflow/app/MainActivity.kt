@@ -1448,7 +1448,7 @@ private fun BottomNav(
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
-                val itemWidth = maxWidth / Page.values().size
+                val itemWidth = maxWidth / Page.entries.size
                 // One capture for the complete tab row replaces five per-icon
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
@@ -1456,7 +1456,7 @@ private fun BottomNav(
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
-                    Page.values().lastIndex - current.ordinal
+                    Page.entries.lastIndex - current.ordinal
                 } else current.ordinal
                 val indicatorWidth = minOf(
                     when {
@@ -1595,7 +1595,7 @@ private fun BottomNav(
                         Modifier.align(Alignment.CenterStart)
                             .graphicsLayer {
                                 val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
-                                    Page.values().lastIndex - pillMotion.position
+                                    Page.entries.lastIndex - pillMotion.position
                                 } else pillMotion.position
                                 val cellWidthPx = with(density) { itemWidth.toPx() }
                                 val pillWidthPx = with(density) { indicatorWidth.toPx() }
@@ -1622,9 +1622,9 @@ private fun BottomNav(
                                         },
                                         onDragEnd = {
                                             val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
-                                                .roundToInt().coerceIn(0, Page.values().lastIndex)
+                                                .roundToInt().coerceIn(0, Page.entries.lastIndex)
                                             pillMotion.release(logicalIndex)
-                                            if (logicalIndex != current.ordinal) onSelect(Page.values()[logicalIndex])
+                                            if (logicalIndex != current.ordinal) onSelect(Page.entries[logicalIndex])
                                         },
                                         onDragCancel = {
                                             pillMotion.release(current.ordinal)
@@ -1635,7 +1635,7 @@ private fun BottomNav(
                                             dragDistance += dragAmount * logicalDirection
                                             pillMotion.dragTo(
                                                 (dragStartIndex + dragDistance / tabStepPx)
-                                                    .coerceIn(0f, Page.values().lastIndex.toFloat())
+                                                    .coerceIn(0f, Page.entries.lastIndex.toFloat())
                                             )
                                         }
                                     )
@@ -1644,7 +1644,7 @@ private fun BottomNav(
                         ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Page.values().forEach { item ->
+                    Page.entries.forEach { item ->
                         val isSelected = item == current
                         val tint by animateColorAsState(
                             targetValue = if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
@@ -1719,7 +1719,7 @@ private fun BottomNav(
                                         pillMotion.position,
                                         cellWidthPx,
                                         restHeightPx,
-                                        Page.values().size,
+                                        Page.entries.size,
                                         layoutDirection == LayoutDirection.Rtl
                                     )
                                     Offset(center.first, center.second)
