@@ -88,3 +88,11 @@ internal enum class MathFlowUiStyle(
 internal val LocalMathFlowUiStyle = staticCompositionLocalOf {
     MathFlowUiStyle.MATERIAL_YOU
 }
+
+
+/**
+ * A refractive navigation renderer is valid only for the global Liquid Glass
+ * visual system and when a real backdrop source is available.
+ */
+internal fun MathFlowUiStyle.usesRefractiveNavigation(backdropAvailable: Boolean): Boolean =
+    glassSurface && backdropAvailable
