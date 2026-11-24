@@ -580,7 +580,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     val backdrop = rememberLayerBackdrop(onDraw = backdropDraw)
     // The full page capture is only consumed by the Liquid Glass navigation.
     // Avoid recording the entire page for every other global visual style.
-    val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).glassSurface
+    val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
@@ -1355,7 +1355,7 @@ private fun BottomNav(
     val uiStyle = LocalMathFlowUiStyle.current
     // Liquid Glass navigation is active only when Liquid Glass is the global UI style.
     // Every other style keeps its own existing navigation surface and indicator.
-    val navLiquidPanel = uiStyle.glassSurface
+    val navLiquidPanel = uiStyle.liquidGlassNavigation
     // The preview uses the same global style gate as the real navigation bar.
     // It receives a backdrop only to render Liquid Glass when that style is selected.
     val useRefractiveLens = uiStyle.usesRefractiveNavigation(backdrop != null)
@@ -2126,7 +2126,7 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = if (uiStyle.glassSurface) 112.dp else 30.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = if (uiStyle.liquidGlassNavigation) 112.dp else 30.dp),
         verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 12.dp)
     ) {
         Text(displayText(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
@@ -3612,44 +3612,22 @@ private fun SettingsPage(
                 Panel {
                     Text("СТИЛЬ ПАНЕЛИ НАВИГАЦИИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Text(
-                        if (false) {
-                            "Используется Liquid Glass: преломление, размытие и физика капли."
+                        if (uiStyle.liquidGlassNavigation) {
+                            "Liquid Glass применяется только к панели навигации и движущейся капле. Остальные панели сохраняют обычное оформление."
                         } else {
-                            "Панель и индикатор используют оформление выбранного глобального стиля: ${uiStyle.title}."
+                            "Панель и индикатор используют оформление выбранного стиля: ${uiStyle.title}."
                         },
                         color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
                     )
                 }
                 Panel {
-                    Text("МАТОВЫЕ ПОВЕРХНОСТИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    Text("Матовое стекло · общие поверхности", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Эти параметры управляют непрозрачностью, глубиной, бликами и тенями матовых поверхностей. Капля на панели настраивается отдельно.",
+                    Text("КОНТУР ОБЫЧНОЙ ПАНЕЛИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text("Настройка влияет только на контур стандартной панели навигации; Liquid Glass-капля использует собственные параметры RX.",
                         color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
-                    Text("Непрозрачность: ${(pendingNavAnimationSettings.matteOpacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
-                    Slider(
-                        value = pendingNavAnimationSettings.matteOpacity,
-                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteOpacity = it) },
-                        valueRange = 0.25f..0.96f,
-                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
-                    )
-                    Text("Глубина: ${(pendingNavAnimationSettings.matteDepth * 100).toInt()}%", color = p.text, fontSize = 13.sp)
-                    Slider(
-                        value = pendingNavAnimationSettings.matteDepth,
-                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteDepth = it) },
-                        valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
-                    )
-                    Text("Блики: ${(pendingNavAnimationSettings.matteHighlight * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("Выраженность контура: ${(pendingNavAnimationSettings.matteHighlight * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.matteHighlight,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteHighlight = it) },
-                        valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
-                    )
-                    Text("Тени: ${(pendingNavAnimationSettings.matteShadow * 100).toInt()}%", color = p.text, fontSize = 13.sp)
-                    Slider(
-                        value = pendingNavAnimationSettings.matteShadow,
-                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteShadow = it) },
                         valueRange = 0f..1f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
