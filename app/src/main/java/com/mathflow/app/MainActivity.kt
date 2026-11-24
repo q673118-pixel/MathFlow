@@ -133,7 +133,6 @@ import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
@@ -1609,8 +1608,6 @@ private fun BottomNav(
                                             if (logicalIndex != current.ordinal) onSelect(Page.values()[logicalIndex])
                                         },
                                         onDragCancel = {
-                                            isDragging = false
-                                            isPressed = false
                                             pillMotion.release(current.ordinal, duration.coerceAtLeast(100))
                                         },
                                         onHorizontalDrag = { change, dragAmount ->
@@ -1699,14 +1696,11 @@ private fun BottomNav(
                                 val pillWidthPx = with(density) { indicatorWidth.toPx() }
                                 translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
                                 val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
+                                // RX's measured lifted size: row height + 5dp top/bottom
+                                // content padding + 9dp growth, with proportional width.
                                 val growFactor = (restHeightPx + with(density) { 19.dp.toPx() }) / restHeightPx
-                                val styleWidth = when (style) {
-                                    BottomNavAnimationStyle.RIPPLE_BLOOM,
-                                    BottomNavAnimationStyle.EXPAND -> bloom.value
-                                    else -> 1f
-                                }
                                 scaleX = (1f + (growFactor - 1f) * pillMotion.liftX) *
-                                    (1f + pillMotion.deviation) * indicatorScaleX.value * styleWidth
+                                    (1f + pillMotion.deviation)
                                 scaleY = (1f + (growFactor - 1f) * pillMotion.liftY) *
                                     (1f - pillMotion.deviation)
                                 alpha = indicatorAlpha.value
