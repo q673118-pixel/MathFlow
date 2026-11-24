@@ -1676,7 +1676,7 @@ private fun BottomNav(
                             Modifier.weight(1f).height(48.dp)
                                 .semantics {
                                     role = Role.Tab
-                                    selected = selected
+                                    this.selected = selected
                                 }
                                 .mathFlowClickable {
                                     if (!selected) onSelect(item)
