@@ -1414,7 +1414,7 @@ private fun BottomNav(
                                 val tint = if (p.dark) Color(0xFF121212) else Color(0xFFFAFAFA)
                                 drawRect(tint.copy(alpha = 0.4f))
                             },
-                            backdropScale = 0.33f
+                            exportedBackdrop = barGlassBackdrop
                         )
                     } else {
                         Modifier.clip(panelShape).background(
@@ -1436,8 +1436,7 @@ private fun BottomNav(
                     )
                 )
                 .fillMaxWidth()
-                .height(58.dp)
-                .then(if (barGlassBackdrop != null) Modifier.layerBackdrop(barGlassBackdrop) else Modifier),
+                .height(58.dp),
             shape = panelShape,
             color = if (navLiquidPanel) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
             // Keep the floating glass capsule clean: the panel itself must not cast
