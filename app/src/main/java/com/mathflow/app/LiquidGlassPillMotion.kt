@@ -205,12 +205,18 @@ internal class LiquidGlassPillMotion(
         }
 
         val liftTarget = if (lifted) 1.0 else 0.0
-        springAxis(liftXPosition, liftXVelocity, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_X)
-            .also { liftXPosition = snapAxis(it, liftTarget).first; liftXVelocity = snapAxis(it, liftTarget).second }
-        springAxis(liftYPosition, liftYVelocity, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_Y)
-            .also { liftYPosition = snapAxis(it, liftTarget).first; liftYVelocity = snapAxis(it, liftTarget).second }
-        springAxis(materialPosition, materialVelocity, liftTarget, dt, MATERIAL_STIFFNESS, MATERIAL_DAMPING)
-            .also { materialPosition = snapAxis(it, liftTarget).first; materialVelocity = snapAxis(it, liftTarget).second }
+        LiquidGlassPillPhysics.stepLift(
+            springAxis(liftXPosition, liftXVelocity, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_X),
+            liftTarget
+        ).also { liftXPosition = it.first; liftXVelocity = it.second }
+        LiquidGlassPillPhysics.stepLift(
+            springAxis(liftYPosition, liftYVelocity, liftTarget, dt, LIFT_STIFFNESS, LIFT_DAMPING_Y),
+            liftTarget
+        ).also { liftYPosition = it.first; liftYVelocity = it.second }
+        LiquidGlassPillPhysics.stepLift(
+            springAxis(materialPosition, materialVelocity, liftTarget, dt, MATERIAL_STIFFNESS, MATERIAL_DAMPING),
+            liftTarget
+        ).also { materialPosition = it.first; materialVelocity = it.second }
 
         val liftSettled = !lifted &&
             liftXPosition == 0.0 && liftYPosition == 0.0 && materialPosition == 0.0
@@ -323,12 +329,6 @@ internal class LiquidGlassPillMotion(
             position, velocity, target, elapsed, stiffness, damping
         )
     }
-
-    private fun snapAxis(
-        result: Pair<Double, Double>,
-        target: Double
-    ): Pair<Double, Double> =
-        LiquidGlassPillPhysics.stepLift(result, target)
 
     private companion object {
         const val TRAVEL_STIFFNESS = 280.0
