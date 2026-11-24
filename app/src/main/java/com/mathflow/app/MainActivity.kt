@@ -3685,7 +3685,7 @@ private fun SettingsPage(
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
                     Text(
-                        "${if (false) "Эластичность капли" else "Интенсивность анимации"}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%",
+                        "Интенсивность анимации: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%",
                         color = p.text, fontSize = 13.sp
                     )
                     Slider(
@@ -3713,7 +3713,7 @@ private fun SettingsPage(
                     Slider(value = pendingNavAnimationSettings.highlightStrength, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(highlightStrength = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
                     Text("Тень: ${(pendingNavAnimationSettings.shadowStrength * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(value = pendingNavAnimationSettings.shadowStrength, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(shadowStrength = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
-                    Text("${if (false) "Прозрачность стекла" else tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.opacity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(opacity = it) },
