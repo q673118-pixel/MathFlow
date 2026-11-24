@@ -1758,9 +1758,10 @@ private fun BottomNav(
                                  shadow = {
                                      val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
                                      Shadow(
-                                         radius = 12.dp,
-                                         alpha = pillMotion.material * rim * settings.shadowStrength
-                                     )
+                                          radius = 12.dp,
+                                          offset = DpOffset(0.dp, 2.dp),
+                                          color = Color.Black.copy(alpha = 0.3f)
+                                      ).copy(alpha = pillMotion.material * rim)
                                  },
                             )
                     )
