@@ -1643,30 +1643,30 @@ private fun BottomNav(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Page.values().forEach { item ->
-                        val selected = item == current
+                        val isSelected = item == current
                         val tint by animateColorAsState(
-                            targetValue = if (selected) p.accent else p.accent.copy(alpha = 0.74f),
+                            targetValue = if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
                             animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconTint"
                         )
                         val iconScale by animateFloatAsState(
                             targetValue = when {
-                                useRefractiveLens && selected -> 1.12f
-                                settings.enabled && selected -> 1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
+                                useRefractiveLens && isSelected -> 1.12f
+                                settings.enabled && isSelected -> 1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
                                 else -> 1f
                             },
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconScale"
                         )
                         val morphY by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && !useRefractiveLens && style == BottomNavAnimationStyle.MORPH) {
+                            targetValue = if (settings.enabled && isSelected && !useRefractiveLens && style == BottomNavAnimationStyle.MORPH) {
                                 1f - settings.iconScale * (0.18f + settings.intensity * 0.22f)
                             } else 1f,
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconMorph"
                         )
                         val focusAlpha by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
+                            targetValue = if (settings.enabled && isSelected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
                                 settings.opacity * 0.72f
                             } else 0f,
                             animationSpec = tween(duration, easing = FastOutSlowInEasing),
@@ -1676,10 +1676,10 @@ private fun BottomNav(
                             Modifier.weight(1f).height(48.dp)
                                 .semantics {
                                     role = Role.Tab
-                                    this.selected = selected
+                                    selected = isSelected
                                 }
                                 .mathFlowClickable {
-                                    if (!selected) onSelect(item)
+                                    if (!isSelected) onSelect(item)
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -1693,7 +1693,7 @@ private fun BottomNav(
                             }
                             // Fade the sharp glyph according to the moving droplet's actual
                             // overlap. This crossfades continuously instead of removing it
-                            // as soon as the destination tab becomes selected.
+                            // as soon as the destination tab becomes isSelected.
                             AppIcon(
                                 glyph = item.glyph,
                                 contentDescription = displayText(item.title),
