@@ -573,13 +573,9 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             { drawRect(backdropBackground); drawContent() }
         }
     val backdrop = rememberLayerBackdrop(onDraw = backdropDraw)
-    // The calculator display must not sample the same GraphicsLayer that records
-    // the whole page. Doing so creates a self-referential RenderNode on HOME.
-    // It samples the stable page base instead; the navigation still samples the
-    // full page capture above.
-    val homeBackdropDraw: androidx.compose.ui.graphics.drawscope.ContentDrawScope.() -> Unit =
-        remember(backdropBackground) { { drawRect(backdropBackground) } }
-    val homeBackdrop = rememberLayerBackdrop(onDraw = homeBackdropDraw)
+    // The calculator display samples a separate background-only source.
+    // It must never read the full-page layer that is currently recording HOME.
+    val homeBackdrop = rememberLayerBackdrop()
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
@@ -685,6 +681,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                         themeBloom.animateTo(1f, animationSpec = tween(680, easing = FastOutSlowInEasing))
                     }
                     Box(Modifier.fillMaxSize()) {
+                        // Dedicated source for the calculator's glass display.
+                        // This layer contains only the page base, never the display itself.
+                        Box(
+                            Modifier.fillMaxSize()
+                                .background(backdropBackground)
+                                .layerBackdrop(homeBackdrop)
+                        )
                         Canvas(Modifier.fillMaxSize()) {
                             val progress = themeBloom.value
                             if (progress < 1f) {
