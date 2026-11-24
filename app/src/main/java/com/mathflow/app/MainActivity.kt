@@ -1489,8 +1489,10 @@ private fun BottomNav(
                         easing = FastOutSlowInEasing
                     )
                 }
+                // The refractive pill has its own RX spring. Do not run a second
+                // Compose offset animation in parallel with that frame loop.
                 val indicatorOffset = animateFloatAsState(
-                    targetValue = targetOffset,
+                    targetValue = if (useRefractiveLens) 0f else targetOffset,
                     animationSpec = offsetSpec,
                     label = "MathFlowNavIndicatorPosition"
                 )
@@ -1713,40 +1715,34 @@ private fun BottomNav(
                 }
                 if (useRefractiveLens && !pillMotion.isFlat) {
                     Box(
-                        Modifier.matchParentSize()
-                            .pillPlacement(
-                                center = {
-                                    val cellWidthPx = with(density) { itemWidth.toPx() }
-                                    val restHeightPx = with(density) { indicatorHeight.toPx() }
-                                    val center = LiquidGlassPillGeometry.center(
-                                        pillMotion.position,
-                                        cellWidthPx,
-                                        restHeightPx,
-                                        Page.entries.size,
-                                        layoutDirection == LayoutDirection.Rtl
-                                    )
-                                    Offset(center.first, center.second)
-                                },
-                                size = {
-                                    val restWidthPx = with(density) { itemWidth.toPx() }
-                                    val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
-                                    val lifted = LiquidGlassPillGeometry.liftedSize(
-                                        restWidthPx,
-                                        restHeightPx,
-                                        with(density) { 5.dp.toPx() },
-                                        with(density) { 5.dp.toPx() },
-                                        with(density) { 9.dp.toPx() }
-                                    )
-                                    val liftedWidthPx = lifted.first
-                                    val liftedHeightPx = lifted.second
-                                    val width = restWidthPx + (liftedWidthPx - restWidthPx) * pillMotion.liftX
-                                    val height = restHeightPx + (liftedHeightPx - restHeightPx) * pillMotion.liftY
-                                    Size(
-                                        width * (1f + pillMotion.deviation),
-                                        height * (1f - pillMotion.deviation)
-                                    )
-                                }
-                            )
+                        Modifier.align(Alignment.CenterStart)
+                            .size(width = itemWidth, height = indicatorHeight)
+                            // Keep the measured bounds constant during motion. The old
+                            // custom layout changed constraints every frame, forcing a
+                            // measure/layout pass while the lens was also being redrawn.
+                            // A graphics-layer transform preserves the same lifted shape
+                            // while keeping the animation on the render layer.
+                            .graphicsLayer {
+                                val cellWidthPx = with(density) { itemWidth.toPx() }
+                                val restWidthPx = cellWidthPx.coerceAtLeast(1f)
+                                val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
+                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
+                                    Page.entries.lastIndex - pillMotion.position
+                                } else pillMotion.position
+                                val lifted = LiquidGlassPillGeometry.liftedSize(
+                                    restWidthPx,
+                                    restHeightPx,
+                                    with(density) { 5.dp.toPx() },
+                                    with(density) { 5.dp.toPx() },
+                                    with(density) { 9.dp.toPx() }
+                                )
+                                val deviation = pillMotion.deviation
+                                translationX = visualPosition * cellWidthPx
+                                scaleX = (1f + (lifted.first / restWidthPx - 1f) * pillMotion.liftX) *
+                                    (1f + deviation)
+                                scaleY = (1f + (lifted.second / restHeightPx - 1f) * pillMotion.liftY) *
+                                    (1f - deviation)
+                            }
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
                                 shape = {
@@ -1780,23 +1776,6 @@ private fun BottomNav(
                 }
             }
         }
-    }
-}
-
-private fun Modifier.pillPlacement(
-    center: () -> Offset,
-    size: () -> Size
-): Modifier = layout { measurable, constraints ->
-    val targetSize = size()
-    val width = targetSize.width.roundToInt().coerceAtLeast(1)
-    val height = targetSize.height.roundToInt().coerceAtLeast(1)
-    val placeable = measurable.measure(Constraints.fixed(width, height))
-    layout(constraints.minWidth, constraints.minHeight) {
-        val targetCenter = center()
-        placeable.place(
-            (targetCenter.x - width / 2f).roundToInt(),
-            (targetCenter.y - height / 2f).roundToInt()
-        )
     }
 }
 
