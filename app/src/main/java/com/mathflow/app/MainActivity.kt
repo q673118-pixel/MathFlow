@@ -28,7 +28,6 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -1495,13 +1494,6 @@ private fun BottomNav(
                         pillMotion.snapTo(current.ordinal)
                     }
                 }
-                var isDragging by remember { mutableStateOf(false) }
-                var isPressed by remember { mutableStateOf(false) }
-                val pressedScale = animateFloatAsState(
-                    targetValue = if (isDragging || isPressed) 1.085f else 1f,
-                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
-                    label = "MathFlowDropletPressScale"
-                )
                 // Resting glass stays spatially stable. Motion is reserved for
                 // touch, drag, and the existing navigation transition.
                 val indicatorScaleX = animateFloatAsState(
@@ -1606,15 +1598,11 @@ private fun BottomNav(
                                     var dragDistance = 0f
                                     detectHorizontalDragGestures(
                                         onDragStart = {
-                                            isDragging = true
-                                            isPressed = true
                                             dragStartIndex = pillMotion.position
                                             dragDistance = 0f
                                             pillMotion.startDrag()
                                         },
                                         onDragEnd = {
-                                            isDragging = false
-                                            isPressed = false
                                             val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
                                                 .roundToInt().coerceIn(0, Page.values().lastIndex)
                                             pillMotion.release(logicalIndex, duration.coerceAtLeast(100))
@@ -1718,17 +1706,10 @@ private fun BottomNav(
                                     else -> 1f
                                 }
                                 scaleX = (1f + (growFactor - 1f) * pillMotion.liftX) *
-                                    (1f + pillMotion.deviation) * indicatorScaleX.value * styleWidth * pressedScale.value
+                                    (1f + pillMotion.deviation) * indicatorScaleX.value * styleWidth
                                 scaleY = (1f + (growFactor - 1f) * pillMotion.liftY) *
-                                    (1f - pillMotion.deviation) * pressedScale.value
+                                    (1f - pillMotion.deviation)
                                 alpha = indicatorAlpha.value
-                            }
-                            .pointerInput(current) {
-                                detectTapGestures(onPress = {
-                                    isPressed = true
-                                    tryAwaitRelease()
-                                    isPressed = false
-                                })
                             }
                             .drawBackdrop(
                                 backdrop = indicatorBackdrop ?: backdrop!!,
