@@ -1395,21 +1395,26 @@ private fun BottomNav(
                             backdrop = backdrop!!,
                             shape = { panelShape },
                             effects = {
-                                if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && settings.refractionStrength > 0f) {
+                                // Fixed RX Playa 1.9.1 panel recipe; settings are
+                                // intentionally not wired into this renderer pass.
+                                colorControls(saturation = 1.5f)
+                                blur(8.dp.toPx())
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                                     lens(
-                                        (24f * settings.refractionStrength).dp.toPx(),
-                                        (42f * settings.refractionStrength).dp.toPx(),
-                                        depthEffect = settings.glassDepth > 0f,
+                                        24.dp.toPx(),
+                                        24.dp.toPx(),
+                                        depthEffect = true,
                                         chromaticAberration = false
                                     )
                                 }
                             },
-                            highlight = { Highlight.Default.copy(alpha = settings.highlightStrength) },
-                            shadow = { Shadow(radius = 18.dp, alpha = settings.shadowStrength) },
+                            highlight = { Highlight.Default },
+                            shadow = { Shadow.Default },
                             onDrawSurface = {
-                                drawRect(p.surface.copy(alpha = 0.40f * settings.opacity))
-                            }
+                                val tint = if (p.dark) Color(0xFF121212) else Color(0xFFFAFAFA)
+                                drawRect(tint.copy(alpha = 0.4f))
+                            },
+                            backdropScale = 0.33f
                         )
                     } else {
                         Modifier.clip(panelShape).background(
