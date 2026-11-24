@@ -69,7 +69,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     // Kyant Backdrop provides GPU-based refraction, lens distortion and glass highlights.
-    implementation("io.github.kyant0:backdrop:1.0.6")
+    // Backdrop 2.0.0 is vendored under Apache-2.0 in com.kyant.backdrop.
     implementation("io.github.kyant0:shapes:1.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")

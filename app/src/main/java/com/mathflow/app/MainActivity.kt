@@ -1401,11 +1401,14 @@ private fun BottomNav(
                                 // Fixed RX Playa 1.9.1 panel recipe; settings are
                                 // intentionally not wired into this renderer pass.
                                 colorControls(saturation = 1.5f)
-                                blur(8.dp.toPx())
+                                // RX Playa renders the panel backdrop at 1/3 resolution.
+                                // Scale pixel-based effects by the same factor so their
+                                // apparent dp size remains unchanged after upscaling.
+                                blur(8.dp.toPx() * 0.33f)
                                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                                     lens(
-                                        24.dp.toPx(),
-                                        24.dp.toPx(),
+                                        24.dp.toPx() * 0.33f,
+                                        24.dp.toPx() * 0.33f,
                                         depthEffect = true,
                                         chromaticAberration = false
                                     )
@@ -1417,7 +1420,8 @@ private fun BottomNav(
                                 val tint = if (p.dark) Color(0xFF121212) else Color(0xFFFAFAFA)
                                 drawRect(tint.copy(alpha = 0.4f))
                             },
-                            exportedBackdrop = barGlassBackdrop
+                            exportedBackdrop = barGlassBackdrop,
+                            backdropScale = 0.33f
                         )
                     } else {
                         Modifier.clip(panelShape).background(
