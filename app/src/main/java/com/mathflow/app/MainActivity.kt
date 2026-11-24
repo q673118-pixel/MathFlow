@@ -137,6 +137,7 @@ import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
@@ -1402,7 +1403,7 @@ private fun BottomNav(
                             highlight = { Highlight.Default.copy(alpha = settings.highlightStrength) },
                             shadow = { Shadow(radius = 18.dp, alpha = settings.shadowStrength) },
                             onDrawSurface = {
-                                drawRect(p.surface.copy(alpha = 0.28f * settings.opacity))
+                                drawRect(p.surface.copy(alpha = 0.40f * settings.opacity))
                             }
                         )
                     } else {
