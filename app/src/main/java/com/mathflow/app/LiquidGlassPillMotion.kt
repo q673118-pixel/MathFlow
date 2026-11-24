@@ -40,8 +40,8 @@ internal class LiquidGlassPillMotion(
     var isFlat by mutableStateOf(true)
         private set
 
-    /** Width of one navigation cell in pixels; updated from measured layout. */
-    var tabStepPx: Float = 0f
+    /** Width of one navigation cell in dp; squash sampling matches RX Playa's dp model. */
+    var tabStepDp: Float = 0f
     var reduceMotion: Boolean = false
 
     private var targetIndex = initialIndex.toDouble()
@@ -224,8 +224,8 @@ internal class LiquidGlassPillMotion(
         }
 
         val drawnPosition = if (dragging) dragPosition else travelPosition
-        if (tabStepPx > 0f) {
-            recordSample(drawnPosition * tabStepPx, nowSeconds)
+        if (tabStepDp > 0f) {
+            recordSample(drawnPosition * tabStepDp, nowSeconds)
             val raw = (averageAcceleration() * ACCELERATION_GAIN)
                 .coerceIn(-MAX_SQUASH, MAX_SQUASH)
             val response = (dt / SQUASH_RESPONSE_TIME).coerceIn(0.0, 1.0)
