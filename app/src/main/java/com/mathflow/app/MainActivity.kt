@@ -107,10 +107,13 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -125,6 +128,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
@@ -1432,12 +1436,6 @@ private fun BottomNav(
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
                 val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
-                // RX Playa's ordering: page -> refractive panel -> moving fill -> tab row.
-                val indicatorBackdrop = if (
-                    useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null
-                ) {
-                    rememberCombinedBackdrop(backdrop!!, barGlassBackdrop, tabRowBackdrop)
-                } else null
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
@@ -1479,6 +1477,15 @@ private fun BottomNav(
                 val navScope = rememberCoroutineScope()
                 val pillMotion = remember { LiquidGlassPillMotion(navScope, current.ordinal) }
                 pillMotion.reduceMotion = !settings.enabled
+                // Match RX's compositing order without re-recording the parent page:
+                // page -> glass panel -> selected fill -> glyph row.
+                val indicatorBackdrop = if (
+                    useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null
+                ) {
+                    rememberSelectionPillBackdrop(
+                        backdrop!!, barGlassBackdrop, tabRowBackdrop, p.navActive, pillMotion.material
+                    )
+                } else null
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                 pillMotion.tabStepDp = itemWidth.value
                 LaunchedEffect(current, useRefractiveLens, settings.enabled, duration) {
@@ -1752,15 +1759,58 @@ private fun BottomNav(
                                          alpha = pillMotion.material * rim * settings.shadowStrength
                                      )
                                  },
-                                 onDrawSurface = {
-                                    drawRect(p.navActive.copy(alpha = p.navActive.alpha * (1f - pillMotion.material)))
-                                }
                             )
                             .size(width = indicatorWidth, height = indicatorHeight)
                     )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun rememberSelectionPillBackdrop(
+    page: Backdrop,
+    panel: Backdrop,
+    tabs: Backdrop,
+    fillColor: Color,
+    material: Float
+): Backdrop {
+    val currentFill by rememberUpdatedState(fillColor)
+    val currentMaterial by rememberUpdatedState(material)
+    return remember(page, panel, tabs) {
+        SelectionPillBackdrop(page, panel, tabs) {
+            val color = currentFill
+            color.copy(alpha = color.alpha * (1f - currentMaterial))
+        }
+    }
+}
+
+/** RX-style ordered sampling: page, panel glass, fading selection fill, then glyphs. */
+private class SelectionPillBackdrop(
+    private val page: Backdrop,
+    private val panel: Backdrop,
+    private val tabs: Backdrop,
+    private val fill: () -> Color
+) : Backdrop {
+    override val isCoordinatesDependent: Boolean = true
+
+    override fun DrawScope.drawBackdrop(
+        density: Density,
+        coordinates: LayoutCoordinates?,
+        layerBlock: (GraphicsLayerScope.() -> Unit)?
+    ) {
+        with(page) { drawBackdrop(density, coordinates, layerBlock) }
+        with(panel) { drawBackdrop(density, coordinates, layerBlock) }
+        val color = fill()
+        if (color.alpha > 0f) {
+            drawRect(
+                color = color,
+                topLeft = Offset(-size.width, -size.height),
+                size = Size(size.width * 3f, size.height * 3f)
+            )
+        }
+        with(tabs) { drawBackdrop(density, coordinates, layerBlock) }
     }
 }
 
