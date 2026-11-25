@@ -1420,6 +1420,7 @@ private fun BottomNav(
     val springStiffness = bottomNavSpringStiffness(duration)
     Box(
         Modifier.then(if (isCollapsed) Modifier.wrapContentWidth() else Modifier.fillMaxWidth())
+            .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
             // Only the real app navigation observes the Android system inset.
             // A preview lives inside a bounded card and must remain self-contained.
             .then(if (preview) Modifier else Modifier.navigationBarsPadding())
