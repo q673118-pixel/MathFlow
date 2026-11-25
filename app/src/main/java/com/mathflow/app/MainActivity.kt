@@ -1589,20 +1589,14 @@ private fun BottomNav(
                         )
                     }
                 }
-                if (useRefractiveLens && pillMotion.isFlat) {
-                    Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .graphicsLayer {
-                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
-                                    Page.entries.lastIndex - pillMotion.position
-                                } else pillMotion.position
-                                val cellWidthPx = with(density) { itemWidth.toPx() }
-                                val pillWidthPx = with(density) { indicatorWidth.toPx() }
-                                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
-                            }
-                            .size(width = indicatorWidth, height = indicatorHeight)
-                            .clip(RoundedCornerShape(percent = 50))
-                            .background(p.navActive)
+                if (useRefractiveLens) {
+                    FlatLiquidGlassSelectionPill(
+                        motion = pillMotion,
+                        color = p.navActive,
+                        itemWidth = itemWidth,
+                        indicatorWidth = indicatorWidth,
+                        indicatorHeight = indicatorHeight,
+                        layoutDirection = layoutDirection
                     )
                 }
                 Row(
@@ -1724,73 +1718,125 @@ private fun BottomNav(
                         }
                     }
                 }
-                if (useRefractiveLens && !pillMotion.isFlat) {
-                    val pillShape = RoundedCornerShape(percent = 50)
-                    val pillModifier = Modifier.pillPlacement(
-                        center = {
-                            val visualPosition = LiquidGlassPillGeometry.visualPosition(
-                                pillMotion.position,
-                                Page.entries.size,
-                                layoutDirection == LayoutDirection.Rtl
-                            )
-                            Offset(
-                                (visualPosition + 0.5f) * tabStepPx,
-                                with(density) { 48.dp.toPx() } * 0.5f
-                            )
-                        },
-                        size = {
-                            val restWidth = tabStepPx
-                            val restHeight = with(density) { indicatorHeight.toPx() }
-                            val lifted = LiquidGlassPillGeometry.liftedSize(
-                                restWidth,
-                                restHeight,
-                                with(density) { 5.dp.toPx() },
-                                with(density) { 5.dp.toPx() },
-                                with(density) { 9.dp.toPx() }
-                            )
-                            Size(
-                                (restWidth + (lifted.first - restWidth) * pillMotion.liftX) *
-                                    (1f + pillMotion.deviation),
-                                (restHeight + (lifted.second - restHeight) * pillMotion.liftY) *
-                                    (1f - pillMotion.deviation)
-                            )
-                        }
-                    )
-                    Box(
-                        pillModifier.drawBackdrop(
-                            backdrop = indicatorBackdrop ?: backdrop!!,
-                            shape = { pillShape },
-                            effects = {
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                    lens(
-                                        12.dp.toPx() * pillMotion.glassPresence,
-                                        14.dp.toPx() * pillMotion.material,
-                                        chromaticAberration = true
-                                    )
-                                }
-                            },
-                            highlight = {
-                                val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
-                                val alpha = pillMotion.material * rim
-                                if (alpha > 0f) Highlight.Default.copy(alpha = alpha) else null
-                            },
-                            shadow = {
-                                val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
-                                val alpha = pillMotion.material * rim
-                                if (alpha > 0f) {
-                                    Shadow(
-                                        radius = 12.dp,
-                                        offset = DpOffset(0.dp, 2.dp),
-                                        color = Color.Black.copy(alpha = 0.3f)
-                                    ).copy(alpha = alpha)
-                                } else null
-                            }
-                        )
+                if (useRefractiveLens) {
+                    MovingLiquidGlassSelectionPill(
+                        motion = pillMotion,
+                        backdrop = indicatorBackdrop ?: backdrop!!,
+                        tabStepPx = tabStepPx,
+                        indicatorHeight = indicatorHeight,
+                        layoutDirection = layoutDirection
                     )
                 }
             }
         }
     }
+}
+
+
+/**
+ * Isolate the resting and moving pill from BottomNav. Motion-frame snapshot
+ * reads stay in this small subtree instead of invalidating the complete bar.
+ */
+@Composable
+private fun FlatLiquidGlassSelectionPill(
+    motion: LiquidGlassPillMotion,
+    color: Color,
+    itemWidth: Dp,
+    indicatorWidth: Dp,
+    indicatorHeight: Dp,
+    layoutDirection: LayoutDirection
+) {
+    if (!motion.isFlat) return
+    Box(
+        Modifier.align(Alignment.CenterStart)
+            .graphicsLayer {
+                val visualPosition = LiquidGlassPillGeometry.visualPosition(
+                    motion.position,
+                    Page.entries.size,
+                    layoutDirection == LayoutDirection.Rtl
+                )
+                val cellWidthPx = with(this) { itemWidth.toPx() }
+                val pillWidthPx = with(this) { indicatorWidth.toPx() }
+                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
+            }
+            .size(width = indicatorWidth, height = indicatorHeight)
+            .clip(RoundedCornerShape(percent = 50))
+            .background(color)
+    )
+}
+
+@Composable
+private fun MovingLiquidGlassSelectionPill(
+    motion: LiquidGlassPillMotion,
+    backdrop: Backdrop,
+    tabStepPx: Float,
+    indicatorHeight: Dp,
+    layoutDirection: LayoutDirection
+) {
+    if (motion.isFlat) return
+    val density = LocalDensity.current
+    val pillShape = remember { RoundedCornerShape(percent = 50) }
+    val pillModifier = Modifier.pillPlacement(
+        center = {
+            val visualPosition = LiquidGlassPillGeometry.visualPosition(
+                motion.position,
+                Page.entries.size,
+                layoutDirection == LayoutDirection.Rtl
+            )
+            Offset(
+                (visualPosition + 0.5f) * tabStepPx,
+                with(density) { 48.dp.toPx() } * 0.5f
+            )
+        },
+        size = {
+            val restWidth = tabStepPx
+            val restHeight = with(density) { indicatorHeight.toPx() }
+            val lifted = LiquidGlassPillGeometry.liftedSize(
+                restWidth,
+                restHeight,
+                with(density) { 5.dp.toPx() },
+                with(density) { 5.dp.toPx() },
+                with(density) { 9.dp.toPx() }
+            )
+            Size(
+                (restWidth + (lifted.first - restWidth) * motion.liftX) *
+                    (1f + motion.deviation),
+                (restHeight + (lifted.second - restHeight) * motion.liftY) *
+                    (1f - motion.deviation)
+            )
+        }
+    )
+    Box(
+        pillModifier.drawBackdrop(
+            backdrop = backdrop,
+            shape = { pillShape },
+            effects = {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    lens(
+                        12.dp.toPx() * motion.glassPresence,
+                        14.dp.toPx() * motion.material,
+                        chromaticAberration = true
+                    )
+                }
+            },
+            highlight = {
+                val rim = ((motion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
+                val alpha = motion.material * rim
+                if (alpha > 0f) Highlight.Default.copy(alpha = alpha) else null
+            },
+            shadow = {
+                val rim = ((motion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
+                val alpha = motion.material * rim
+                if (alpha > 0f) {
+                    Shadow(
+                        radius = 12.dp,
+                        offset = DpOffset(0.dp, 2.dp),
+                        color = Color.Black.copy(alpha = 0.3f)
+                    ).copy(alpha = alpha)
+                } else null
+            }
+        )
+    )
 }
 
 @Composable
