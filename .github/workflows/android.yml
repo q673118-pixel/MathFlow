@@ -52,8 +52,8 @@ jobs:
             echo "::warning::Stable signing secrets are not configured. This APK will use the temporary runner debug key and may not update an APK from another workflow run."
           fi
 
-      - name: Run unit tests and build debug + optimized benchmark APKs
-        run: gradle --no-daemon testDebugUnitTest assembleDebug assembleBenchmark
+      - name: Run unit tests and build Debug, Release and optimized Benchmark APKs
+        run: gradle --no-daemon testDebugUnitTest assembleDebug assembleRelease assembleBenchmark
 
 
       - name: Upload test reports
@@ -72,6 +72,17 @@ jobs:
         with:
           name: MathFlow-v1.6.0-${{ github.event.pull_request.head.ref || github.ref_name }}-build-${{ github.run_number }}-apk
           path: app/build/outputs/apk/debug/MathFlow-v1.6.0.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Rename release APK
+        run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/MathFlow-v1.6.0-release.apk
+
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MathFlow-v1.6.0-${{ github.event.pull_request.head.ref || github.ref_name }}-build-${{ github.run_number }}-release-apk
+          path: app/build/outputs/apk/release/MathFlow-v1.6.0-release.apk
           if-no-files-found: error
           retention-days: 7
 
