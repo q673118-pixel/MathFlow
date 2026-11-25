@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.mathflow.app.navigation
 
+import android.provider.Settings
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
@@ -43,6 +44,7 @@ import com.kyant.backdrop.shadow.Shadow
 val LocalDockAppBackdrop = compositionLocalOf<Backdrop> { error("MathFlow dock backdrop not provided") }
 internal val LocalDockGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 internal val LocalDockReduceMotion = compositionLocalOf { false }
+internal val LocalDockAnimationScale = compositionLocalOf { 1f }
 internal val LocalDockGlassEnabled = compositionLocalOf { true }
 internal val LocalDockHaptic = compositionLocalOf<(Boolean) -> Unit> { {} }
 
@@ -62,12 +64,25 @@ fun MathFlowRxDock(
     dark: Boolean,
     accent: Color,
     reduceMotion: Boolean,
+    animationDurationMs: Int = 280,
     liquidGlassEnabled: Boolean,
     modifier: Modifier = Modifier,
     useSystemInsets: Boolean = true,
     onSelect: (Any) -> Unit
 ) {
     val view = LocalView.current
+    val systemDurationScale = remember(view) {
+        runCatching {
+            Settings.Global.getFloat(
+                view.context.contentResolver,
+                Settings.Global.ANIMATOR_DURATION_SCALE,
+                1f
+            )
+        }.getOrDefault(1f).coerceAtLeast(0f)
+    }
+    val effectiveReduceMotion = reduceMotion || systemDurationScale == 0f
+    val animationScale = (animationDurationMs.coerceIn(100, 1000) / 280f * systemDurationScale)
+        .coerceIn(0.1f, 4f)
     val currentOnSelect by rememberUpdatedState(onSelect)
     val shape = remember { RoundedCornerShape(percent = 50) }
     val haptic: (Boolean) -> Unit = { tick ->
@@ -86,7 +101,8 @@ fun MathFlowRxDock(
 
     CompositionLocalProvider(
         LocalDockAppBackdrop provides pageBackdrop,
-        LocalDockReduceMotion provides reduceMotion,
+        LocalDockReduceMotion provides effectiveReduceMotion,
+        LocalDockAnimationScale provides animationScale,
         LocalDockGlassEnabled provides glassEnabled,
         LocalDockHaptic provides haptic
     ) {
