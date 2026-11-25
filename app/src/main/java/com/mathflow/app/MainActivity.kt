@@ -1452,7 +1452,7 @@ private fun BottomNav(
             // Keep the floating glass capsule clean: the panel itself must not cast
             // a broad grey halo. The selected droplet retains its own local depth.
             shadowElevation = if (navLiquidPanel) 0.dp else uiStyle.elevationDp.dp
-        ) { }
+        ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
@@ -1739,6 +1739,7 @@ private fun BottomNav(
                         layoutDirection = layoutDirection
                     )
                 }
+            }
             }
         }
         if (navLiquidPanel) {
