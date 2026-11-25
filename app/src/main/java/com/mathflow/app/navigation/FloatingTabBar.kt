@@ -441,6 +441,7 @@ private fun SharedTransitionScope.InlineBar(
         if (hasInlineTab) {
             InlineTab(
                 inlineTab = inlineTab,
+                isSelected = inlineTab.key == selectedTabKey,
                 onInlineTabClick = onInlineTabClick,
                 shapes = shapes,
                 sizes = sizes,
@@ -469,6 +470,8 @@ private fun SharedTransitionScope.InlineBar(
         if (standaloneTab != null) {
             InlineStandaloneTab(
                 standaloneTab = standaloneTab,
+                isSelected = standaloneTab.key == selectedTabKey,
+                onInlineTabClick = onInlineTabClick,
                 shapes = shapes,
                 colors = colors,
                 elevations = elevations,
@@ -485,6 +488,7 @@ private fun SharedTransitionScope.InlineBar(
 @Composable
 private fun SharedTransitionScope.InlineTab(
     inlineTab: FloatingTabBarTab,
+    isSelected: Boolean,
     onInlineTabClick: () -> Unit,
     shapes: FloatingTabBarShapes,
     sizes: FloatingTabBarSizes,
@@ -514,7 +518,7 @@ private fun SharedTransitionScope.InlineTab(
             .clickable(
                 onClick = {
                     onInlineTabClick()
-                    inlineTab.onClick()
+                    if (!isSelected) inlineTab.onClick()
                 },
                 indication = inlineTab.indication?.invoke(),
                 interactionSource = remember { MutableInteractionSource() }
@@ -542,6 +546,8 @@ private fun SharedTransitionScope.InlineTab(
 @Composable
 private fun SharedTransitionScope.InlineStandaloneTab(
     standaloneTab: FloatingTabBarTab,
+    isSelected: Boolean,
+    onInlineTabClick: () -> Unit,
     shapes: FloatingTabBarShapes,
     colors: FloatingTabBarColors,
     elevations: FloatingTabBarElevations,
@@ -571,7 +577,10 @@ private fun SharedTransitionScope.InlineStandaloneTab(
             .clip(shapes.standaloneTabShape)
             .then(tabBarContentModifier())
             .clickable(
-                onClick = standaloneTab.onClick,
+                onClick = {
+                    onInlineTabClick()
+                    if (!isSelected) standaloneTab.onClick()
+                },
                 indication = standaloneTab.indication?.invoke(),
                 interactionSource = remember { MutableInteractionSource() }
             )
