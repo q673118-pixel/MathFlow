@@ -121,9 +121,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import android.os.Build
 import android.os.Build.VERSION_CODES
-import import import import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import import import import kotlin.math.roundToInt
+import kotlin.math.roundToInt
 
 /** Hoisted so the default is one stable lambda rather than a new one per call. */
 private val DefaultTabBarContentModifier: @Composable () -> Modifier = { Modifier }
