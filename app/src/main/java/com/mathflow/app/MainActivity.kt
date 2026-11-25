@@ -1606,7 +1606,7 @@ private fun BottomNav(
                     FlatLiquidGlassSelectionPill(
                         motion = pillMotion,
                         modifier = Modifier.align(Alignment.CenterStart),
-                        color = glassNavSelection,
+                        color = p.navActive,
                         itemWidth = itemWidth,
                         indicatorWidth = indicatorWidth,
                         indicatorHeight = indicatorHeight,
