@@ -1512,6 +1512,7 @@ private fun BottomNav(
         dark = palette.dark,
         accent = palette.accent,
         reduceMotion = !settings.enabled || !android.animation.ValueAnimator.areAnimatorsEnabled(),
+        animationDurationMs = settings.durationMs,
         liquidGlassEnabled = liquidGlassEnabled,
         modifier = Modifier.fillMaxWidth(),
         useSystemInsets = !preview
