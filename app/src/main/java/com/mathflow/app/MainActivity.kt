@@ -1004,7 +1004,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                 settings = bottomNavAnimationSettings,
                                 backdrop = backdrop,
                                 scrollConnection = navScrollConnection,
-                                liquidGlassEnabled = MathFlowUiStyle.fromId(pendingUiStyleId).liquidGlassNavigation
+                                liquidGlassEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
                             ) { page = it }
                         }
                         if (showWelcome && splashFinished) {
@@ -3278,7 +3278,7 @@ private fun SettingsPage(
                                 pendingNavAnimationSettings,
                                 backdrop = navPreviewBackdrop,
                                 preview = true,
-                                liquidGlassEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
+                                 liquidGlassEnabled = MathFlowUiStyle.fromId(pendingUiStyleId).liquidGlassNavigation
                             ) { navPreviewPage = it }
                         }
                     }
