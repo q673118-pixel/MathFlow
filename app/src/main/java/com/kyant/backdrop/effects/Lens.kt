@@ -67,6 +67,41 @@ fun BackdropEffectScope.lens(
     effect(effect)
 }
 
+/**
+ * A restrained convex lens: subtle magnification across the interior plus
+ * stronger refraction at the rounded-rectangle rim. The backdrop is sampled
+ * at shifted coordinates, so the child icon itself is never scaled or moved.
+ */
+fun BackdropEffectScope.convexLens(
+    @FloatRange(from = 0.0) refractionHeight: Float,
+    @FloatRange(from = 0.0) refractionAmount: Float,
+    @FloatRange(from = 0.0) magnification: Float
+) {
+    if (!isRuntimeShaderSupported()) return
+    if (refractionHeight <= 0f && magnification <= 0f) return
+
+    if (padding > 0f && refractionHeight > 0f) {
+        padding = (padding - refractionHeight).fastCoerceAtLeast(0f)
+    }
+
+    val cornerRadii = cornerRadii
+    if (cornerRadii == null) throwUnsupportedSDFException()
+
+    val shader = obtainRuntimeShader(
+        "ConvexLens",
+        RoundedRectConvexLensShaderString
+    )
+    shader.apply {
+        setFloatUniform("size", size.width, size.height)
+        setFloatUniform("offset", -padding, -padding)
+        setFloatUniform("cornerRadii", cornerRadii)
+        setFloatUniform("refractionHeight", refractionHeight)
+        setFloatUniform("refractionAmount", -refractionAmount)
+        setFloatUniform("magnification", magnification)
+    }
+    effect(RuntimeShaderEffect(shader, "content"))
+}
+
 // Vendored change: support for io.github.kyant0:shapes' RoundedRectangularShape was
 // dropped so the vendored sources have no external dependency; this app only passes
 // CornerBasedShape here.
