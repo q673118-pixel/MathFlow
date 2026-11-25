@@ -1766,7 +1766,8 @@ private fun BottomNav(
                         Box(
                             glassPillModifier.drawBackdrop(
                                 backdrop = indicatorMaskBackdrop,
-                                shape = { RoundedCornerShape(percent = 50) }
+                                shape = { RoundedCornerShape(percent = 50) },
+                                effects = {}
                             )
                         )
                     }
@@ -1823,6 +1824,7 @@ private fun rememberSelectionPillBackdrop(
 }
 
 /** RX-style ordered sampling: page, panel glass, fading selection fill, then glyphs. */
+@Composable
 private fun rememberSelectionPillMaskBackdrop(
     page: Backdrop,
     panel: Backdrop,
