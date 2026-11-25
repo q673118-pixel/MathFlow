@@ -2583,7 +2583,9 @@ private fun setLauncherIcon(context: Context, iconId: String) {
     val changes = AppIconOptions.mapNotNull { option ->
         val component = android.content.ComponentName(
             context,
-            "${context.packageName}.Launcher${option.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}"
+            "${context.packageName}.Launcher" + option.id.split('_').joinToString("") { part ->
+                part.replaceFirstChar { it.uppercase(Locale.ROOT) }
+            }
         )
         val desiredState = if (option.id == selected.id) {
             android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
