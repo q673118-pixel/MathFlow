@@ -500,6 +500,7 @@ private fun SharedTransitionScope.InlineTab(
 ) {
     Box(
         modifier = modifier
+            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("tabGroup"),
                 animatedVisibilityScope = animatedVisibilityScope,
@@ -555,6 +556,11 @@ private fun SharedTransitionScope.InlineStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
+    val settingsScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.06f else 1f,
+        animationSpec = spring(dampingRatio = 0.76f, stiffness = 520f),
+        label = "SettingsButtonScaleInline"
+    )
     Tab(
         icon = standaloneTab.icon,
         title = standaloneTab.title,
@@ -693,6 +699,7 @@ private fun SharedTransitionScope.ExpandedBar(
             if (standaloneTab != null) {
                 ExpandedStandaloneTab(
                     standaloneTab = standaloneTab,
+                    isSelected = standaloneTab.key == selectedTabKey,
                     shapes = shapes,
                     colors = colors,
                     elevations = elevations,
@@ -1011,6 +1018,7 @@ private fun SharedTransitionScope.ExpandedTabs(
 @Composable
 private fun SharedTransitionScope.ExpandedStandaloneTab(
     standaloneTab: FloatingTabBarTab,
+    isSelected: Boolean,
     shapes: FloatingTabBarShapes,
     colors: FloatingTabBarColors,
     elevations: FloatingTabBarElevations,
@@ -1018,12 +1026,18 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
+    val settingsScale by animateFloatAsState(
+        targetValue = if (isSelected) 1.06f else 1f,
+        animationSpec = spring(dampingRatio = 0.76f, stiffness = 520f),
+        label = "SettingsButtonScaleExpanded"
+    )
     Tab(
         icon = standaloneTab.icon,
         title = standaloneTab.title,
         isInline = false,
         isStandalone = true,
         modifier = modifier
+            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
