@@ -1383,7 +1383,7 @@ private fun BottomNav(
             icon = {
                 val selected = selectedKey == destination
                 val tint = if (selected) paletteState.accent else paletteState.accent.copy(alpha = 0.74f)
-                AppIcon(destination.glyph, displayText(destination.title), tint, Modifier.size(26.dp))
+                AppIcon(glyph = destination.glyph, contentDescription = displayText(destination.title), modifier = Modifier.size(26.dp), tint = tint)
             }
         )
     }
@@ -1393,7 +1393,7 @@ private fun BottomNav(
         icon = {
             val selected = selectedKey == Page.SETTINGS
             val tint = if (selected) paletteState.accent else paletteState.accent.copy(alpha = 0.74f)
-            AppIcon(Page.SETTINGS.glyph, displayText(Page.SETTINGS.title), tint, Modifier.size(26.dp))
+            AppIcon(glyph = Page.SETTINGS.glyph, contentDescription = displayText(Page.SETTINGS.title), modifier = Modifier.size(26.dp), tint = tint)
         }
     )
     val effectiveScrollConnection = scrollConnection
