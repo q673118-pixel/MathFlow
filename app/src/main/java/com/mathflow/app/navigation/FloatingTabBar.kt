@@ -855,7 +855,10 @@ private fun SharedTransitionScope.ExpandedTabs(
                         color = colors.backgroundColor,
                         shape = shapes.tabBarShape
                     )
-                    .clip(shapes.tabBarShape)
+                    // Do not clip the selection pill to the dock bounds. In the
+                    // Material style the flat pill is drawn inside this surface;
+                    // clipping here prevents its lifted spring from extending
+                    // beyond the bar, unlike the refractive pill sibling below.
                     .then(tabBarContentModifier())
                     .padding(contentPadding)
                     .animateContentSize()
