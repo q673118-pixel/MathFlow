@@ -145,6 +145,11 @@ import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.mathflow.app.navigation.FloatingTabBarInlineBehavior
+import com.mathflow.app.navigation.FloatingTabBarScrollConnection
+import com.mathflow.app.navigation.MathFlowRxDock
+import com.mathflow.app.navigation.RxDockItem
+import com.mathflow.app.navigation.rememberFloatingTabBarScrollConnection
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
@@ -684,31 +689,10 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                 androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = family)
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
-                    var navCollapsed by rememberSaveable { mutableStateOf(false) }
-                    var navAccumulatedScroll by remember { mutableFloatStateOf(0f) }
-                    val navScrollDensity = LocalDensity.current
-                    val navScrollThreshold = with(navScrollDensity) { 50.dp.toPx() }
-                    val navScrollConnection = remember(navScrollThreshold) {
-                        object : NestedScrollConnection {
-                            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                                val delta = available.y
-                                if (delta == 0f) return Offset.Zero
-                                if ((navAccumulatedScroll > 0f && delta < 0f) ||
-                                    (navAccumulatedScroll < 0f && delta > 0f)) {
-                                    navAccumulatedScroll = 0f
-                                }
-                                navAccumulatedScroll += delta
-                                if (navAccumulatedScroll <= -navScrollThreshold && !navCollapsed) {
-                                    navCollapsed = true
-                                    navAccumulatedScroll = 0f
-                                } else if (navAccumulatedScroll >= navScrollThreshold && navCollapsed) {
-                                    navCollapsed = false
-                                    navAccumulatedScroll = 0f
-                                }
-                                return Offset.Zero
-                            }
-                        }
-                    }
+                    val navScrollConnection = rememberFloatingTabBarScrollConnection(
+                        initialIsInline = false,
+                        inlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
+                    )
                     val themeBloom = remember { Animatable(1f) }
                     LaunchedEffect(themeId) {
                         themeBloom.snapTo(0f)
@@ -1017,8 +1001,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                 current = page,
                                 settings = bottomNavAnimationSettings,
                                 backdrop = backdrop,
-                                isCollapsed = navCollapsed,
-                                onExpand = { navCollapsed = false }
+                                scrollConnection = navScrollConnection
                             ) { page = it }
                         }
                         if (showWelcome && splashFinished) {
@@ -1386,654 +1369,51 @@ private fun BottomNav(
     settings: BottomNavAnimationSettings,
     backdrop: Backdrop? = null,
     preview: Boolean = false,
-    isCollapsed: Boolean = false,
-    onExpand: () -> Unit = {},
+    scrollConnection: FloatingTabBarScrollConnection? = null,
     onSelect: (Page) -> Unit
 ) {
-    val p = LocalPalette.current
-    val uiStyle = LocalMathFlowUiStyle.current
-    // Keep Liquid Glass strictly on the floating navigation panel. The rest
-    // of MathFlow continues to use its selected Material You visual style.
-    val navLiquidPanel = true
-    val useRefractiveLens = backdrop != null
-    val style = settings.style
-    val duration = if (settings.enabled) settings.durationMs else 0
-    // RX Playa separates its final standalone destination from the main tab pill.
-    // MathFlow keeps Settings as that standalone destination; the other four tabs
-    // remain grouped so their refractive selection lens never crosses the gap.
-    val groupedTabCount = if (navLiquidPanel) Page.entries.size - 1 else Page.entries.size
-    val visibleGroupedPages = if (navLiquidPanel && isCollapsed) {
-        listOf(current.takeIf { it != Page.SETTINGS } ?: Page.HOME)
-    } else Page.entries.take(groupedTabCount)
-    val visibleTabCount = visibleGroupedPages.size
-    val groupedSelection = if (isCollapsed) 0 else current.ordinal.coerceIn(0, groupedTabCount - 1)
-
-    val springMotion = settings.enabled && (
-        useRefractiveLens || style in setOf(
-            BottomNavAnimationStyle.FLUID_PILL,
-            BottomNavAnimationStyle.SPRING_MOTION,
-            BottomNavAnimationStyle.ELASTIC_SLIDE
-        )
-    )
-    // Compose springs do not have a fixed duration. Map the duration control to
-    // spring stiffness so slower settings remain visibly slower in spring styles.
-    val springStiffness = bottomNavSpringStiffness(duration)
-    Box(
-        Modifier.then(if (isCollapsed) Modifier.wrapContentWidth() else Modifier.fillMaxWidth())
-            .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
-            // Only the real app navigation observes the Android system inset.
-            // A preview lives inside a bounded card and must remain self-contained.
-            .then(if (preview) Modifier else Modifier.navigationBarsPadding())
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        val panelShape = if (navLiquidPanel) RoundedCornerShape(percent = 50) else RoundedCornerShape(uiStyle.cardRadiusDp.dp)
-        val barGlassBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
-        // The panel and its content are siblings: the moving lens must not inherit
-        // Surface's rounded clipping and must be able to rise above the panel.
-        Box {
-            Row(
-                modifier = Modifier
-                    .then(if (isCollapsed) Modifier.wrapContentWidth() else Modifier.fillMaxWidth())
-                    .then(if (navLiquidPanel && !isCollapsed) Modifier.padding(end = 66.dp) else Modifier),
-                horizontalArrangement = Arrangement.spacedBy(if (isCollapsed) 14.dp else if (navLiquidPanel) 10.dp else 0.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-        Surface(
-            modifier = Modifier
-                .then(
-                    if (navLiquidPanel && useRefractiveLens) {
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop!!,
-                            shape = { panelShape },
-                            effects = {
-                                // Fixed RX Playa 1.9.1 panel recipe; settings are
-                                // intentionally not wired into this renderer pass.
-                                colorControls(saturation = 1.5f)
-                                // RX Playa renders the panel backdrop at 1/3 resolution.
-                                // Scale pixel-based effects by the same factor so their
-                                // apparent dp size remains unchanged after upscaling.
-                                blur(8.dp.toPx() * 0.33f)
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                    lens(
-                                        24.dp.toPx() * 0.33f,
-                                        24.dp.toPx() * 0.33f,
-                                        depthEffect = true,
-                                        chromaticAberration = true
-                                    )
-                                }
-                            },
-                            highlight = { Highlight.Default },
-                            shadow = { Shadow.Default },
-                            onDrawSurface = {
-                                val tint = if (p.dark) Color(0xFF121212) else Color(0xFFFAFAFA)
-                                drawRect(tint.copy(alpha = 0.4f))
-                            },
-                            exportedBackdrop = barGlassBackdrop,
-                            backdropScale = 0.33f
-                        )
-                    } else {
-                        Modifier.clip(panelShape).background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(
-                                    p.surface.copy(alpha = 0.98f),
-                                    p.surface.copy(alpha = 0.94f)
-                                )
-                            )
-                        )
-                    }
-                )
-                .then(
-                    if (useRefractiveLens) Modifier
-                    else Modifier.border(
-                        if (navLiquidPanel) 0.8.dp else 1.dp,
-                        p.text.copy(alpha = 0.12f),
-                        panelShape
-                    )
-                )
-                .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
-                .then(
-                    if (navLiquidPanel && isCollapsed) Modifier.width(48.dp)
-                    else if (navLiquidPanel) Modifier.weight(1f)
-                    else Modifier.fillMaxWidth()
-                )
-                .height(if (navLiquidPanel && isCollapsed) 48.dp else 58.dp),
-            shape = panelShape,
-            color = p.surface,
-            // Material surface elevation; no glass or backdrop rendering.
-            // RX's backdrop already renders its own shadow; avoid a second Material shadow.
-            shadowElevation = 0.dp
-        ) {
-            BoxWithConstraints(
-                Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
-            ) {
-                val itemWidth = maxWidth / visibleTabCount
-                // One capture for the complete tab row replaces five per-icon
-                // captures. The lens samples the glyphs as a single layer, matching
-                // RX Playa's composition with substantially less render-target work.
-                val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
-                val density = LocalDensity.current
-                val layoutDirection = LocalLayoutDirection.current
-                val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
-                    visibleTabCount - 1 - groupedSelection
-                } else groupedSelection
-                val indicatorWidth = minOf(
-                    when {
-                        navLiquidPanel -> 56.dp
-                        style == BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
-                        style == BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
-                        else -> 72.dp
-                    },
-                    itemWidth * if (navLiquidPanel) 1f else 0.92f
-                )
-                val indicatorHeight = when {
-                    navLiquidPanel -> 44.dp
-                    style == BottomNavAnimationStyle.MORPH -> 38.dp
-                    style == BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
-                    else -> 42.dp
-                }
-                val targetOffset = with(density) {
-                    (itemWidth * visualIndex + (itemWidth - indicatorWidth) / 2).toPx()
-                }
-                // The indicator always follows the duration slider. Spring-like character
-                // is retained by the stretch and icon-scale effects below.
-                val offsetSpec = if (springMotion) {
-                    spring<Float>(dampingRatio = 0.82f, stiffness = springStiffness)
-                } else {
-                    tween<Float>(
-                        durationMillis = duration.coerceAtLeast(1),
-                        easing = FastOutSlowInEasing
-                    )
-                }
-                // The refractive pill has its own RX spring. Do not run a second
-                // Compose offset animation in parallel with that frame loop.
-                val indicatorOffset = animateFloatAsState(
-                    targetValue = if (useRefractiveLens) 0f else targetOffset,
-                    animationSpec = offsetSpec,
-                    label = "MathFlowNavIndicatorPosition"
-                )
-                val navScope = rememberCoroutineScope()
-                val pillMotion = remember { LiquidGlassPillMotion(navScope, groupedSelection) }
-                pillMotion.reduceMotion = !settings.enabled || !ValueAnimator.areAnimatorsEnabled()
-                // Match RX's compositing order without re-recording the parent page:
-                // page -> glass panel -> selected fill -> glyph row.
-                val indicatorBackdrop = if (
-                    useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null
-                ) {
-                    rememberSelectionPillBackdrop(
-                        backdrop!!, barGlassBackdrop, tabRowBackdrop, p.navActive
-                    ) { pillMotion.material }
-                } else null
-                val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
-                pillMotion.tabStepDp = itemWidth.value
-                LaunchedEffect(current, useRefractiveLens, settings.enabled, isCollapsed) {
-                    if (useRefractiveLens && settings.enabled && current != Page.SETTINGS) {
-                        pillMotion.animateTo(groupedSelection)
-                    } else {
-                        pillMotion.snapTo(groupedSelection)
-                    }
-                }
-                // Resting glass stays spatially stable. Motion is reserved for
-                // touch, drag, and the existing navigation transition.
-                val indicatorScaleX = animateFloatAsState(
-                    targetValue = when {
-                        useRefractiveLens || !settings.enabled -> 1f
-                        style == BottomNavAnimationStyle.EXPAND -> 1f + settings.intensity * 0.12f
-                        style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f
-                        else -> 1f
-                    },
-                    animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                    label = "MathFlowNavIndicatorScale"
-                )
-                val indicatorAlpha = animateFloatAsState(
-                    targetValue = if (useRefractiveLens) 1f else if (style == BottomNavAnimationStyle.SOFT_FOCUS) {
-                        settings.opacity * 0.62f
-                    } else settings.opacity,
-                    animationSpec = tween(duration),
-                    label = "MathFlowNavIndicatorAlpha"
-                )
-                val bloom = remember(current, style) { Animatable(0.72f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, useRefractiveLens) {
-                    if (!useRefractiveLens && settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
-                        bloom.snapTo(
-                            if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.08f + settings.intensity * 0.34f
-                            else 0.38f + settings.intensity * 0.36f
-                        )
-                        bloom.animateTo(1f, tween(duration, easing = FastOutSlowInEasing))
-                    } else {
-                        bloom.snapTo(1f)
-                    }
-                }
-                // Restore the original droplet-like elastic travel. The lens and
-                // capsule stretch together, then settle with a soft spring rebound.
-                val stretchAmount = when (style) {
-                    BottomNavAnimationStyle.FLUID_PILL -> 0.28f
-                    BottomNavAnimationStyle.SPRING_MOTION -> 0.16f
-                    BottomNavAnimationStyle.MORPH -> 0.46f
-                    BottomNavAnimationStyle.EXPAND -> 0.22f
-                    BottomNavAnimationStyle.SOFT_FOCUS -> 0.08f
-                    BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.38f
-                    BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.18f
-                }
-                val travelStretch = remember(current, style) { Animatable(1f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, useRefractiveLens) {
-                    if (!useRefractiveLens && settings.enabled && stretchAmount > 0f) {
-                        travelStretch.snapTo(1f + settings.intensity * stretchAmount)
-                        travelStretch.animateTo(
-                            1f,
-                            if (springMotion) {
-                                spring<Float>(dampingRatio = 0.72f, stiffness = springStiffness * 0.72f)
-                            } else {
-                                tween(durationMillis = duration.coerceAtLeast(1), easing = FastOutSlowInEasing)
-                            }
-                        )
-                    } else {
-                        travelStretch.snapTo(1f)
-                    }
-                }
-                if (!useRefractiveLens &&
-                    (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled)) {
-                    Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .graphicsLayer {
-                                translationX = indicatorOffset.value
-                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX.value * travelStretch.value
-                                alpha = indicatorAlpha.value
-                            }
-                            .size(
-                                width = indicatorWidth,
-                                height = indicatorHeight
-                            )
-                    ) {
-                        Box(
-                            Modifier.fillMaxSize().clip(if (navLiquidPanel) NavDropletShape else RoundedCornerShape(percent = 50))
-                                .background(p.navActive)
-                        )
-                    }
-                }
-                if (useRefractiveLens && current != Page.SETTINGS) {
-                    FlatLiquidGlassSelectionPill(
-                        motion = pillMotion,
-                        modifier = Modifier.align(Alignment.CenterStart),
-                        color = p.navActive,
-                        itemWidth = itemWidth,
-                        indicatorWidth = indicatorWidth,
-                        indicatorHeight = indicatorHeight,
-                        layoutDirection = layoutDirection
-                    )
-                }
-                Row(
-                    Modifier.fillMaxWidth()
-                        .then(if (tabRowBackdrop != null) Modifier.layerBackdrop(tabRowBackdrop) else Modifier)
-                        .then(
-                            if (useRefractiveLens) {
-                                // RX keeps the gesture detector alive for the whole row.
-                                // Updated values flow through state holders, so a page
-                                // recomposition cannot cancel a drag midway through.
-                                val currentSelectedIndex by rememberUpdatedState(groupedSelection)
-                                val currentLayoutDirection by rememberUpdatedState(layoutDirection)
-                                val currentOnSelect by rememberUpdatedState(onSelect)
-                                if (current != Page.SETTINGS && !isCollapsed) Modifier.pointerInput(Unit) {
-                                    var dragStartIndex = currentSelectedIndex.toFloat()
-                                    var dragDistance = 0f
-                                    detectHorizontalDragGestures(
-                                        onDragStart = {
-                                            dragStartIndex = pillMotion.position
-                                            dragDistance = 0f
-                                            pillMotion.startDrag()
-                                        },
-                                        onDragEnd = {
-                                            val logicalIndex = LiquidGlassPillGeometry.dragTargetIndex(
-                                                startIndex = dragStartIndex,
-                                                dragDistancePx = dragDistance,
-                                                tabStepPx = tabStepPx,
-                                                tabCount = groupedTabCount,
-                                                isRtl = currentLayoutDirection == LayoutDirection.Rtl
-                                            ).roundToInt()
-                                            pillMotion.release(logicalIndex)
-                                            if (logicalIndex != currentSelectedIndex) {
-                                                currentOnSelect(Page.entries[logicalIndex])
-                                            }
-                                        },
-                                        onDragCancel = {
-                                            pillMotion.release(currentSelectedIndex)
-                                        },
-                                        onHorizontalDrag = { change, dragAmount ->
-                                            change.consume()
-                                            dragDistance += dragAmount
-                                            pillMotion.dragTo(
-                                                LiquidGlassPillGeometry.dragTargetIndex(
-                                                    startIndex = dragStartIndex,
-                                                    dragDistancePx = dragDistance,
-                                                    tabStepPx = tabStepPx,
-                                                    tabCount = groupedTabCount,
-                                                    isRtl = currentLayoutDirection == LayoutDirection.Rtl
-                                                )
-                                            )
-                                        }
-                                    )
-                                } else Modifier
-                            } else Modifier
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    visibleGroupedPages.forEach { item ->
-                        val isSelected = item == current
-                        val tint by animateColorAsState(
-                            targetValue = if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
-                            animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconTint"
-                        )
-                        val iconScale by animateFloatAsState(
-                            targetValue = when {
-                                useRefractiveLens && isSelected -> 1.12f
-                                settings.enabled && isSelected -> 1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
-                                else -> 1f
-                            },
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconScale"
-                        )
-                        val morphY by animateFloatAsState(
-                            targetValue = if (settings.enabled && isSelected && !useRefractiveLens && style == BottomNavAnimationStyle.MORPH) {
-                                1f - settings.iconScale * (0.18f + settings.intensity * 0.22f)
-                            } else 1f,
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconMorph"
-                        )
-                        val focusAlpha by animateFloatAsState(
-                            targetValue = if (settings.enabled && isSelected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
-                                settings.opacity * 0.72f
-                            } else 0f,
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavSoftFocusAlpha"
-                        )
-                        Box(
-                            Modifier.weight(1f).height(48.dp)
-                                .semantics {
-                                    role = Role.Tab
-                                    selected = isSelected
-                                }
-                                .mathFlowClickable {
-                                    if (isCollapsed) onExpand() else if (!isSelected) onSelect(item)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (style == BottomNavAnimationStyle.SOFT_FOCUS && settings.enabled) {
-                                Box(
-                                    Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp)
-                                        .graphicsLayer { alpha = focusAlpha }
-                                        .clip(RoundedCornerShape(percent = 50))
-                                        .background(p.navActive)
-                                )
-                            }
-                            // Fade the sharp glyph according to the moving droplet's actual
-                            // overlap. This crossfades continuously instead of removing it
-                            // as soon as the destination tab becomes isSelected.
-                            AppIcon(
-                                glyph = item.glyph,
-                                contentDescription = displayText(item.title),
-                                tint = tint,
-                                modifier = Modifier.size(26.dp).graphicsLayer {
-                                    scaleX = iconScale
-                                    scaleY = iconScale * morphY
-                                }
-                            )
-                        }
-                    }
-                }
-                if (useRefractiveLens && current != Page.SETTINGS) {
-                    MovingLiquidGlassSelectionPill(
-                        motion = pillMotion,
-                        backdrop = indicatorBackdrop ?: backdrop!!,
-                        tabStepPx = tabStepPx,
-                        indicatorHeight = indicatorHeight,
-                        layoutDirection = layoutDirection
-                    )
-                }
-            }
-            }
-        }
-        if (navLiquidPanel) {
-            val standaloneSelected = current == Page.SETTINGS
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(if (isCollapsed) 48.dp else 58.dp)
-                    .then(
-                        if (useRefractiveLens) {
-                            Modifier.drawBackdrop(
-                                backdrop = backdrop!!,
-                                shape = { CircleShape },
-                                effects = {
-                                    colorControls(saturation = 1.5f)
-                                    blur(8.dp.toPx() * 0.33f)
-                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                        lens(
-                                            24.dp.toPx() * 0.33f,
-                                            24.dp.toPx() * 0.33f,
-                                            depthEffect = true,
-                                            chromaticAberration = true
-                                        )
-                                    }
-                                },
-                                highlight = { Highlight.Default },
-                                shadow = { Shadow.Default },
-                                onDrawSurface = {
-                                    val tint = if (p.dark) Color(0xFF121212) else Color(0xFFFAFAFA)
-                                    drawRect(tint.copy(alpha = 0.4f))
-                                },
-                                backdropScale = 0.33f
-                            )
-                        } else {
-                            Modifier.clip(CircleShape).background(
-                                p.surface.copy(alpha = 0.98f)
-                            )
-                        }
-                    )
-                    .then(
-                        if (useRefractiveLens) Modifier
-                        else Modifier.border(
-                            1.dp,
-                            p.text.copy(alpha = 0.12f),
-                            CircleShape
-                        )
-                    ),
-                shape = CircleShape,
-                color = Color.Transparent,
-                shadowElevation = 0.dp
-            ) {
-                Box(
-                    Modifier.fillMaxSize()
-                        .semantics {
-                            role = Role.Tab
-                            selected = standaloneSelected
-                        }
-                        .mathFlowClickable {
-                            if (!standaloneSelected) onSelect(Page.SETTINGS)
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    AppIcon(
-                        glyph = Page.SETTINGS.glyph,
-                        contentDescription = displayText(Page.SETTINGS.title),
-                        tint = if (standaloneSelected) p.accent else p.accent.copy(alpha = 0.74f),
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            }
-        }
-            }
-        }
-    }
-
-
-/**
- * Isolate the resting and moving pill from BottomNav. Motion-frame snapshot
- * reads stay in this small subtree instead of invalidating the complete bar.
- */
-@Composable
-private fun FlatLiquidGlassSelectionPill(
-    motion: LiquidGlassPillMotion,
-    modifier: Modifier,
-    color: Color,
-    itemWidth: Dp,
-    indicatorWidth: Dp,
-    indicatorHeight: Dp,
-    layoutDirection: LayoutDirection
-) {
-    if (!motion.isFlat) return
-    val density = LocalDensity.current
-    Box(
-        modifier
-            .graphicsLayer {
-                val visualPosition = LiquidGlassPillGeometry.visualPosition(
-                    motion.position,
-                    Page.entries.size - 1,
-                    layoutDirection == LayoutDirection.Rtl
-                )
-                val cellWidthPx = with(density) { itemWidth.toPx() }
-                val pillWidthPx = with(density) { indicatorWidth.toPx() }
-                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
-            }
-            .size(width = indicatorWidth, height = indicatorHeight)
-            .clip(RoundedCornerShape(percent = 50))
-            .background(color)
-    )
-}
-
-@Composable
-private fun MovingLiquidGlassSelectionPill(
-    motion: LiquidGlassPillMotion,
-    backdrop: Backdrop,
-    tabStepPx: Float,
-    indicatorHeight: Dp,
-    layoutDirection: LayoutDirection
-) {
-    if (motion.isFlat) return
-    val density = LocalDensity.current
-    val pillShape = remember { RoundedCornerShape(percent = 50) }
-    val pillModifier = Modifier.pillPlacement(
-        center = {
-            val visualPosition = LiquidGlassPillGeometry.visualPosition(
-                motion.position,
-                Page.entries.size - 1,
-                layoutDirection == LayoutDirection.Rtl
-            )
-            Offset(
-                (visualPosition + 0.5f) * tabStepPx,
-                with(density) { 48.dp.toPx() } * 0.5f
-            )
-        },
-        size = {
-            val restWidth = tabStepPx
-            val restHeight = with(density) { indicatorHeight.toPx() }
-            val lifted = LiquidGlassPillGeometry.liftedSize(
-                restWidth,
-                restHeight,
-                with(density) { 5.dp.toPx() },
-                with(density) { 5.dp.toPx() },
-                with(density) { 9.dp.toPx() }
-            )
-            Size(
-                (restWidth + (lifted.first - restWidth) * motion.liftX) *
-                    (1f + motion.deviation),
-                (restHeight + (lifted.second - restHeight) * motion.liftY) *
-                    (1f - motion.deviation)
-            )
-        }
-    )
-    Box(
-        pillModifier.drawBackdrop(
-            backdrop = backdrop,
-            shape = { pillShape },
-            effects = {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    lens(
-                        12.dp.toPx() * motion.glassPresence,
-                        14.dp.toPx() * motion.material,
-                        chromaticAberration = true
-                    )
-                }
-            },
-            highlight = {
-                val rim = ((motion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
-                val alpha = motion.material * rim
-                if (alpha > 0f) Highlight.Default.copy(alpha = alpha) else null
-            },
-            shadow = {
-                val rim = ((motion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
-                val alpha = motion.material * rim
-                if (alpha > 0f) {
-                    Shadow(
-                        radius = 12.dp,
-                        offset = DpOffset(0.dp, 2.dp),
-                        color = Color.Black.copy(alpha = 0.3f)
-                    ).copy(alpha = alpha)
-                } else null
+    val palette = LocalPalette.current
+    val selectedKey by rememberUpdatedState(current)
+    val paletteState by rememberUpdatedState(palette)
+    val destinations = remember { Page.entries.dropLast(1) }
+    val tabs = destinations.map { destination ->
+        RxDockItem(
+            key = destination,
+            label = displayText(destination.title),
+            icon = {
+                val selected = selectedKey == destination
+                val tint = if (selected) paletteState.accent else paletteState.accent.copy(alpha = 0.74f)
+                AppIcon(destination.glyph, displayText(destination.title), tint, Modifier.size(26.dp))
             }
         )
+    }
+    val standalone = RxDockItem(
+        key = Page.SETTINGS,
+        label = displayText(Page.SETTINGS.title),
+        icon = {
+            val selected = selectedKey == Page.SETTINGS
+            val tint = if (selected) paletteState.accent else paletteState.accent.copy(alpha = 0.74f)
+            AppIcon(Page.SETTINGS.glyph, displayText(Page.SETTINGS.title), tint, Modifier.size(26.dp))
+        }
     )
-}
-
-@Composable
-private fun rememberSelectionPillBackdrop(
-    page: Backdrop,
-    panel: Backdrop,
-    tabs: Backdrop,
-    fillColor: Color,
-    material: () -> Float
-): Backdrop {
-    val currentFill by rememberUpdatedState(fillColor)
-    return remember(page, panel, tabs) {
-        SelectionPillBackdrop(page, panel, tabs) {
-            val color = currentFill
-            color.copy(alpha = color.alpha * (1f - material()))
-        }
-    }
-}
-
-/** RX Playa pill placement: measure at the live glass size and place around its live centre. */
-private fun Modifier.pillPlacement(
-    center: () -> Offset,
-    size: () -> Size
-): Modifier = layout { measurable, constraints ->
-    val live = size()
-    val width = live.width.roundToInt().coerceAtLeast(1)
-    val height = live.height.roundToInt().coerceAtLeast(1)
-    val placeable = measurable.measure(Constraints.fixed(width, height))
-    layout(constraints.minWidth, constraints.minHeight) {
-        val c = center()
-        placeable.place(
-            (c.x - width / 2f).roundToInt(),
-            (c.y - height / 2f).roundToInt()
+    val effectiveScrollConnection = scrollConnection
+        ?: rememberFloatingTabBarScrollConnection(
+            initialIsInline = false,
+            inlineBehavior = FloatingTabBarInlineBehavior.Never
         )
-    }
-}
-
-private class SelectionPillBackdrop(
-    private val page: Backdrop,
-    private val panel: Backdrop,
-    private val tabs: Backdrop,
-    private val fill: () -> Color
-) : Backdrop {
-    override val isCoordinatesDependent: Boolean = true
-
-    override fun DrawScope.drawBackdrop(
-        density: Density,
-        coordinates: LayoutCoordinates?,
-        layerBlock: (GraphicsLayerScope.() -> Unit)?
-    ) {
-        with(page) { drawBackdrop(density, coordinates, layerBlock) }
-        with(panel) { drawBackdrop(density, coordinates, layerBlock) }
-        val color = fill()
-        if (color.alpha > 0f) {
-            drawRect(
-                color = color,
-                topLeft = Offset(-size.width, -size.height),
-                size = Size(size.width * 3f, size.height * 3f)
-            )
-        }
-        with(tabs) { drawBackdrop(density, coordinates, layerBlock) }
+    MathFlowRxDock(
+        items = tabs,
+        selectedKey = current,
+        standalone = standalone,
+        scrollConnection = effectiveScrollConnection,
+        pageBackdrop = backdrop ?: rememberLayerBackdrop(),
+        dark = palette.dark,
+        accent = palette.accent,
+        reduceMotion = !settings.enabled,
+        modifier = Modifier.fillMaxWidth(),
+        useSystemInsets = !preview
+    ) { key ->
+        (key as? Page)?.let(onSelect)
     }
 }
 
