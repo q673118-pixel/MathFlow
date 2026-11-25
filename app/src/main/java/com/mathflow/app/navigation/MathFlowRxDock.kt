@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package com.mathflow.app.navigation
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.ui.graphics.graphicsLayer
 import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
@@ -78,21 +75,6 @@ fun MathFlowRxDock(
             if (tick) HapticFeedbackConstants.CLOCK_TICK else HapticFeedbackConstants.KEYBOARD_TAP
         )
     }
-    val settingsButtonScale by animateFloatAsState(
-        targetValue = if (selectedKey == standalone.key && !reduceMotion) 1.10f else 1f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
-        label = "MathFlowSettingsDockScale"
-    )
-    val animatedStandalone = remember(standalone, settingsButtonScale) {
-        standalone.copy(icon = {
-            androidx.compose.foundation.layout.Box(
-                Modifier.graphicsLayer {
-                    scaleX = settingsButtonScale
-                    scaleY = settingsButtonScale
-                }
-            ) { standalone.icon() }
-        })
-    }
     val glassEnabled = liquidGlassEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val glassContentTint = if (dark) Color.White else Color.Black
     val glassSurface: @Composable () -> Modifier = {
@@ -150,8 +132,8 @@ fun MathFlowRxDock(
                 )
             }
             standaloneTab(
-                key = animatedStandalone.key,
-                icon = animatedStandalone.icon,
+                key = standalone.key,
+                icon = standalone.icon,
                 onClick = {
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     if (standalone.key == selectedKey) scrollConnection.inline() else currentOnSelect(standalone.key)
