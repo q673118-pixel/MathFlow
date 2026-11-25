@@ -17,7 +17,7 @@ internal enum class MathFlowUiStyle(
     val surfaceAlpha: Float,
     val outlineAlpha: Float,
     val elevationDp: Float,
-    val liquidGlassNavigation: Boolean = false,
+    val liquidGlassNavigation: Boolean = true,
     val compact: Boolean = false
 ) {
     MATERIAL_YOU(
