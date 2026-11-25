@@ -124,10 +124,8 @@ fun MathFlowRxDock(
                     title = {},
                     icon = item.icon,
                     onClick = {
-                        if (item.key != selectedKey) {
-                            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                            currentOnSelect(item.key)
-                        }
+                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                        if (item.key == selectedKey) scrollConnection.inline() else currentOnSelect(item.key)
                     }
                 )
             }
@@ -135,10 +133,8 @@ fun MathFlowRxDock(
                 key = standalone.key,
                 icon = standalone.icon,
                 onClick = {
-                    if (standalone.key != selectedKey) {
-                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                        currentOnSelect(standalone.key)
-                    }
+                    view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    if (standalone.key == selectedKey) scrollConnection.inline() else currentOnSelect(standalone.key)
                 }
             )
         }
