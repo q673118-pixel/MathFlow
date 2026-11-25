@@ -130,6 +130,8 @@ internal class GlassPillMotion(
 
     /** "Reduce animation": every move lands at once, with no lift. */
     var reduceMotion: Boolean = false
+    /** Combined system animator scale and MathFlow's navigation duration setting. */
+    var animationScale: Float = 1f
 
     private var travelPos = initialIndex.toDouble()
     private var travelVel = 0.0
@@ -248,7 +250,9 @@ internal class GlassPillMotion(
                     val now = withFrameNanos { it }
                     val dt = if (last < 0) 0.0 else (now - last) / 1e9
                     last = now
-                    if (!tick(dt, now / 1e9)) break
+                    val scale = animationScale.coerceIn(0.1f, 4f)
+                    val scaledDt = dt / scale
+                    if (!tick(scaledDt, now / 1e9 / scale)) break
                 }
             } finally {
                 running = false
