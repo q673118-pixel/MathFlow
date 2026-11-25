@@ -592,7 +592,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     val backdrop = rememberLayerBackdrop(onDraw = backdropDraw)
     // The full page capture is only consumed by the Liquid Glass navigation.
     // Avoid recording the entire page for every other global visual style.
-    val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
@@ -693,6 +692,9 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                         initialIsInline = false,
                         inlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
                     )
+                    // Capture the page only while the expanded refractive dock needs it.
+                    val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation &&
+                        !navScrollConnection.isInline
                     val themeBloom = remember { Animatable(1f) }
                     LaunchedEffect(themeId) {
                         themeBloom.snapTo(0f)
@@ -1383,7 +1385,7 @@ private fun BottomNav(
             icon = {
                 val selected = selectedKey == destination
                 val tint = if (selected) paletteState.accent else paletteState.accent.copy(alpha = 0.74f)
-                AppIcon(glyph = destination.glyph, contentDescription = displayText(destination.title), modifier = Modifier.size(26.dp), tint = tint)
+                AppIcon(glyph = destination.glyph, contentDescription = displayText(destination.title), modifier = Modifier.size(29.dp), tint = tint)
             }
         )
     }
@@ -3664,7 +3666,7 @@ private fun SettingsPage(
         visible = hasPendingChanges,
         // Settings content already sits above the app's bottom navigation.
         // Do not apply system-bar insets a second time or push the action below the viewport.
-        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 116.dp),
         enter = androidx.compose.animation.fadeIn(tween(170)) +
             androidx.compose.animation.slideInVertically(tween(240, easing = FastOutSlowInEasing)) { it },
         exit = androidx.compose.animation.fadeOut(tween(120)) +
