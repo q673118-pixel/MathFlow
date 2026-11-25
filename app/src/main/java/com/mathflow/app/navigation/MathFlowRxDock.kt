@@ -172,7 +172,9 @@ private fun rxDockGlass(
     val tint = if (dark) Color(0xFF121212) else Color(0xFFFAFAFA)
     val dynamicGlassEnabled = LocalDockGlassEnabled.current
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !dynamicGlassEnabled) {
-        return Modifier.clip(shape).background(tint.copy(alpha = 0.90f), shape)
+        // The shape is applied to the surface itself, not as a content clip:
+        // the Material selection pill must be allowed to rise beyond the dock.
+        return Modifier.background(tint.copy(alpha = 0.90f), shape)
             .border(1.dp, if (dark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.22f), shape)
     }
     return Modifier.drawBackdrop(
