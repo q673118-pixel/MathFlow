@@ -126,7 +126,8 @@ fun MathFlowRxDock(
                     onClick = {
                         view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         if (item.key == selectedKey) scrollConnection.inline() else currentOnSelect(item.key)
-                    }
+                    },
+                    indication = null
                 )
             }
             standaloneTab(
@@ -135,7 +136,8 @@ fun MathFlowRxDock(
                 onClick = {
                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                     if (standalone.key == selectedKey) scrollConnection.inline() else currentOnSelect(standalone.key)
-                }
+                },
+                indication = null
             )
         }
     }
