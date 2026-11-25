@@ -1002,7 +1002,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                 current = page,
                                 settings = bottomNavAnimationSettings,
                                 backdrop = backdrop,
-                                scrollConnection = navScrollConnection
+                                scrollConnection = navScrollConnection,
+                                liquidGlassEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
                             ) { page = it }
                         }
                         if (showWelcome && splashFinished) {
@@ -1371,6 +1372,7 @@ private fun BottomNav(
     backdrop: Backdrop? = null,
     preview: Boolean = false,
     scrollConnection: FloatingTabBarScrollConnection? = null,
+    liquidGlassEnabled: Boolean = false,
     onSelect: (Page) -> Unit
 ) {
     val palette = LocalPalette.current
@@ -1411,6 +1413,7 @@ private fun BottomNav(
         dark = palette.dark,
         accent = palette.accent,
         reduceMotion = !settings.enabled,
+        liquidGlassEnabled = liquidGlassEnabled,
         modifier = Modifier.fillMaxWidth(),
         useSystemInsets = !preview
     ) { key ->
@@ -3273,7 +3276,8 @@ private fun SettingsPage(
                                 navPreviewPage,
                                 pendingNavAnimationSettings,
                                 backdrop = navPreviewBackdrop,
-                                preview = true
+                                preview = true,
+                                liquidGlassEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
                             ) { navPreviewPage = it }
                         }
                     }
