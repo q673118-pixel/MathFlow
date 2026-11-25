@@ -1619,10 +1619,10 @@ private fun BottomNav(
                                 // RX keeps the gesture detector alive for the whole row.
                                 // Updated values flow through state holders, so a page
                                 // recomposition cannot cancel a drag midway through.
-                                val currentSelectedIndex by rememberUpdatedState(current.ordinal)
+                                val currentSelectedIndex by rememberUpdatedState(groupedSelection)
                                 val currentLayoutDirection by rememberUpdatedState(layoutDirection)
                                 val currentOnSelect by rememberUpdatedState(onSelect)
-                                Modifier.pointerInput(Unit) {
+                                if (current != Page.SETTINGS) Modifier.pointerInput(Unit) {
                                     var dragStartIndex = currentSelectedIndex.toFloat()
                                     var dragDistance = 0f
                                     detectHorizontalDragGestures(
@@ -1655,7 +1655,7 @@ private fun BottomNav(
                                                     startIndex = dragStartIndex,
                                                     dragDistancePx = dragDistance,
                                                     tabStepPx = tabStepPx,
-                                                    tabCount = Page.entries.size,
+                                                    tabCount = groupedTabCount,
                                                     isRtl = currentLayoutDirection == LayoutDirection.Rtl
                                                 )
                                             )
