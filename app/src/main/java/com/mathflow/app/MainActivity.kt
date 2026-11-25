@@ -1646,7 +1646,7 @@ private fun BottomNav(
                                                 LiquidGlassPillGeometry.dragTargetIndex(
                                                     startIndex = dragStartIndex,
                                                     dragDistancePx = dragDistance,
-                                                    tabStepPx = currentTabStepPx,
+                                                    tabStepPx = tabStepPx,
                                                     tabCount = Page.entries.size,
                                                     isRtl = currentLayoutDirection == LayoutDirection.Rtl
                                                 )
