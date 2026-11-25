@@ -1561,7 +1561,7 @@ private fun BottomNav(
                 } else null
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                 pillMotion.tabStepDp = itemWidth.value
-                LaunchedEffect(current, useRefractiveLens, settings.enabled) {
+                LaunchedEffect(current, useRefractiveLens, settings.enabled, isCollapsed) {
                     if (useRefractiveLens && settings.enabled && current != Page.SETTINGS) {
                         pillMotion.animateTo(groupedSelection)
                     } else {
