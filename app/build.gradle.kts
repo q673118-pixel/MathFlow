@@ -47,11 +47,10 @@ android {
             signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
         }
 
-        // R8-optimized build for on-device performance comparison.
-        // Separate package; use the same certificate as the regular Release build.
+        // R8-optimized primary build. It deliberately shares Release's application ID
+        // and signing identity so installing Benchmark updates the regular MathFlow app.
         create("benchmark") {
             initWith(getByName("release"))
-            applicationIdSuffix = ".benchmark"
             signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
             isDebuggable = false
             isMinifyEnabled = true
