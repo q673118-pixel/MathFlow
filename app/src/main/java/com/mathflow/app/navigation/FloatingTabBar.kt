@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * FloatingTabBar v1.0.1 by Elyes Mansour
  * https://github.com/elyesmansour/compose-floating-tab-bar
