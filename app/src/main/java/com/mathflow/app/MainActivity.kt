@@ -1500,6 +1500,17 @@ private fun BottomNav(
                         backdrop!!, barGlassBackdrop, tabRowBackdrop, p.navActive
                     ) { pillMotion.material }
                 } else null
+                // The glass first replaces the sharp glyph underneath with the
+                // page/panel/fill composite, then refracts the captured glyph row.
+                // Without this mask pass the original glyph remains visible below
+                // its refracted copy and looks doubled.
+                val indicatorMaskBackdrop = if (
+                    useRefractiveLens && barGlassBackdrop != null && tabRowBackdrop != null
+                ) {
+                    rememberSelectionPillMaskBackdrop(
+                        backdrop!!, barGlassBackdrop, p.navActive
+                    ) { pillMotion.material }
+                } else null
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                 pillMotion.tabStepDp = itemWidth.value
                 LaunchedEffect(current, useRefractiveLens, settings.enabled) {
@@ -1723,64 +1734,70 @@ private fun BottomNav(
                     }
                 }
                 if (useRefractiveLens && !pillMotion.isFlat) {
-                    Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .size(width = itemWidth, height = indicatorHeight)
-                            // Keep the measured bounds constant during motion. The old
-                            // custom layout changed constraints every frame, forcing a
-                            // measure/layout pass while the lens was also being redrawn.
-                            // A graphics-layer transform preserves the same lifted shape
-                            // while keeping the animation on the render layer.
-                            .graphicsLayer {
-                                val cellWidthPx = with(density) { itemWidth.toPx() }
-                                val restWidthPx = cellWidthPx.coerceAtLeast(1f)
-                                val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
-                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
-                                    Page.entries.lastIndex - pillMotion.position
-                                } else pillMotion.position
-                                val lifted = LiquidGlassPillGeometry.liftedSize(
-                                    restWidthPx,
-                                    restHeightPx,
-                                    with(density) { 5.dp.toPx() },
-                                    with(density) { 5.dp.toPx() },
-                                    with(density) { 9.dp.toPx() }
-                                )
-                                val deviation = pillMotion.deviation
-                                translationX = visualPosition * cellWidthPx
-                                scaleX = (1f + (lifted.first / restWidthPx - 1f) * pillMotion.liftX) *
-                                    (1f + deviation)
-                                scaleY = (1f + (lifted.second / restHeightPx - 1f) * pillMotion.liftY) *
-                                    (1f - deviation)
-                            }
-                            .drawBackdrop(
-                                backdrop = indicatorBackdrop ?: backdrop!!,
-                                shape = {
-                                     RoundedCornerShape(percent = 50)
-                                },
-                                effects = {
-                                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                         lens(
-                                             12.dp.toPx() * pillMotion.glassPresence,
-                                             14.dp.toPx() * pillMotion.material,
-                                             chromaticAberration = true
-                                         )
-                                     }
-                                 },
-                                 highlight = {
-                                     val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
-                                     Highlight.Default.copy(
-                                         alpha = pillMotion.material * rim
-                                     )
-                                 },
-                                 shadow = {
-                                     val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
-                                     Shadow(
-                                          radius = 12.dp,
-                                          offset = DpOffset(0.dp, 2.dp),
-                                          color = Color.Black.copy(alpha = 0.3f)
-                                      ).copy(alpha = pillMotion.material * rim)
-                                 },
+                    // Both passes share identical geometry so the mask cannot drift
+                    // away from the moving droplet during its spring animation.
+                    val glassPillModifier = Modifier.align(Alignment.CenterStart)
+                        .size(width = itemWidth, height = indicatorHeight)
+                        .graphicsLayer {
+                            val cellWidthPx = with(density) { itemWidth.toPx() }
+                            val restWidthPx = cellWidthPx.coerceAtLeast(1f)
+                            val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
+                            val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
+                                Page.entries.lastIndex - pillMotion.position
+                            } else pillMotion.position
+                            val lifted = LiquidGlassPillGeometry.liftedSize(
+                                restWidthPx,
+                                restHeightPx,
+                                with(density) { 5.dp.toPx() },
+                                with(density) { 5.dp.toPx() },
+                                with(density) { 9.dp.toPx() }
                             )
+                            val deviation = pillMotion.deviation
+                            translationX = visualPosition * cellWidthPx
+                            scaleX = (1f + (lifted.first / restWidthPx - 1f) * pillMotion.liftX) *
+                                (1f + deviation)
+                            scaleY = (1f + (lifted.second / restHeightPx - 1f) * pillMotion.liftY) *
+                                (1f - deviation)
+                        }
+
+                    // Pass 1: erase the sharp on-screen glyph with the actual
+                    // page/panel material underneath the droplet (no tab glyphs).
+                    if (indicatorMaskBackdrop != null) {
+                        Box(
+                            glassPillModifier.drawBackdrop(
+                                backdrop = indicatorMaskBackdrop,
+                                shape = { RoundedCornerShape(percent = 50) }
+                            )
+                        )
+                    }
+
+                    // Pass 2: render the captured tab row through the RX-style lens.
+                    Box(
+                        glassPillModifier.drawBackdrop(
+                            backdrop = indicatorBackdrop ?: backdrop!!,
+                            shape = { RoundedCornerShape(percent = 50) },
+                            effects = {
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                    lens(
+                                        12.dp.toPx() * pillMotion.glassPresence,
+                                        14.dp.toPx() * pillMotion.material,
+                                        chromaticAberration = true
+                                    )
+                                }
+                            },
+                            highlight = {
+                                val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
+                                Highlight.Default.copy(alpha = pillMotion.material * rim)
+                            },
+                            shadow = {
+                                val rim = ((pillMotion.glassPresence - 0.45f) / 0.55f).coerceIn(0f, 1f)
+                                Shadow(
+                                    radius = 12.dp,
+                                    offset = DpOffset(0.dp, 2.dp),
+                                    color = Color.Black.copy(alpha = 0.3f)
+                                ).copy(alpha = pillMotion.material * rim)
+                            }
+                        )
                     )
                 }
             }
@@ -1806,6 +1823,47 @@ private fun rememberSelectionPillBackdrop(
 }
 
 /** RX-style ordered sampling: page, panel glass, fading selection fill, then glyphs. */
+private fun rememberSelectionPillMaskBackdrop(
+    page: Backdrop,
+    panel: Backdrop,
+    fillColor: Color,
+    material: () -> Float
+): Backdrop {
+    val currentFill by rememberUpdatedState(fillColor)
+    return remember(page, panel) {
+        SelectionPillMaskBackdrop(page, panel) {
+            val color = currentFill
+            color.copy(alpha = color.alpha * (1f - material()))
+        }
+    }
+}
+
+/** Backdrop under the droplet without tab glyphs; used to mask their sharp copies. */
+private class SelectionPillMaskBackdrop(
+    private val page: Backdrop,
+    private val panel: Backdrop,
+    private val fill: () -> Color
+) : Backdrop {
+    override val isCoordinatesDependent: Boolean = true
+
+    override fun DrawScope.drawBackdrop(
+        density: Density,
+        coordinates: LayoutCoordinates?,
+        layerBlock: (GraphicsLayerScope.() -> Unit)?
+    ) {
+        with(page) { drawBackdrop(density, coordinates, layerBlock) }
+        with(panel) { drawBackdrop(density, coordinates, layerBlock) }
+        val color = fill()
+        if (color.alpha > 0f) {
+            drawRect(
+                color = color,
+                topLeft = Offset(-size.width, -size.height),
+                size = Size(size.width * 3f, size.height * 3f)
+            )
+        }
+    }
+}
+
 private class SelectionPillBackdrop(
     private val page: Backdrop,
     private val panel: Backdrop,
