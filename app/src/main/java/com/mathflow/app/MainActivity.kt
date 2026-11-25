@@ -683,13 +683,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                         themeBloom.animateTo(1f, animationSpec = tween(680, easing = FastOutSlowInEasing))
                     }
                     Box(Modifier.fillMaxSize()) {
-                        // Dedicated source for the calculator's glass display.
-                        // This layer contains only the page base, never the display itself.
-                        Box(
-                            Modifier.fillMaxSize()
-                                .layerBackdrop(homeBackdrop)
-                                .background(backdropBackground)
-                        )
+                        // Ordinary opaque page background; Liquid Glass is confined to navigation.
+                        Box(Modifier.fillMaxSize().background(backdropBackground))
                         Canvas(Modifier.fillMaxSize()) {
                             val progress = themeBloom.value
                             if (progress < 1f) {
@@ -1632,7 +1627,7 @@ private fun BottomNav(
                                             val logicalIndex = LiquidGlassPillGeometry.dragTargetIndex(
                                                 startIndex = dragStartIndex,
                                                 dragDistancePx = dragDistance,
-                                                tabStepPx = currentTabStepPx,
+                                                tabStepPx = tabStepPx,
                                                 tabCount = Page.entries.size,
                                                 isRtl = currentLayoutDirection == LayoutDirection.Rtl
                                             ).roundToInt()
@@ -2096,7 +2091,7 @@ private fun CalculatorHome(
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { key ->
-                        CalcKey(key, Modifier.weight(1f).fillMaxSize(), compact = scientific) { press(key) }
+                        MathFlowKeyButton(key, Modifier.weight(1f).fillMaxSize(), compact = scientific) { press(key) }
                     }
                 }
             }
