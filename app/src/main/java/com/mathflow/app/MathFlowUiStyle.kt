@@ -28,7 +28,7 @@ internal enum class MathFlowUiStyle(
     LIQUID_GLASS(
         "liquid_glass", "Liquid Glass",
         "Стеклянная капля и преломление только в панели навигации; остальные поверхности остаются обычными.",
-        28, 19, 24, 0.78f, 0.42f, 2f, liquidGlassNavigation = true
+        28, 19, 24, 1f, 0.42f, 2f, liquidGlassNavigation = true
     ),
     FLUENT(
         "fluent", "Fluent",
