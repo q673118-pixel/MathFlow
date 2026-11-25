@@ -692,7 +692,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                         initialIsInline = false,
                         inlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
                     )
-                    // Capture the page only while the expanded refractive dock needs it.
+                    // Keep capture enabled for the whole Liquid Glass style; tying it to inline state
+                    // would rebuild the backdrop layer during the dock's fold animation.
                     val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
                     val themeBloom = remember { Animatable(1f) }
                     LaunchedEffect(themeId) {
