@@ -3700,60 +3700,56 @@ private fun SettingsPage(
             }
 
             SettingsSection.STYLES -> PageColumn("Стиль интерфейса") {
-                Text("Выберите визуальное оформление всего приложения. Цветовая тема останется независимой.", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
-                MathFlowUiStyle.entries.forEach { style ->
-                    val selected = pendingUiStyleId == style.id
-                    val applied = selectedUiStyleId == style.id
-                    val shape = RoundedCornerShape(style.cardRadiusDp.dp)
-                    Panel {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(style.title, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                Text(style.description, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
-                            }
-                            if (selected) AppIcon(AppGlyph.CHECK, contentDescription = "Выбрано", tint = p.accent)
-                        }
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(style.cardRadiusDp.dp))
-                                .background(p.background).padding(10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                Modifier.weight(1f).height(38.dp).clip(shape)
-                                    .background(p.surface.copy(alpha = style.surfaceAlpha))
-                                    .border(1.dp, p.text.copy(alpha = style.outlineAlpha.coerceAtMost(0.45f)), shape)
-                            )
-                            Box(
-                                Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(style.buttonRadiusDp.dp))
-                                    .background(p.keyEquals),
-                                contentAlignment = Alignment.Center
+                Text("Компактный предпросмотр геометрии и поверхностей. Цветовая тема остаётся независимой.",
+                    color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                MathFlowUiStyle.entries.chunked(2).forEach { styleRow ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        styleRow.forEach { style ->
+                            val selected = pendingUiStyleId == style.id
+                            val applied = selectedUiStyleId == style.id
+                            val shape = RoundedCornerShape(style.cardRadiusDp.dp)
+                            Column(
+                                Modifier.weight(1f)
+                                    .clip(shape)
+                                    .background(if (selected) p.navActive else p.surface.copy(alpha = style.surfaceAlpha))
+                                    .border(
+                                        if (selected) 1.7.dp else 1.dp,
+                                        if (selected) p.accent else if (!p.dark) Color(0xFF777777) else p.key,
+                                        shape
+                                    )
+                                    .mathFlowClickable { pendingUiStyleId = style.id }
+                                    .padding(9.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("123", color = p.onKeyEquals, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text(style.title, color = p.text, fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(style.description, color = p.muted, fontSize = 10.sp,
+                                    lineHeight = 13.sp, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis)
+                                Row(
+                                    Modifier.fillMaxWidth().height(30.dp)
+                                        .clip(RoundedCornerShape(style.controlRadiusDp.dp))
+                                        .background(p.background).padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(Modifier.weight(1f).fillMaxHeight()
+                                        .clip(RoundedCornerShape((style.cardRadiusDp / 2).dp))
+                                        .background(p.surface)
+                                        .border(1.dp, p.text.copy(alpha = style.outlineAlpha.coerceAtMost(0.45f)),
+                                            RoundedCornerShape((style.cardRadiusDp / 2).dp)))
+                                    Box(Modifier.weight(1f).fillMaxHeight()
+                                        .clip(RoundedCornerShape(style.buttonRadiusDp.dp))
+                                        .background(p.keyEquals), contentAlignment = Alignment.Center) {
+                                        Text("123", color = p.onKeyEquals, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Text(
+                                    when { applied -> "Применён"; selected -> "Выбран"; else -> "Выбрать" },
+                                    color = if (selected) p.accent else p.muted,
+                                    fontSize = 10.sp, fontWeight = FontWeight.Medium
+                                )
                             }
                         }
-                        Text(
-                            when {
-                                applied -> "Применён"
-                                selected -> "Выбран"
-                                else -> "Нажмите, чтобы выбрать"
-                            },
-                            color = if (selected) p.accent else p.muted,
-                            fontSize = 11.sp
-                        )
-                        Box(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(style.buttonRadiusDp.dp))
-                                .background(if (selected) p.navActive else p.key)
-                                .mathFlowClickable { pendingUiStyleId = style.id }
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(if (selected) "Выбрано" else "Выбрать стиль", color = p.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        }
+                        if (styleRow.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
