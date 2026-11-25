@@ -980,6 +980,10 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                 }
                             }
+                        }
+                        // RX Playa's navigation is a floating overlay, not a bottom-bar
+                        // slot: page content continues behind the glass capsule.
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                             BottomNav(page, bottomNavAnimationSettings, backdrop = backdrop) { page = it }
                         }
                         if (showWelcome && splashFinished) {
