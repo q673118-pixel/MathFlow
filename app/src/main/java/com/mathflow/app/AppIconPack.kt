@@ -33,9 +33,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.DrawScope
 
 /**
- * App-wide icon families. The iOS family follows the SF Symbols visual language
- * used by the native iOS branch; the remaining families use Compose Material
- * icon variants so every glyph stays crisp and accessible at any density.
+ * App-wide icon families. MathFlow uses its own navigation glyph geometry;
+ * supporting utility glyphs use Compose vectors so they remain crisp at every density.
  */
 internal enum class AppIconPack(
     val id: String,
