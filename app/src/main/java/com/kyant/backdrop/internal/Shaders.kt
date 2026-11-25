@@ -93,6 +93,52 @@ half4 main(float2 coord) {
 }"""
 
 @Language("AGSL")
+internal const val RoundedRectConvexLensShaderString = """
+uniform shader content;
+
+uniform float2 size;
+uniform float2 offset;
+uniform float4 cornerRadii;
+uniform float refractionHeight;
+uniform float refractionAmount;
+uniform float magnification;
+
+$RoundedRectSDF
+
+float circleMap(float x) {
+    return 1.0 - sqrt(1.0 - x * x);
+}
+
+half4 main(float2 coord) {
+    float2 halfSize = size * 0.5;
+    float2 centeredCoord = (coord + offset) - halfSize;
+    float radius = radiusAt(coord, cornerRadii);
+
+    float sd = sdRoundedRect(centeredCoord, halfSize, radius);
+    float depth = max(-sd, 0.0);
+
+    // Compress backdrop sample coordinates gently toward the lens center.
+    // This magnifies the content beneath the glass without moving its geometry.
+    float normalizedDepth = clamp(depth / min(halfSize.x, halfSize.y), 0.0, 1.0);
+    float magnificationFade = smoothstep(0.025, 0.30, normalizedDepth);
+    float2 sampleCoord = coord - centeredCoord * (magnification * magnificationFade);
+
+    // Keep the stronger, narrow refraction at the rim, while the subtle
+    // convex magnification remains visible through the whole inner surface.
+    if (depth < refractionHeight) {
+        float d = circleMap(clamp(1.0 - depth / refractionHeight, 0.0, 1.0)) * refractionAmount;
+        float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
+        float2 grad = normalize(
+            gradSdRoundedRect(centeredCoord, halfSize, gradRadius) +
+            0.18 * normalize(centeredCoord)
+        );
+        sampleCoord += d * grad;
+    }
+
+    return content.eval(sampleCoord);
+}"""
+
+@Language("AGSL")
 internal val RoundedRectRefractionWithDispersionShaderString = """
 uniform shader content;
 
