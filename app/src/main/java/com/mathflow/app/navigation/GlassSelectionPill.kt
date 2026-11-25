@@ -46,7 +46,7 @@ import com.mathflow.app.navigation.LocalDockAppBackdrop
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.convexLens
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.Shadow
 import kotlinx.coroutines.CoroutineScope
@@ -543,10 +543,10 @@ internal fun GlassSelectionPill(
             shape = { shape },
             effects = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    lens(
+                    convexLens(
                         refractionHeight = LENS_HEIGHT.toPx() * motion.glassPresence,
                         refractionAmount = LENS_AMOUNT.toPx() * motion.material,
-                        chromaticAberration = true,
+                        magnification = 0.055f * motion.material,
                     )
                 }
             },
