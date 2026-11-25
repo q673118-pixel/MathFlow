@@ -1470,7 +1470,7 @@ private fun BottomNav(
                 } else groupedSelection
                 val indicatorWidth = minOf(
                     when {
-                        navLiquidPanel -> itemWidth
+                        navLiquidPanel -> 56.dp
                         style == BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
                         style == BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
                         else -> 72.dp
@@ -1478,7 +1478,7 @@ private fun BottomNav(
                     itemWidth * if (navLiquidPanel) 1f else 0.92f
                 )
                 val indicatorHeight = when {
-                    navLiquidPanel -> 48.dp
+                    navLiquidPanel -> 44.dp
                     style == BottomNavAnimationStyle.MORPH -> 38.dp
                     style == BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
                     else -> 42.dp
@@ -1597,7 +1597,7 @@ private fun BottomNav(
                             )
                     ) {
                         Box(
-                            Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
+                            Modifier.fillMaxSize().clip(if (navLiquidPanel) NavDropletShape else RoundedCornerShape(percent = 50))
                                 .background(p.navActive)
                         )
                     }
@@ -2123,7 +2123,7 @@ private fun CalculatorHome(
 
 
     Column(
-        Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp),
+        Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp, bottom = 88.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
@@ -2253,6 +2253,20 @@ private fun CalculatorHome(
     }
 }
 
+private val NavDropletShape = androidx.compose.ui.graphics.Shape { size, layoutDirection, _ ->
+    val w = size.width
+    val h = size.height
+    val path = androidx.compose.ui.graphics.Path().apply {
+        moveTo(w * 0.5f, 0f)
+        cubicTo(w * 0.72f, h * 0.12f, w, h * 0.30f, w, h * 0.56f)
+        cubicTo(w, h * 0.82f, w * 0.78f, h, w * 0.5f, h)
+        cubicTo(w * 0.22f, h, 0f, h * 0.82f, 0f, h * 0.56f)
+        cubicTo(0f, h * 0.30f, w * 0.28f, h * 0.12f, w * 0.5f, 0f)
+        close()
+    }
+    androidx.compose.ui.graphics.Outline.Generic(path)
+}
+
 @Composable
 private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
@@ -2275,7 +2289,7 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = if (uiStyle.liquidGlassNavigation) 112.dp else 30.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 112.dp),
         verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 12.dp)
     ) {
         Text(displayText(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
