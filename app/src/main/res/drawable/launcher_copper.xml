@@ -5,5 +5,5 @@
             <solid android:color="#99502E" />
         </shape>
     </item>
-    <item android:width="108dp" android:height="108dp" android:gravity="center" android:drawable="@drawable/mark_vanilla" />
+    <item android:width="108dp" android:height="108dp" android:gravity="center" android:drawable="@drawable/mark_sunset" />
 </layer-list>
