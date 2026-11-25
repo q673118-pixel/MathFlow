@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * Glass selection pill adapted from RX Playa commit 3c874b8d462e5ef5b69e25e3ee47c3f2ebc7c000.
  * Motion model originated in liquid_glass_easy 4.3.4 (MIT License),
