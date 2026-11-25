@@ -546,7 +546,7 @@ internal fun GlassSelectionPill(
                     convexLens(
                         refractionHeight = LENS_HEIGHT.toPx() * motion.glassPresence,
                         refractionAmount = LENS_AMOUNT.toPx() * motion.material,
-                        magnification = 0.055f * motion.material,
+                        magnification = 0.10f * motion.material,
                     )
                 }
             },
