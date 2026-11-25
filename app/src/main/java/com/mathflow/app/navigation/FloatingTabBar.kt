@@ -775,6 +775,7 @@ private fun SharedTransitionScope.ExpandedTabs(
     val coroutineScope = rememberCoroutineScope()
     val pill = remember { GlassPillMotion(coroutineScope, selectedTabIndex.coerceAtLeast(0)) }
     pill.reduceMotion = reduceAnimation
+    pill.animationScale = LocalDockAnimationScale.current
     // The lens samples the recorded page, and "reduce dynamic blur" stops that
     // recording. There the flat pill carries the whole motion on its own.
     val glassPill = Build.VERSION.SDK_INT >= VERSION_CODES.S && !reduceDynamicBlur
