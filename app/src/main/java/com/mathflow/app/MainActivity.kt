@@ -1511,7 +1511,7 @@ private fun BottomNav(
         pageBackdrop = backdrop ?: rememberLayerBackdrop(),
         dark = palette.dark,
         accent = palette.accent,
-        reduceMotion = !settings.enabled,
+        reduceMotion = !settings.enabled || !android.animation.ValueAnimator.areAnimatorsEnabled(),
         liquidGlassEnabled = liquidGlassEnabled,
         modifier = Modifier.fillMaxWidth(),
         useSystemInsets = !preview
@@ -1856,6 +1856,7 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         neo -> p.accent
         retro -> p.accent.copy(alpha = 0.78f)
         skeuo -> p.text.copy(alpha = 0.14f)
+        !p.dark -> Color(0xFF777777)
         else -> p.text.copy(alpha = uiStyle.outlineAlpha)
     }
     val panelColor = p.surface.copy(alpha = uiStyle.surfaceAlpha)
@@ -1864,6 +1865,8 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
             .background(panelColor, shape)
             .then(if (neo || retro || skeuo || uiStyle.outlineAlpha > 0f) {
                 Modifier.border(borderWidth, borderColor, shape)
+            } else if (!p.dark) {
+                Modifier.border(1.dp, borderColor, shape)
             } else Modifier),
         shape = shape,
         color = panelColor,
@@ -3368,7 +3371,7 @@ private fun SettingsPage(
                         Column(
                             Modifier.fillMaxWidth().clip(shape)
                                 .background(if (selected) p.navActive else p.surface)
-                                .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                                .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else if (!p.dark) Color(0xFF777777) else p.key, shape)
                                 .mathFlowClickable {
                                     pendingNavAnimationSettings = pendingNavAnimationSettings.copy(style = style)
                                 }
