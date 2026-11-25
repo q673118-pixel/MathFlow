@@ -1499,7 +1499,8 @@ private fun BottomNav(
             shape = panelShape,
             color = p.surface,
             // Material surface elevation; no glass or backdrop rendering.
-            shadowElevation = 8.dp
+            // RX's backdrop already renders its own shadow; avoid a second Material shadow.
+            shadowElevation = 0.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
