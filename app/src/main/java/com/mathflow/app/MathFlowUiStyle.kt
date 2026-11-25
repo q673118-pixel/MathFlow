@@ -50,26 +50,7 @@ internal enum class MathFlowUiStyle(
         "Мягкая глубина и деликатное разделение поверхностей.",
         25, 18, 22, 0.96f, 0.10f, 4f
     ),
-    PIXEL(
-        "pixel", "Pixel",
-        "Чёткая геометрия, строгие контуры и компактные элементы.",
-        12, 9, 12, 1f, 0.38f, 0f, compact = true
-    ),
-    NEO(
-        "neo", "Neo",
-        "Графичная геометрия, контрастные рамки и выразительные блоки.",
-        10, 8, 8, 1f, 0.82f, 0f, compact = true
-    ),
-    SKEUOMORPHIC(
-        "skeuomorphic", "Skeuomorphic",
-        "Тактильные поверхности, многослойные границы и заметная глубина.",
-        22, 18, 20, 0.98f, 0.18f, 5f
-    ),
-    RETRO_GRID(
-        "retro_grid", "Retro Grid",
-        "Ретро-терминальная эстетика, строгая сетка и угловатые элементы.",
-        5, 4, 5, 1f, 0.58f, 0f, compact = true
-    );
+;
 
     /**
      * Calculator keys retain generous rounding in every visual system.
