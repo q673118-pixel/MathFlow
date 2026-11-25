@@ -500,7 +500,6 @@ private fun SharedTransitionScope.InlineTab(
 ) {
     Box(
         modifier = modifier
-            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("tabGroup"),
                 animatedVisibilityScope = animatedVisibilityScope,
@@ -567,6 +566,7 @@ private fun SharedTransitionScope.InlineStandaloneTab(
         isInline = true,
         isStandalone = true,
         modifier = modifier
+            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
