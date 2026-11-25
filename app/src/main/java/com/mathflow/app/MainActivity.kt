@@ -1661,7 +1661,7 @@ private fun BottomNav(
                                             )
                                         }
                                     )
-                                }
+                                } else Modifier
                             } else Modifier
                         ),
                     verticalAlignment = Alignment.CenterVertically
