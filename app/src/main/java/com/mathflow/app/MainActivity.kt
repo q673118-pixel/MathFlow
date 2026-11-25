@@ -1354,6 +1354,10 @@ private fun BottomNav(
     // Liquid Glass navigation is active only when Liquid Glass is the global UI style.
     // Every other style keeps its own existing navigation surface and indicator.
     val navLiquidPanel = uiStyle.liquidGlassNavigation
+    // RX Playa uses monochrome glyphs and a restrained white selection lift,
+    // rather than MathFlow's accent colour on its standard navigation.
+    val glassNavContent = if (p.dark) Color.White else Color.Black
+    val glassNavSelection = if (p.dark) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.5f)
     // The preview uses the same global style gate as the real navigation bar.
     // It receives a backdrop only to render Liquid Glass when that style is selected.
     val useRefractiveLens = uiStyle.usesRefractiveNavigation(backdrop != null)
@@ -1383,7 +1387,7 @@ private fun BottomNav(
             .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        val panelShape = RoundedCornerShape(if (navLiquidPanel) 35.dp else uiStyle.cardRadiusDp.dp)
+        val panelShape = if (navLiquidPanel) RoundedCornerShape(percent = 50) else RoundedCornerShape(uiStyle.cardRadiusDp.dp)
         val barGlassBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
         // The panel and its content are siblings: the moving lens must not inherit
         // Surface's rounded clipping and must be able to rise above the panel.
@@ -1413,7 +1417,7 @@ private fun BottomNav(
                                         24.dp.toPx() * 0.33f,
                                         24.dp.toPx() * 0.33f,
                                         depthEffect = true,
-                                        chromaticAberration = false
+                                        chromaticAberration = true
                                     )
                                 }
                             },
@@ -1604,7 +1608,7 @@ private fun BottomNav(
                     FlatLiquidGlassSelectionPill(
                         motion = pillMotion,
                         modifier = Modifier.align(Alignment.CenterStart),
-                        color = p.navActive,
+                        color = glassNavSelection,
                         itemWidth = itemWidth,
                         indicatorWidth = indicatorWidth,
                         indicatorHeight = indicatorHeight,
@@ -1669,7 +1673,9 @@ private fun BottomNav(
                     Page.entries.take(groupedTabCount).forEach { item ->
                         val isSelected = item == current
                         val tint by animateColorAsState(
-                            targetValue = if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
+                            targetValue = if (navLiquidPanel) {
+                                if (isSelected) glassNavContent else glassNavContent.copy(alpha = 0.65f)
+                            } else if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
                             animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconTint"
                         )
@@ -1760,7 +1766,7 @@ private fun BottomNav(
                                             24.dp.toPx() * 0.33f,
                                             24.dp.toPx() * 0.33f,
                                             depthEffect = true,
-                                            chromaticAberration = false
+                                            chromaticAberration = true
                                         )
                                     }
                                 },
@@ -1804,7 +1810,9 @@ private fun BottomNav(
                     AppIcon(
                         glyph = Page.SETTINGS.glyph,
                         contentDescription = displayText(Page.SETTINGS.title),
-                        tint = if (standaloneSelected) p.accent else p.accent.copy(alpha = 0.74f),
+                        tint = if (navLiquidPanel) {
+                            if (standaloneSelected) glassNavContent else glassNavContent.copy(alpha = 0.65f)
+                        } else if (standaloneSelected) p.accent else p.accent.copy(alpha = 0.74f),
                         modifier = Modifier.size(26.dp)
                     )
                 }
