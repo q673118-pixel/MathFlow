@@ -2555,7 +2555,23 @@ private val AppIconOptions = listOf(
     AppIconOption("sunset", "Sunset", "Градиент заката с белым фирменным знаком.", R.drawable.launcher_sunset, Color(0xFFF04A66)),
     AppIconOption("rose", "Rose", "Нежно-розовый фон и малиновый знак.", R.drawable.launcher_rose, Color(0xFFF4A9D1)),
     AppIconOption("midnight", "Midnight", "Глубокий ночной фон и лавандовый знак.", R.drawable.launcher_midnight, Color(0xFF19002F)),
-    AppIconOption("graphite", "Graphite", "Графитовый фон и светлый холодный знак.", R.drawable.launcher_graphite, Color(0xFF292B3A))
+    AppIconOption("graphite", "Graphite", "Графитовый фон и светлый холодный знак.", R.drawable.launcher_graphite, Color(0xFF292B3A)),
+    AppIconOption("gray", "Gray", "Нейтральный графит.", R.drawable.launcher_gray, Color(0xFF383F4A)),
+    AppIconOption("transparent", "Transparent", "Холодный сине-стальной знак.", R.drawable.launcher_transparent, Color(0xFF17405D)),
+    AppIconOption("arctic", "Arctic", "Ледяной голубой фон.", R.drawable.launcher_arctic, Color(0xFF087FAE)),
+    AppIconOption("cobalt", "Cobalt", "Электрический кобальт.", R.drawable.launcher_cobalt, Color(0xFF174CB0)),
+    AppIconOption("crimson", "Crimson", "Рубиновый оттенок.", R.drawable.launcher_crimson, Color(0xFF8C1D3B)),
+    AppIconOption("amber", "Amber", "Янтарный фон.", R.drawable.launcher_amber, Color(0xFF95600F)),
+    AppIconOption("teal", "Teal", "Морская бирюза.", R.drawable.launcher_teal, Color(0xFF08717B)),
+    AppIconOption("lavender", "Lavender", "Лавандовый фон.", R.drawable.launcher_lavender, Color(0xFF8050D8)),
+    AppIconOption("mint", "Mint", "Мятный зелёный.", R.drawable.launcher_mint, Color(0xFF16865B)),
+    AppIconOption("copper", "Copper", "Медный оттенок.", R.drawable.launcher_copper, Color(0xFF99502E)),
+    AppIconOption("aurora", "Aurora", "Цвет северного сияния.", R.drawable.launcher_aurora, Color(0xFF126B78)),
+    AppIconOption("cherry", "Cherry", "Вишнёвый оттенок.", R.drawable.launcher_cherry, Color(0xFFBF2345)),
+    AppIconOption("sand", "Sand", "Песочно-терракотовый.", R.drawable.launcher_sand, Color(0xFF9B5A22)),
+    AppIconOption("neon", "Neon", "Неоновый зелёный.", R.drawable.launcher_neon, Color(0xFF365047)),
+    AppIconOption("black_white", "Black & White", "Белый знак на чёрном фоне.", R.drawable.launcher_black_white, Color(0xFF000000)),
+    AppIconOption("white_black", "White & Black", "Белый фон и чёрная тема.", R.drawable.launcher_white_black, Color(0xFFFFFFFF))
 )
 
 private fun setLauncherIcon(context: Context, iconId: String) {
