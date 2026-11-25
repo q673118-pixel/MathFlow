@@ -74,7 +74,7 @@ fun MathFlowRxDock(
             if (tick) HapticFeedbackConstants.CLOCK_TICK else HapticFeedbackConstants.KEYBOARD_TAP
         )
     }
-    val glassEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val glassEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !scrollConnection.isInline
     val glassContentTint = if (dark) Color.White else Color.Black
     val glassSurface: @Composable () -> Modifier = {
         rxDockGlass(shape, pageBackdrop, dark)
@@ -94,8 +94,8 @@ fun MathFlowRxDock(
             scrollConnection = scrollConnection,
             modifier = modifier
                 .then(if (useSystemInsets) Modifier.windowInsetsPadding(WindowInsets.navigationBars) else Modifier)
-                .padding(horizontal = 28.dp)
-                .padding(bottom = 7.dp)
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 9.dp)
                 .fillMaxWidth(),
             tabBarContentModifier = glassSurface,
             colors = FloatingTabBarDefaults.colors(
@@ -108,10 +108,10 @@ fun MathFlowRxDock(
                 expandedElevation = 0.dp
             ),
             sizes = FloatingTabBarDefaults.sizes(
-                tabBarContentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
-                tabInlineContentPadding = PaddingValues(10.dp),
-                tabExpandedContentPadding = PaddingValues(vertical = 6.dp, horizontal = 0.dp),
-                componentSpacing = 8.dp,
+                tabBarContentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
+                tabInlineContentPadding = PaddingValues(13.dp),
+                tabExpandedContentPadding = PaddingValues(vertical = 10.dp, horizontal = 0.dp),
+                componentSpacing = 10.dp,
                 tabSpacing = 0.dp,
                 inlineComponentSpacing = 14.dp,
                 inlineBarPadding = PaddingValues(start = 0.dp, end = 0.dp, bottom = 7.dp)
@@ -153,9 +153,10 @@ private fun rxDockGlass(
 ): Modifier {
     val exported = LocalDockGlassExport.current
     val tint = if (dark) Color(0xFF121212) else Color(0xFFFAFAFA)
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-        return Modifier.clip(shape).background(tint.copy(alpha = 0.94f), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
+    val dynamicGlassEnabled = LocalDockGlassEnabled.current
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !dynamicGlassEnabled) {
+        return Modifier.clip(shape).background(tint.copy(alpha = 0.90f), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.14f), shape)
     }
     return Modifier.drawBackdrop(
         backdrop = pageBackdrop,
