@@ -173,7 +173,7 @@ private fun rxDockGlass(
     val dynamicGlassEnabled = LocalDockGlassEnabled.current
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !dynamicGlassEnabled) {
         return Modifier.clip(shape).background(tint.copy(alpha = 0.90f), shape)
-            .border(1.dp, Color.White.copy(alpha = 0.14f), shape)
+            .border(1.dp, if (dark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.22f), shape)
     }
     return Modifier.drawBackdrop(
         backdrop = pageBackdrop,
@@ -195,5 +195,5 @@ private fun rxDockGlass(
         onDrawSurface = { drawRect(tint.copy(alpha = 0.4f)) },
         exportedBackdrop = exported,
         backdropScale = 0.33f
-    )
+    ).border(1.dp, if (dark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.22f), shape)
 }
