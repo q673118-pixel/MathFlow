@@ -1355,16 +1355,11 @@ private fun BottomNav(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    // Liquid Glass navigation is active only when Liquid Glass is the global UI style.
-    // Every other style keeps its own existing navigation surface and indicator.
-    val navLiquidPanel = uiStyle.liquidGlassNavigation
-    // RX Playa uses monochrome glyphs and a restrained white selection lift,
-    // rather than MathFlow's accent colour on its standard navigation.
-    val glassNavContent = if (p.dark) Color.White else Color.Black
-    val glassNavSelection = if (p.dark) Color.White.copy(alpha = 0.14f) else Color.White.copy(alpha = 0.5f)
-    // The preview uses the same global style gate as the real navigation bar.
-    // It receives a backdrop only to render Liquid Glass when that style is selected.
-    val useRefractiveLens = uiStyle.usesRefractiveNavigation(backdrop != null)
+    // MathFlow keeps its Material palette and surfaces. Only the navigation
+    // geometry is redesigned as a floating dock: four tabs plus a separate
+    // Settings action. No backdrop capture, blur, or refractive lens is used.
+    val navLiquidPanel = true
+    val useRefractiveLens = false
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
     // RX Playa separates its final standalone destination from the main tab pill.
@@ -1438,8 +1433,8 @@ private fun BottomNav(
                         Modifier.clip(panelShape).background(
                             androidx.compose.ui.graphics.Brush.verticalGradient(
                                 listOf(
-                                    p.surface.copy(alpha = 0.46f * settings.opacity),
-                                    p.surface.copy(alpha = 0.30f * settings.opacity)
+                                    p.surface.copy(alpha = 0.98f),
+                                    p.surface.copy(alpha = 0.94f)
                                 )
                             )
                         )
@@ -1449,17 +1444,16 @@ private fun BottomNav(
                     if (useRefractiveLens) Modifier
                     else Modifier.border(
                         if (navLiquidPanel) 0.8.dp else 1.dp,
-                        p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
+                        p.text.copy(alpha = 0.12f),
                         panelShape
                     )
                 )
                 .then(if (navLiquidPanel) Modifier.weight(1f) else Modifier.fillMaxWidth())
                 .height(58.dp),
             shape = panelShape,
-            color = if (navLiquidPanel) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            // Keep the floating glass capsule clean: the panel itself must not cast
-            // a broad grey halo. The selected droplet retains its own local depth.
-            shadowElevation = if (navLiquidPanel) 0.dp else uiStyle.elevationDp.dp
+            color = p.surface,
+            // Material surface elevation; no glass or backdrop rendering.
+            shadowElevation = 8.dp
         ) {
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
@@ -1677,9 +1671,7 @@ private fun BottomNav(
                     Page.entries.take(groupedTabCount).forEach { item ->
                         val isSelected = item == current
                         val tint by animateColorAsState(
-                            targetValue = if (navLiquidPanel) {
-                                if (isSelected) glassNavContent else glassNavContent.copy(alpha = 0.65f)
-                            } else if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
+                            targetValue = if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
                             animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
                             label = "MathFlowNavigationIconTint"
                         )
@@ -1784,15 +1776,15 @@ private fun BottomNav(
                             )
                         } else {
                             Modifier.clip(CircleShape).background(
-                                p.surface.copy(alpha = 0.46f * settings.opacity)
+                                p.surface.copy(alpha = 0.98f)
                             )
                         }
                     )
                     .then(
                         if (useRefractiveLens) Modifier
                         else Modifier.border(
-                            0.8.dp,
-                            p.text.copy(alpha = settings.highlightStrength * 0.22f),
+                            1.dp,
+                            p.text.copy(alpha = 0.12f),
                             CircleShape
                         )
                     ),
@@ -1814,9 +1806,7 @@ private fun BottomNav(
                     AppIcon(
                         glyph = Page.SETTINGS.glyph,
                         contentDescription = displayText(Page.SETTINGS.title),
-                        tint = if (navLiquidPanel) {
-                            if (standaloneSelected) glassNavContent else glassNavContent.copy(alpha = 0.65f)
-                        } else if (standaloneSelected) p.accent else p.accent.copy(alpha = 0.74f),
+                        tint = if (standaloneSelected) p.accent else p.accent.copy(alpha = 0.74f),
                         modifier = Modifier.size(26.dp)
                     )
                 }
