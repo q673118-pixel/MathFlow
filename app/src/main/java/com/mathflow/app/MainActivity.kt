@@ -123,6 +123,9 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -680,12 +683,37 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                 androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = family)
             ) {
                 Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
+                    var navCollapsed by rememberSaveable { mutableStateOf(false) }
+                    var navAccumulatedScroll by remember { mutableFloatStateOf(0f) }
+                    val navScrollDensity = LocalDensity.current
+                    val navScrollThreshold = with(navScrollDensity) { 50.dp.toPx() }
+                    val navScrollConnection = remember(navScrollThreshold) {
+                        object : NestedScrollConnection {
+                            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                                val delta = available.y
+                                if (delta == 0f) return Offset.Zero
+                                if ((navAccumulatedScroll > 0f && delta < 0f) ||
+                                    (navAccumulatedScroll < 0f && delta > 0f)) {
+                                    navAccumulatedScroll = 0f
+                                }
+                                navAccumulatedScroll += delta
+                                if (navAccumulatedScroll <= -navScrollThreshold && !navCollapsed) {
+                                    navCollapsed = true
+                                    navAccumulatedScroll = 0f
+                                } else if (navAccumulatedScroll >= navScrollThreshold && navCollapsed) {
+                                    navCollapsed = false
+                                    navAccumulatedScroll = 0f
+                                }
+                                return Offset.Zero
+                            }
+                        }
+                    }
                     val themeBloom = remember { Animatable(1f) }
                     LaunchedEffect(themeId) {
                         themeBloom.snapTo(0f)
                         themeBloom.animateTo(1f, animationSpec = tween(680, easing = FastOutSlowInEasing))
                     }
-                    Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().nestedScroll(navScrollConnection)) {
                         // Ordinary opaque page background; Liquid Glass is confined to navigation.
                         Box(Modifier.fillMaxSize().background(backdropBackground))
                         Canvas(Modifier.fillMaxSize()) {
@@ -984,7 +1012,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                         // RX Playa's navigation is a floating overlay, not a bottom-bar
                         // slot: page content continues behind the glass capsule.
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-                            BottomNav(page, bottomNavAnimationSettings, backdrop = backdrop) { page = it }
+                            BottomNav(
+                                current = page,
+                                settings = bottomNavAnimationSettings,
+                                backdrop = backdrop,
+                                isCollapsed = navCollapsed,
+                                onExpand = { navCollapsed = false }
+                            ) { page = it }
                         }
                         if (showWelcome && splashFinished) {
                             FirstLaunchWelcome(
@@ -1351,6 +1385,8 @@ private fun BottomNav(
     settings: BottomNavAnimationSettings,
     backdrop: Backdrop? = null,
     preview: Boolean = false,
+    isCollapsed: Boolean = false,
+    onExpand: () -> Unit = {},
     onSelect: (Page) -> Unit
 ) {
     val p = LocalPalette.current
@@ -1365,7 +1401,11 @@ private fun BottomNav(
     // MathFlow keeps Settings as that standalone destination; the other four tabs
     // remain grouped so their refractive selection lens never crosses the gap.
     val groupedTabCount = if (navLiquidPanel) Page.entries.size - 1 else Page.entries.size
-    val groupedSelection = current.ordinal.coerceIn(0, groupedTabCount - 1)
+    val visibleGroupedPages = if (navLiquidPanel && isCollapsed) {
+        listOf(current.takeIf { it != Page.SETTINGS } ?: Page.HOME)
+    } else Page.entries.take(groupedTabCount)
+    val visibleTabCount = visibleGroupedPages.size
+    val groupedSelection = if (isCollapsed) 0 else current.ordinal.coerceIn(0, groupedTabCount - 1)
 
     val springMotion = settings.enabled && (
         useRefractiveLens || style in setOf(
@@ -1447,7 +1487,12 @@ private fun BottomNav(
                         panelShape
                     )
                 )
-                .then(if (navLiquidPanel) Modifier.weight(1f) else Modifier.fillMaxWidth())
+                .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
+                .then(
+                    if (navLiquidPanel && isCollapsed) Modifier.width(68.dp)
+                    else if (navLiquidPanel) Modifier.weight(1f)
+                    else Modifier.fillMaxWidth()
+                )
                 .height(58.dp),
             shape = panelShape,
             color = p.surface,
@@ -1457,7 +1502,7 @@ private fun BottomNav(
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
-                val itemWidth = maxWidth / groupedTabCount
+                val itemWidth = maxWidth / visibleTabCount
                 // One capture for the complete tab row replaces five per-icon
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
@@ -1465,7 +1510,7 @@ private fun BottomNav(
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
-                    groupedTabCount - 1 - groupedSelection
+                    visibleTabCount - 1 - groupedSelection
                 } else groupedSelection
                 val indicatorWidth = minOf(
                     when {
@@ -1623,7 +1668,7 @@ private fun BottomNav(
                                 val currentSelectedIndex by rememberUpdatedState(groupedSelection)
                                 val currentLayoutDirection by rememberUpdatedState(layoutDirection)
                                 val currentOnSelect by rememberUpdatedState(onSelect)
-                                if (current != Page.SETTINGS) Modifier.pointerInput(Unit) {
+                                if (current != Page.SETTINGS && !isCollapsed) Modifier.pointerInput(Unit) {
                                     var dragStartIndex = currentSelectedIndex.toFloat()
                                     var dragDistance = 0f
                                     detectHorizontalDragGestures(
@@ -1667,7 +1712,7 @@ private fun BottomNav(
                         ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Page.entries.take(groupedTabCount).forEach { item ->
+                    visibleGroupedPages.forEach { item ->
                         val isSelected = item == current
                         val tint by animateColorAsState(
                             targetValue = if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
@@ -1704,7 +1749,7 @@ private fun BottomNav(
                                     selected = isSelected
                                 }
                                 .mathFlowClickable {
-                                    if (!isSelected) onSelect(item)
+                                    if (isCollapsed) onExpand() else if (!isSelected) onSelect(item)
                                 },
                             contentAlignment = Alignment.Center
                         ) {
