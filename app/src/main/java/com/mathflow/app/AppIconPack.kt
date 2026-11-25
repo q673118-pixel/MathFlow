@@ -43,13 +43,16 @@ internal enum class AppIconPack(
     val description: String
 ) {
     MATERIAL("material", "Material", "Залитые формы и привычная геометрия Material."),
-    IOS("ios", "iOS", "Контурные символы в духе SF Symbols."),
+    MATHFLOW("mathflow", "MathFlow", "Авторские контурные и геометрические символы MathFlow."),
     ROUNDED("rounded", "Rounded", "Мягкие формы и округлённые окончания."),
     SHARP("sharp", "Sharp", "Строгие силуэты и чёткие углы."),
     DUOTONE("duotone", "Duotone", "Два уровня заполнения для большей глубины.");
 
     companion object {
-        fun fromId(id: String): AppIconPack = entries.firstOrNull { it.id == id } ?: MATERIAL
+        fun fromId(id: String): AppIconPack = when (id) {
+            "ios" -> MATHFLOW
+            else -> entries.firstOrNull { it.id == id } ?: MATERIAL
+        }
     }
 }
 
@@ -70,12 +73,12 @@ internal fun AppIcon(
     pack: AppIconPack? = null
 ) {
     val activePack = pack ?: LocalAppIconPack.current
-    if (activePack == AppIconPack.IOS && glyph in setOf(
+    if (activePack == AppIconPack.MATHFLOW && glyph in setOf(
             AppGlyph.HOME, AppGlyph.FUNCTIONS, AppGlyph.TOOLS, AppGlyph.SOLVER,
             AppGlyph.HISTORY, AppGlyph.SETTINGS, AppGlyph.TUNE
         )
     ) {
-        IosNavigationGlyph(glyph, modifier, tint)
+        MathFlowNavigationGlyph(glyph, modifier, tint)
     } else {
         Icon(
             imageVector = iconVector(activePack, glyph),
@@ -102,7 +105,7 @@ private fun iconVector(pack: AppIconPack, glyph: AppGlyph): ImageVector {
             AppGlyph.LANGUAGE -> Icons.Filled.Language
             AppGlyph.GLOBE -> Icons.Filled.Public
         }
-        AppIconPack.IOS -> when (glyph) {
+        AppIconPack.MATHFLOW -> when (glyph) {
             AppGlyph.HOME, AppGlyph.FUNCTIONS -> Icons.Outlined.Functions
             AppGlyph.SOLVER -> Icons.Outlined.Calculate
             AppGlyph.TOOLS -> Icons.Outlined.GridView
@@ -164,9 +167,9 @@ private fun iconVector(pack: AppIconPack, glyph: AppGlyph): ImageVector {
 }
 
 
-/** Custom SF-Symbol-inspired navigation glyphs matching the iOS reference screenshot. */
+/** Original MathFlow navigation glyphs; independent of platform SF Symbols. */
 @Composable
-private fun IosNavigationGlyph(glyph: AppGlyph, modifier: Modifier, tint: Color) {
+private fun MathFlowNavigationGlyph(glyph: AppGlyph, modifier: Modifier, tint: Color) {
     when (glyph) {
         AppGlyph.HOME, AppGlyph.FUNCTIONS -> Text(
             text = "ƒ(x)",
