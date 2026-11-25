@@ -762,7 +762,7 @@ private fun SharedTransitionScope.ExpandedTabs(
     val currentSelectedTabIndex by rememberUpdatedState(selectedTabIndex)
     val reduceAnimation = LocalDockReduceMotion.current
     val reduceDynamicBlur = !LocalDockGlassEnabled.current
-    val selectionSpec: AnimationSpec<Float> = if (reduceAnimation) snap() else spring(dampingRatio = 0.72f, stiffness = 620f)
+    val selectionSpec: AnimationSpec<Float> = if (reduceAnimation) snap() else spring(dampingRatio = 0.78f, stiffness = 420f)
     val haptics = LocalDockHaptic.current
 
     val coroutineScope = rememberCoroutineScope()
