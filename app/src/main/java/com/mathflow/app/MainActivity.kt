@@ -1424,7 +1424,7 @@ private fun BottomNav(
             // Only the real app navigation observes the Android system inset.
             // A preview lives inside a bounded card and must remain self-contained.
             .then(if (preview) Modifier else Modifier.navigationBarsPadding())
-            .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         val panelShape = if (navLiquidPanel) RoundedCornerShape(percent = 50) else RoundedCornerShape(uiStyle.cardRadiusDp.dp)
@@ -1433,7 +1433,9 @@ private fun BottomNav(
         // Surface's rounded clipping and must be able to rise above the panel.
         Box {
             Row(
-                modifier = Modifier.then(if (isCollapsed) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()),
+                modifier = Modifier
+                    .then(if (isCollapsed) Modifier.wrapContentWidth() else Modifier.fillMaxWidth())
+                    .then(if (navLiquidPanel && !isCollapsed) Modifier.padding(end = 66.dp) else Modifier),
                 horizontalArrangement = Arrangement.spacedBy(if (isCollapsed) 14.dp else if (navLiquidPanel) 10.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1795,6 +1797,7 @@ private fun BottomNav(
             val standaloneSelected = current == Page.SETTINGS
             Surface(
                 modifier = Modifier
+                    .align(Alignment.CenterEnd)
                     .size(if (isCollapsed) 48.dp else 58.dp)
                     .then(
                         if (useRefractiveLens) {
