@@ -3099,15 +3099,25 @@ private fun SettingsPage(
                 val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    baseIcons.forEach { option ->
-                        IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
-                            Modifier.fillMaxWidth()) { pendingIconId = option.id }
+                    baseIcons.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                                    Modifier.weight(1f)) { pendingIconId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(displayText("ЦВЕТОВЫЕ ИКОНКИ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    colorIcons.forEach { option ->
-                        IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
-                            Modifier.fillMaxWidth()) { pendingIconId = option.id }
+                    colorIcons.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                                    Modifier.weight(1f)) { pendingIconId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
                 val selected = AppIconOptions.firstOrNull { it.id == pendingIconId } ?: AppIconOptions.first()
@@ -3751,15 +3761,25 @@ private fun SettingsPage(
                 val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    baseThemes.forEach { option ->
-                        ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
-                            Modifier.fillMaxWidth()) { pendingThemeId = option.id }
+                    baseThemes.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                                    Modifier.weight(1f)) { pendingThemeId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(displayText("ЦВЕТОВЫЕ ТЕМЫ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    colorThemes.forEach { option ->
-                        ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
-                            Modifier.fillMaxWidth()) { pendingThemeId = option.id }
+                    colorThemes.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                                    Modifier.weight(1f)) { pendingThemeId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
                 val selected = themeFor(pendingThemeId)
