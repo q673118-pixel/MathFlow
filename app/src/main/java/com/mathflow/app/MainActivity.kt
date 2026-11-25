@@ -1418,7 +1418,7 @@ private fun BottomNav(
     // spring stiffness so slower settings remain visibly slower in spring styles.
     val springStiffness = bottomNavSpringStiffness(duration)
     Box(
-        Modifier.fillMaxWidth()
+        Modifier.then(if (isCollapsed) Modifier.wrapContentWidth() else Modifier.fillMaxWidth())
             // Only the real app navigation observes the Android system inset.
             // A preview lives inside a bounded card and must remain self-contained.
             .then(if (preview) Modifier else Modifier.navigationBarsPadding())
@@ -1431,8 +1431,8 @@ private fun BottomNav(
         // Surface's rounded clipping and must be able to rise above the panel.
         Box {
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(if (navLiquidPanel) 10.dp else 0.dp),
+                modifier = Modifier.then(if (isCollapsed) Modifier.wrapContentWidth() else Modifier.fillMaxWidth()),
+                horizontalArrangement = Arrangement.spacedBy(if (isCollapsed) 14.dp else if (navLiquidPanel) 10.dp else 0.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
         Surface(
@@ -1489,11 +1489,11 @@ private fun BottomNav(
                 )
                 .animateContentSize(animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f))
                 .then(
-                    if (navLiquidPanel && isCollapsed) Modifier.width(68.dp)
+                    if (navLiquidPanel && isCollapsed) Modifier.width(48.dp)
                     else if (navLiquidPanel) Modifier.weight(1f)
                     else Modifier.fillMaxWidth()
                 )
-                .height(58.dp),
+                .height(if (navLiquidPanel && isCollapsed) 48.dp else 58.dp),
             shape = panelShape,
             color = p.surface,
             // Material surface elevation; no glass or backdrop rendering.
@@ -1792,7 +1792,7 @@ private fun BottomNav(
             val standaloneSelected = current == Page.SETTINGS
             Surface(
                 modifier = Modifier
-                    .size(58.dp)
+                    .size(if (isCollapsed) 48.dp else 58.dp)
                     .then(
                         if (useRefractiveLens) {
                             Modifier.drawBackdrop(
