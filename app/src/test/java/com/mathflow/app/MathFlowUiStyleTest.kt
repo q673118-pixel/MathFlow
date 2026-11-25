@@ -16,6 +16,11 @@ class MathFlowUiStyleTest {
     }
 
     @Test
+    fun liquidGlassKeepsTextBearingSurfacesOpaque() {
+        assertTrue(MathFlowUiStyle.LIQUID_GLASS.surfaceAlpha == 1f)
+    }
+
+    @Test
     fun missingBackdropDisablesRefractionWithoutChangingTheGlobalStyle() {
         MathFlowUiStyle.entries.forEach { style ->
             assertFalse(style.usesRefractiveNavigation(backdropAvailable = false))
