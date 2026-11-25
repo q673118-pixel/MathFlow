@@ -49,8 +49,7 @@ internal enum class MathFlowUiStyle(
         "soft_ui", "Soft UI",
         "Мягкая глубина и деликатное разделение поверхностей.",
         25, 18, 22, 0.96f, 0.10f, 4f
-    ),
-;
+    );
 
     /**
      * Calculator keys retain generous rounding in every visual system.
