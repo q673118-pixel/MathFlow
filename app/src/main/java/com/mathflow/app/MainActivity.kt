@@ -1592,6 +1592,7 @@ private fun BottomNav(
                 if (useRefractiveLens) {
                     FlatLiquidGlassSelectionPill(
                         motion = pillMotion,
+                        modifier = Modifier.align(Alignment.CenterStart),
                         color = p.navActive,
                         itemWidth = itemWidth,
                         indicatorWidth = indicatorWidth,
@@ -1740,6 +1741,7 @@ private fun BottomNav(
 @Composable
 private fun FlatLiquidGlassSelectionPill(
     motion: LiquidGlassPillMotion,
+    modifier: Modifier,
     color: Color,
     itemWidth: Dp,
     indicatorWidth: Dp,
@@ -1748,7 +1750,7 @@ private fun FlatLiquidGlassSelectionPill(
 ) {
     if (!motion.isFlat) return
     Box(
-        Modifier.align(Alignment.CenterStart)
+        modifier
             .graphicsLayer {
                 val visualPosition = LiquidGlassPillGeometry.visualPosition(
                     motion.position,
