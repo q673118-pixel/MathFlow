@@ -529,7 +529,7 @@ internal fun GlassSelectionPill(
     tabRow: LayerBackdrop,
     modifier: Modifier,
 ) {
-    val page = LocalAppBackdrop.current
+    val page = LocalDockAppBackdrop.current
     val shape = remember { RoundedCornerShape(percent = 50) }
     val backdrop = remember(page, barGlass, tabRow, fillColor) {
         SelectionPillBackdrop(page, barGlass, tabRow) {
