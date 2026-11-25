@@ -1812,7 +1812,6 @@ private fun BottomNav(
             }
         }
     }
-}
 
 
 /**
