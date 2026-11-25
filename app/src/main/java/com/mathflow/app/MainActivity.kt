@@ -367,65 +367,125 @@ private data class ThemeOption(
 )
 
 private val ThemeOptions = listOf(
-    ThemeOption("vanilla", "Vanilla", "Фирменная фиолетовая палитра MathFlow.", Palette(
-        Color(0xFF0C0B10), Color(0xFF16141C), Color(0xFF211F29), Color(0xFF54447F),
-        Color(0xFF6A5AA3), Color.White, Color(0xFFE9E5F3), Color(0xFF9A94AB),
-        Color(0xFFB9A8F0), Color(0xFF2E2942), Color(0xFFFF8A80), true
+    ThemeOption("vanilla", "Vanilla", "Фирменная насыщенная фиолетовая палитра MathFlow.", Palette(
+        Color(0xFF10091D), Color(0xFF1D1230), Color(0xFF2B1B43), Color(0xFF6335A8),
+        Color(0xFF8B45E8), Color.White, Color(0xFFF5EDFF), Color(0xFFB8A6D0),
+        Color(0xFFC28BFF), Color(0xFF3A225C), Color(0xFFFF756F), true
     )),
-    ThemeOption("black", "Black", "Почти чёрный интерфейс с нейтральными поверхностями.", Palette(
-        Color(0xFF08090D), Color(0xFF12141A), Color(0xFF20232B), Color(0xFF343945),
-        Color(0xFFB7A0FF), Color(0xFF1A1327), Color(0xFFF4F2FA), Color(0xFF9296A3),
-        Color(0xFFC9B8FF), Color(0xFF252833), Color(0xFFFF8A80), true
+    ThemeOption("black", "Black", "Глубокий чёрный с ярким фиолетовым свечением.", Palette(
+        Color(0xFF05060A), Color(0xFF10121A), Color(0xFF1C202C), Color(0xFF343B52),
+        Color(0xFF9B78FF), Color(0xFF211638), Color(0xFFF7F5FF), Color(0xFF9EA5BA),
+        Color(0xFFBDA4FF), Color(0xFF2B2148), Color(0xFFFF7777), true
     )),
-    ThemeOption("white", "White", "Светлая тема с чистыми белыми поверхностями.", Palette(
-        Color(0xFFF7F6FA), Color.White, Color(0xFFECEAF2), Color(0xFFE1D8F3),
-        Color(0xFF6A1B9A), Color.White, Color(0xFF17131F), Color(0xFF686274),
-        Color(0xFF7428B2), Color(0xFFE8DDF5), Color(0xFFB3261E), false
+    ThemeOption("white", "White", "Чистая светлая тема с выразительным фиолетовым акцентом.", Palette(
+        Color(0xFFF8F7FF), Color(0xFFFFFFFF), Color(0xFFEAE6F7), Color(0xFFD8C9F7),
+        Color(0xFF7138D4), Color.White, Color(0xFF191326), Color(0xFF655C78),
+        Color(0xFF7D35E8), Color(0xFFE5D8FF), Color(0xFFB32635), false
     )),
-    ThemeOption("purple", "Purple", "Глубокий фиолетовый с насыщенными акцентами.", Palette(
-        Color(0xFF10051B), Color(0xFF1C0C2B), Color(0xFF2C1240), Color(0xFF511C70),
-        Color(0xFF8A2CC2), Color.White, Color(0xFFF5E9FF), Color(0xFFB59BBF),
-        Color(0xFFD49AFF), Color(0xFF321343), Color(0xFFFF8A80), true
+    ThemeOption("purple", "Purple", "Сочный ультрафиолет и глубокие сливовые поверхности.", Palette(
+        Color(0xFF16051F), Color(0xFF260B35), Color(0xFF39124D), Color(0xFF7625A8),
+        Color(0xFFB33CFA), Color.White, Color(0xFFFFF0FF), Color(0xFFC49BCF),
+        Color(0xFFE06BFF), Color(0xFF4A1764), Color(0xFFFF777F), true
     )),
-    ThemeOption("ocean", "Ocean", "Холодные синие оттенки и яркий голубой акцент.", Palette(
-        Color(0xFF04142F), Color(0xFF081E43), Color(0xFF102D58), Color(0xFF075C9B),
-        Color(0xFF139EE0), Color.White, Color(0xFFEAF7FF), Color(0xFF8FB7D4),
-        Color(0xFF39C7FF), Color(0xFF0B3157), Color(0xFFFF8A80), true
+    ThemeOption("ocean", "Ocean", "Глубокий океан, насыщенный лазурный и электрический циан.", Palette(
+        Color(0xFF03152C), Color(0xFF062544), Color(0xFF0D3B62), Color(0xFF087CB8),
+        Color(0xFF00B7F4), Color.White, Color(0xFFEAFBFF), Color(0xFF8ABBD5),
+        Color(0xFF36D5FF), Color(0xFF075078), Color(0xFFFF7777), true
     )),
-    ThemeOption("emerald", "Emerald", "Тёмно-зелёная палитра с мятными акцентами.", Palette(
-        Color(0xFF031D17), Color(0xFF082B22), Color(0xFF104336), Color(0xFF14664C),
-        Color(0xFF13A67A), Color.White, Color(0xFFE8FFF6), Color(0xFF90C9B3),
-        Color(0xFF4BE2B2), Color(0xFF0D3A2C), Color(0xFFFF8A80), true
+    ThemeOption("emerald", "Emerald", "Изумрудные глубины с ярким зелёно-мятным свечением.", Palette(
+        Color(0xFF031B16), Color(0xFF062B21), Color(0xFF0D4332), Color(0xFF087B53),
+        Color(0xFF00C987), Color.White, Color(0xFFE8FFF5), Color(0xFF8CCAB1),
+        Color(0xFF38F0B0), Color(0xFF0B513A), Color(0xFFFF7777), true
     )),
-    ThemeOption("sunset", "Sunset", "Тёплые оттенки заката: коралл, оранжевый и розовый.", Palette(
-        Color(0xFF24101C), Color(0xFF351729), Color(0xFF4C2035), Color(0xFFB34B37),
-        Color(0xFFFF6D49), Color.White, Color(0xFFFFF2EA), Color(0xFFD3A6A0),
-        Color(0xFFFF9A66), Color(0xFF51243B), Color(0xFFFFB4AB), true
+    ThemeOption("sunset", "Sunset", "Контрастный закат: мандариновый, коралловый и тёплый розовый.", Palette(
+        Color(0xFF260D1A), Color(0xFF3A1524), Color(0xFF542034), Color(0xFFC34B32),
+        Color(0xFFFF7445), Color.White, Color(0xFFFFF3E9), Color(0xFFD7A79B),
+        Color(0xFFFFA15C), Color(0xFF64263C), Color(0xFFFFB4A8), true
     )),
-    ThemeOption("rose", "Rose", "Мягкая розовая тема с ярким малиновым акцентом.", Palette(
-        Color(0xFFFFF3F8), Color.White, Color(0xFFF8DDEB), Color(0xFFF5BBD5),
-        Color(0xFFE50070), Color.White, Color(0xFF39182B), Color(0xFF9C6B83),
-        Color(0xFFD60069), Color(0xFFF9D7E9), Color(0xFFB3261E), false
+    ThemeOption("rose", "Rose", "Яркая розовая палитра с малиновыми и фуксиевыми акцентами.", Palette(
+        Color(0xFFFFF0F7), Color(0xFFFFFBFE), Color(0xFFF8D9E9), Color(0xFFF3B6D5),
+        Color(0xFFD90070), Color.White, Color(0xFF351126), Color(0xFF98617E),
+        Color(0xFFED1685), Color(0xFFFFD5E9), Color(0xFFB32635), false
     )),
-    ThemeOption("midnight", "Midnight", "Ночная фиолетовая палитра с мягкими лавандовыми акцентами.", Palette(
-        Color(0xFF100521), Color(0xFF1A0B31), Color(0xFF2A124A), Color(0xFF6331A1),
-        Color(0xFFA66BFF), Color.White, Color(0xFFF6EDFF), Color(0xFFB5A0D1),
-        Color(0xFFC69AFF), Color(0xFF321957), Color(0xFFFF8A80), true
+    ThemeOption("midnight", "Midnight", "Ночная индиго-палитра с яркой лавандой и аметистом.", Palette(
+        Color(0xFF0C0823), Color(0xFF171039), Color(0xFF251954), Color(0xFF5636B5),
+        Color(0xFF906BFF), Color.White, Color(0xFFF4F0FF), Color(0xFFB0A4D8),
+        Color(0xFFB49AFF), Color(0xFF33206D), Color(0xFFFF777F), true
     )),
-    ThemeOption("graphite", "Graphite", "Спокойные графитовые оттенки с холодным светлым акцентом.", Palette(
-        Color(0xFF222431), Color(0xFF2D3040), Color(0xFF3A3D4F), Color(0xFF4A4D62),
-        Color(0xFFAEB4D8), Color(0xFF222431), Color(0xFFF1F2FF), Color(0xFFB0B4C9),
-        Color(0xFFD1D5FF), Color(0xFF3C4056), Color(0xFFFF8A80), true
+    ThemeOption("graphite", "Graphite", "Графитовая основа с холодным ледяным синим акцентом.", Palette(
+        Color(0xFF191D29), Color(0xFF252B3A), Color(0xFF343D50), Color(0xFF53627D),
+        Color(0xFF8BAEFF), Color(0xFF202A40), Color(0xFFF1F5FF), Color(0xFFABB8D1),
+        Color(0xFFB3CAFF), Color(0xFF3A4A68), Color(0xFFFF7777), true
     )),
-    ThemeOption("gray", "Gray", "Нейтральная графитово-серая палитра без цветового оттенка.", Palette(
-        Color(0xFF17191E), Color(0xFF22252C), Color(0xFF2E323A), Color(0xFF515965),
-        Color(0xFFD4D8E0), Color(0xFF20232A), Color(0xFFF2F3F5), Color(0xFFAEB3BD),
-        Color(0xFFDCE0E8), Color(0xFF393E48), Color(0xFFFF8A80), true
+    ThemeOption("gray", "Gray", "Нейтральный антрацит с чистым серебристым контрастом.", Palette(
+        Color(0xFF14171D), Color(0xFF20252D), Color(0xFF2D343E), Color(0xFF596574),
+        Color(0xFFB8C7DA), Color(0xFF202A36), Color(0xFFF5F7FA), Color(0xFFB0BAC7),
+        Color(0xFFDCEBFA), Color(0xFF394A5C), Color(0xFFFF7777), true
     )),
-    ThemeOption("transparent", "Transparent", "Полупрозрачные поверхности и холодные стеклянные оттенки.", Palette(
-        Color(0xFF10151C), Color(0xC01C2633), Color(0xA02C3948), Color(0xB34D6379),
-        Color(0xFFDCEBFA), Color(0xFF16202B), Color(0xFFF4F8FC), Color(0xFFB5C2D0),
-        Color(0xFFB7D9F5), Color(0x803B536B), Color(0xFFFF8A80), true
+    ThemeOption("transparent", "Transparent", "Холодное стекло с более насыщенными сине-голубыми акцентами.", Palette(
+        Color(0xFF0B1724), Color(0xD0182A3D), Color(0xB52B4058), Color(0xD04A789B),
+        Color(0xFFB5E7FF), Color(0xFF172D42), Color(0xFFF4FAFF), Color(0xFFB0C8DA),
+        Color(0xFF66CFFF), Color(0x99456F91), Color(0xFFFF7777), true
+    )),
+    ThemeOption("arctic", "Arctic", "Ледяная светлая тема с бирюзовым и полярно-синим.", Palette(
+        Color(0xFFF0FAFF), Color(0xFFFFFFFF), Color(0xFFDDF2FC), Color(0xFFB8E7F8),
+        Color(0xFF087FAE), Color.White, Color(0xFF102A3A), Color(0xFF5D7F91),
+        Color(0xFF009BCB), Color(0xFFD4F3FF), Color(0xFFB32635), false
+    )),
+    ThemeOption("cobalt", "Cobalt", "Насыщенный кобальт и электрический синий на тёмной основе.", Palette(
+        Color(0xFF06112B), Color(0xFF0B1D42), Color(0xFF122D61), Color(0xFF174CB0),
+        Color(0xFF347BFF), Color.White, Color(0xFFEEF4FF), Color(0xFF9CB5E2),
+        Color(0xFF5D9BFF), Color(0xFF173D83), Color(0xFFFF7777), true
+    )),
+    ThemeOption("crimson", "Crimson", "Глубокий бордовый, рубиновый и алый акцент.", Palette(
+        Color(0xFF21070F), Color(0xFF340B18), Color(0xFF4C1425), Color(0xFF8C1D3B),
+        Color(0xFFE52E59), Color.White, Color(0xFFFFEFF2), Color(0xFFD2A0AD),
+        Color(0xFFFF5278), Color(0xFF5B1830), Color(0xFFFFA0A0), true
+    )),
+    ThemeOption("amber", "Amber", "Тёмный янтарь с золотыми и медовыми акцентами.", Palette(
+        Color(0xFF211407), Color(0xFF34200B), Color(0xFF4B3010), Color(0xFF95600F),
+        Color(0xFFFFB52E), Color(0xFF2B1B08), Color(0xFFFFF6E5), Color(0xFFD0B98E),
+        Color(0xFFFFC44D), Color(0xFF5B3A0D), Color(0xFFFF7777), true
+    )),
+    ThemeOption("teal", "Teal", "Тёмная морская бирюза с ярким аквамариновым свечением.", Palette(
+        Color(0xFF031B20), Color(0xFF062A31), Color(0xFF0C414B), Color(0xFF08717B),
+        Color(0xFF00C8C8), Color.White, Color(0xFFE9FFFF), Color(0xFF91C6C9),
+        Color(0xFF39E3D8), Color(0xFF0B5058), Color(0xFFFF7777), true
+    )),
+    ThemeOption("lavender", "Lavender", "Светлая лавандовая тема с прохладными сиреневыми тонами.", Palette(
+        Color(0xFFF5F0FF), Color(0xFFFFFCFF), Color(0xFFE8DDFB), Color(0xFFD5C0F7),
+        Color(0xFF8050D8), Color.White, Color(0xFF241638), Color(0xFF79688F),
+        Color(0xFF925CFA), Color(0xFFE8DAFF), Color(0xFFB32635), false
+    )),
+    ThemeOption("mint", "Mint", "Светлая мятная палитра с прохладным зелёным акцентом.", Palette(
+        Color(0xFFEDFFF7), Color(0xFFFFFFFF), Color(0xFFD5F6E7), Color(0xFFB2EBD2),
+        Color(0xFF16865B), Color.White, Color(0xFF102D21), Color(0xFF638A78),
+        Color(0xFF0DAD70), Color(0xFFD0F8E5), Color(0xFFB32635), false
+    )),
+    ThemeOption("copper", "Copper", "Тёплая медь, бронза и глубокий шоколад.", Palette(
+        Color(0xFF21120D), Color(0xFF342018), Color(0xFF4A2D21), Color(0xFF99502E),
+        Color(0xFFE17A42), Color.White, Color(0xFFFFF1E8), Color(0xFFD0A995),
+        Color(0xFFFF9860), Color(0xFF613722), Color(0xFFFF7777), true
+    )),
+    ThemeOption("aurora", "Aurora", "Северное сияние: глубокий индиго, бирюза и лайм.", Palette(
+        Color(0xFF071326), Color(0xFF0D2038), Color(0xFF15334A), Color(0xFF126B78),
+        Color(0xFF28D6B0), Color.White, Color(0xFFEFFFFB), Color(0xFF9ABDBA),
+        Color(0xFF75F0C9), Color(0xFF174C59), Color(0xFFFF7777), true
+    )),
+    ThemeOption("cherry", "Cherry", "Светлая вишнёвая палитра с сочным красно-розовым акцентом.", Palette(
+        Color(0xFFFFF1F2), Color(0xFFFFFCFC), Color(0xFFF8DCDD), Color(0xFFF0BFC4),
+        Color(0xFFBF2345), Color.White, Color(0xFF35131B), Color(0xFF94636C),
+        Color(0xFFE52D55), Color(0xFFFFDDE2), Color(0xFFB32635), false
+    )),
+    ThemeOption("sand", "Sand", "Тёплый песочный фон с карамельными и терракотовыми акцентами.", Palette(
+        Color(0xFFFFF7E9), Color(0xFFFFFCF5), Color(0xFFF1E3C9), Color(0xFFE6C995),
+        Color(0xFF9B5A22), Color.White, Color(0xFF342414), Color(0xFF8A755A),
+        Color(0xFFB86A25), Color(0xFFF2E0C1), Color(0xFFB32635), false
+    )),
+    ThemeOption("neon", "Neon", "Высококонтрастный киберпанк: угольный, лайм и горячая фуксия.", Palette(
+        Color(0xFF090D13), Color(0xFF111923), Color(0xFF1C2935), Color(0xFF365047),
+        Color(0xFFB6FF3B), Color(0xFF21162C), Color(0xFFF4FFE9), Color(0xFFA5B59B),
+        Color(0xFFE0FF52), Color(0xFF243A32), Color(0xFFFF6688), true
     ))
 )
 
@@ -609,15 +669,35 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             }
         }
     }
-    val family = when (fontPath) {
-        null -> FontFamily.Default
-        BUILTIN_ARTEGRA_FONT -> FontFamily(Font(R.font.artegra_soft_global_bold_rounded, FontWeight.Normal))
-        else -> customFont ?: FontFamily.Default
+    val family = remember(fontPath, customFont) {
+        when (fontPath) {
+            null -> FontFamily.Default
+            BUILTIN_ARTEGRA_FONT -> FontFamily(Font(R.font.artegra_soft_global_bold_rounded, FontWeight.Normal))
+            else -> customFont ?: FontFamily.Default
+        }
+    }
+    val fontApplyMotion = remember { Animatable(1f) }
+    var fontPathInitialized by remember { mutableStateOf(false) }
+    LaunchedEffect(family) {
+        if (fontPathInitialized) {
+            fontApplyMotion.snapTo(0.992f)
+            fontApplyMotion.animateTo(
+                1f,
+                animationSpec = tween(280, easing = FastOutSlowInEasing)
+            )
+        } else {
+            fontPathInitialized = true
+        }
     }
 
     val baseDensity = LocalDensity.current
-    val density = remember(baseDensity, fontScale) {
-        Density(baseDensity.density, baseDensity.fontScale * fontScale)
+    val animatedFontScale by animateFloatAsState(
+        targetValue = fontScale,
+        animationSpec = tween(360, easing = FastOutSlowInEasing),
+        label = "MathFlowTextScale"
+    )
+    val density = remember(baseDensity, animatedFontScale) {
+        Density(baseDensity.density, baseDensity.fontScale * animatedFontScale)
     }
 
     val colors = remember(palette) { if (palette.dark) {
@@ -687,7 +767,15 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             CompositionLocalProvider(
                 androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = family)
             ) {
-                Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
+                Surface(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        alpha = fontApplyMotion.value
+                        scaleX = fontApplyMotion.value
+                        scaleY = fontApplyMotion.value
+                    },
+                    color = palette.background,
+                    contentColor = palette.text
+                ) {
                     val navScrollConnection = rememberFloatingTabBarScrollConnection(
                         initialIsInline = false,
                         inlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
