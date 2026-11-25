@@ -277,7 +277,7 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
         }
 
         delay(120L)
-        splashAlpha.animateTo(0f, tween(2200, easing = LinearOutSlowInEasing))
+        splashAlpha.animateTo(0f, tween(1100, easing = LinearOutSlowInEasing))
         onFinished()
     }
 
@@ -486,6 +486,16 @@ private val ThemeOptions = listOf(
         Color(0xFF090D13), Color(0xFF111923), Color(0xFF1C2935), Color(0xFF365047),
         Color(0xFFB6FF3B), Color(0xFF21162C), Color(0xFFF4FFE9), Color(0xFFA5B59B),
         Color(0xFFE0FF52), Color(0xFF243A32), Color(0xFFFF6688), true
+    )),
+    ThemeOption("black_white", "Black & White", "Чёрная основа с белыми поверхностями и акцентами.", Palette(
+        Color(0xFF000000), Color(0xFF111111), Color(0xFF242424), Color(0xFF444444),
+        Color(0xFFFFFFFF), Color(0xFF000000), Color(0xFFFFFFFF), Color(0xFFBDBDBD),
+        Color(0xFFFFFFFF), Color(0xFF303030), Color(0xFFFF6B6B), true
+    )),
+    ThemeOption("white_black", "White & Black", "Белая основа с чёрными поверхностями и акцентами.", Palette(
+        Color(0xFFFFFFFF), Color(0xFFF5F5F5), Color(0xFFE5E5E5), Color(0xFFD0D0D0),
+        Color(0xFF111111), Color(0xFFFFFFFF), Color(0xFF101010), Color(0xFF666666),
+        Color(0xFF111111), Color(0xFFE0E0E0), Color(0xFFB32635), false
     ))
 )
 
@@ -3069,8 +3079,8 @@ private fun SettingsPage(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tx("icon_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 }
-                val baseIcons = AppIconOptions.filter { it.id in setOf("vanilla", "black", "white") }
-                val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
+                val baseIcons = AppIconOptions.filter { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
+                val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     baseIcons.forEach { option ->
@@ -3147,7 +3157,7 @@ private fun SettingsPage(
                     Column(
                         Modifier.fillMaxWidth().clip(shape)
                             .background(if (selected) p.navActive else p.surface)
-                            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else if (!p.dark) Color(0xFF777777) else p.key, shape)
                             .mathFlowClickable { pendingAnimationSettings = pendingAnimationSettings.copy(style = style) }
                             .padding(horizontal = 15.dp, vertical = 13.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -3721,8 +3731,8 @@ private fun SettingsPage(
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
                 Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
-                val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white") }
-                val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
+                val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
+                val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     baseThemes.forEach { option ->
