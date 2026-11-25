@@ -1359,6 +1359,11 @@ private fun BottomNav(
     val useRefractiveLens = uiStyle.usesRefractiveNavigation(backdrop != null)
     val style = settings.style
     val duration = if (settings.enabled) settings.durationMs else 0
+    // RX Playa separates its final standalone destination from the main tab pill.
+    // MathFlow keeps Settings as that standalone destination; the other four tabs
+    // remain grouped so their refractive selection lens never crosses the gap.
+    val groupedTabCount = if (navLiquidPanel) Page.entries.size - 1 else Page.entries.size
+    val groupedSelection = current.ordinal.coerceIn(0, groupedTabCount - 1)
 
     val springMotion = settings.enabled && (
         useRefractiveLens || style in setOf(
@@ -1383,6 +1388,11 @@ private fun BottomNav(
         // The panel and its content are siblings: the moving lens must not inherit
         // Surface's rounded clipping and must be able to rise above the panel.
         Box {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(if (navLiquidPanel) 10.dp else 0.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
         Surface(
             modifier = Modifier
                 .then(
@@ -1435,7 +1445,7 @@ private fun BottomNav(
                         panelShape
                     )
                 )
-                .fillMaxWidth()
+                .then(if (navLiquidPanel) Modifier.weight(1f) else Modifier.fillMaxWidth())
                 .height(58.dp),
             shape = panelShape,
             color = if (navLiquidPanel) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
@@ -1446,7 +1456,7 @@ private fun BottomNav(
             BoxWithConstraints(
                 Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
             ) {
-                val itemWidth = maxWidth / Page.entries.size
+                val itemWidth = maxWidth / groupedTabCount
                 // One capture for the complete tab row replaces five per-icon
                 // captures. The lens samples the glyphs as a single layer, matching
                 // RX Playa's composition with substantially less render-target work.
@@ -1454,8 +1464,8 @@ private fun BottomNav(
                 val density = LocalDensity.current
                 val layoutDirection = LocalLayoutDirection.current
                 val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
-                    Page.entries.lastIndex - current.ordinal
-                } else current.ordinal
+                    groupedTabCount - 1 - groupedSelection
+                } else groupedSelection
                 val indicatorWidth = minOf(
                     when {
                         navLiquidPanel -> itemWidth
@@ -1492,7 +1502,7 @@ private fun BottomNav(
                     label = "MathFlowNavIndicatorPosition"
                 )
                 val navScope = rememberCoroutineScope()
-                val pillMotion = remember { LiquidGlassPillMotion(navScope, current.ordinal) }
+                val pillMotion = remember { LiquidGlassPillMotion(navScope, groupedSelection) }
                 pillMotion.reduceMotion = !settings.enabled || !ValueAnimator.areAnimatorsEnabled()
                 // Match RX's compositing order without re-recording the parent page:
                 // page -> glass panel -> selected fill -> glyph row.
@@ -1506,10 +1516,10 @@ private fun BottomNav(
                 val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
                 pillMotion.tabStepDp = itemWidth.value
                 LaunchedEffect(current, useRefractiveLens, settings.enabled) {
-                    if (useRefractiveLens && settings.enabled) {
-                        pillMotion.animateTo(current.ordinal)
+                    if (useRefractiveLens && settings.enabled && current != Page.SETTINGS) {
+                        pillMotion.animateTo(groupedSelection)
                     } else {
-                        pillMotion.snapTo(current.ordinal)
+                        pillMotion.snapTo(groupedSelection)
                     }
                 }
                 // Resting glass stays spatially stable. Motion is reserved for
@@ -1590,7 +1600,7 @@ private fun BottomNav(
                         )
                     }
                 }
-                if (useRefractiveLens) {
+                if (useRefractiveLens && current != Page.SETTINGS) {
                     FlatLiquidGlassSelectionPill(
                         motion = pillMotion,
                         modifier = Modifier.align(Alignment.CenterStart),
@@ -1626,7 +1636,7 @@ private fun BottomNav(
                                                 startIndex = dragStartIndex,
                                                 dragDistancePx = dragDistance,
                                                 tabStepPx = tabStepPx,
-                                                tabCount = Page.entries.size,
+                                                tabCount = groupedTabCount,
                                                 isRtl = currentLayoutDirection == LayoutDirection.Rtl
                                             ).roundToInt()
                                             pillMotion.release(logicalIndex)
@@ -1656,7 +1666,7 @@ private fun BottomNav(
                         ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Page.entries.forEach { item ->
+                    Page.entries.take(groupedTabCount).forEach { item ->
                         val isSelected = item == current
                         val tint by animateColorAsState(
                             targetValue = if (isSelected) p.accent else p.accent.copy(alpha = 0.74f),
@@ -1720,7 +1730,7 @@ private fun BottomNav(
                         }
                     }
                 }
-                if (useRefractiveLens) {
+                if (useRefractiveLens && current != Page.SETTINGS) {
                     MovingLiquidGlassSelectionPill(
                         motion = pillMotion,
                         backdrop = indicatorBackdrop ?: backdrop!!,
@@ -1729,6 +1739,76 @@ private fun BottomNav(
                         layoutDirection = layoutDirection
                     )
                 }
+            }
+        }
+        if (navLiquidPanel) {
+            val standaloneSelected = current == Page.SETTINGS
+            Surface(
+                modifier = Modifier
+                    .size(58.dp)
+                    .then(
+                        if (useRefractiveLens) {
+                            Modifier.drawBackdrop(
+                                backdrop = backdrop!!,
+                                shape = { CircleShape },
+                                effects = {
+                                    colorControls(saturation = 1.5f)
+                                    blur(8.dp.toPx() * 0.33f)
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                                        lens(
+                                            24.dp.toPx() * 0.33f,
+                                            24.dp.toPx() * 0.33f,
+                                            depthEffect = true,
+                                            chromaticAberration = false
+                                        )
+                                    }
+                                },
+                                highlight = { Highlight.Default },
+                                shadow = { Shadow.Default },
+                                onDrawSurface = {
+                                    val tint = if (p.dark) Color(0xFF121212) else Color(0xFFFAFAFA)
+                                    drawRect(tint.copy(alpha = 0.4f))
+                                },
+                                backdropScale = 0.33f
+                            )
+                        } else {
+                            Modifier.clip(CircleShape).background(
+                                p.surface.copy(alpha = 0.46f * settings.opacity)
+                            )
+                        }
+                    )
+                    .then(
+                        if (useRefractiveLens) Modifier
+                        else Modifier.border(
+                            0.8.dp,
+                            p.text.copy(alpha = settings.highlightStrength * 0.22f),
+                            CircleShape
+                        )
+                    ),
+                shape = CircleShape,
+                color = Color.Transparent,
+                shadowElevation = 0.dp
+            ) {
+                Box(
+                    Modifier.fillMaxSize()
+                        .semantics {
+                            role = Role.Tab
+                            selected = standaloneSelected
+                        }
+                        .mathFlowClickable {
+                            if (!standaloneSelected) onSelect(Page.SETTINGS)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AppIcon(
+                        glyph = Page.SETTINGS.glyph,
+                        contentDescription = displayText(Page.SETTINGS.title),
+                        tint = if (standaloneSelected) p.accent else p.accent.copy(alpha = 0.74f),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+        }
             }
         }
     }
@@ -1756,7 +1836,7 @@ private fun FlatLiquidGlassSelectionPill(
             .graphicsLayer {
                 val visualPosition = LiquidGlassPillGeometry.visualPosition(
                     motion.position,
-                    Page.entries.size,
+                    Page.entries.size - 1,
                     layoutDirection == LayoutDirection.Rtl
                 )
                 val cellWidthPx = with(density) { itemWidth.toPx() }
@@ -1784,7 +1864,7 @@ private fun MovingLiquidGlassSelectionPill(
         center = {
             val visualPosition = LiquidGlassPillGeometry.visualPosition(
                 motion.position,
-                Page.entries.size,
+                Page.entries.size - 1,
                 layoutDirection == LayoutDirection.Rtl
             )
             Offset(
