@@ -6,6 +6,23 @@ import org.junit.Test
 
 class MathFlowUiStyleTest {
     @Test
+    fun onlySixCuratedStylesRemainAvailable() {
+        assertEqualsExpected(true, MathFlowUiStyle.entries.size == 6)
+        assertEqualsExpected(
+            true,
+            MathFlowUiStyle.entries.map { it.id }.toSet() ==
+                setOf("material_you", "liquid_glass", "fluent", "one_ui", "minimal", "soft_ui")
+        )
+    }
+
+    @Test
+    fun retiredStyleIdsFallBackToMaterialYou() {
+        listOf("pixel", "neo", "skeuomorphic", "retro_grid").forEach { oldId ->
+            assertEqualsExpected(true, MathFlowUiStyle.fromId(oldId) == MathFlowUiStyle.MATERIAL_YOU)
+        }
+    }
+
+    @Test
     fun onlyGlobalLiquidGlassStyleEnablesTheRefractiveNavigationRenderer() {
         MathFlowUiStyle.entries.forEach { style ->
             assertEqualsExpected(
