@@ -44,6 +44,19 @@ android {
                 signingConfig = signingConfigs.getByName("distribution")
             }
         }
+
+        // R8-optimized build for on-device performance comparison.
+        // A separate package allows Debug and Benchmark to coexist.
+        create("benchmark") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".benchmark"
+            signingConfig = signingConfigs.getByName("debug")
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
