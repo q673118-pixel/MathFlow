@@ -128,9 +128,10 @@ half4 main(float2 coord) {
     if (depth < refractionHeight) {
         float d = circleMap(clamp(1.0 - depth / refractionHeight, 0.0, 1.0)) * refractionAmount;
         float gradRadius = min(radius * 1.5, min(halfSize.x, halfSize.y));
+        float2 radial = centeredCoord / max(length(centeredCoord), 0.001);
         float2 grad = normalize(
             gradSdRoundedRect(centeredCoord, halfSize, gradRadius) +
-            0.18 * normalize(centeredCoord)
+            0.18 * radial
         );
         sampleCoord += d * grad;
     }
