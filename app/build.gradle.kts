@@ -40,17 +40,19 @@ android {
 
     buildTypes {
         getByName("debug") {
-            if (useDistributionSigning) {
-                signingConfig = signingConfigs.getByName("distribution")
-            }
+            signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
+        }
+
+        getByName("release") {
+            signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
         }
 
         // R8-optimized build for on-device performance comparison.
-        // A separate package allows Debug and Benchmark to coexist.
+        // Separate package; use the same certificate as the regular Release build.
         create("benchmark") {
             initWith(getByName("release"))
             applicationIdSuffix = ".benchmark"
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
