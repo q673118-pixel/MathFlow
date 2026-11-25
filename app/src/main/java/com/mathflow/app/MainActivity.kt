@@ -1749,6 +1749,7 @@ private fun FlatLiquidGlassSelectionPill(
     layoutDirection: LayoutDirection
 ) {
     if (!motion.isFlat) return
+    val density = LocalDensity.current
     Box(
         modifier
             .graphicsLayer {
@@ -1757,8 +1758,8 @@ private fun FlatLiquidGlassSelectionPill(
                     Page.entries.size,
                     layoutDirection == LayoutDirection.Rtl
                 )
-                val cellWidthPx = with(this) { itemWidth.toPx() }
-                val pillWidthPx = with(this) { indicatorWidth.toPx() }
+                val cellWidthPx = with(density) { itemWidth.toPx() }
+                val pillWidthPx = with(density) { indicatorWidth.toPx() }
                 translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
             }
             .size(width = indicatorWidth, height = indicatorHeight)
