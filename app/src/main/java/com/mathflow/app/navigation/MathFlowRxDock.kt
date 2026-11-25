@@ -2,6 +2,8 @@ package com.mathflow.app.navigation
 
 import android.os.Build
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.navigationBars
@@ -16,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalView
@@ -149,6 +152,10 @@ private fun rxDockGlass(
 ): Modifier {
     val exported = LocalDockGlassExport.current
     val tint = if (dark) Color(0xFF121212) else Color(0xFFFAFAFA)
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+        return Modifier.clip(shape).background(tint.copy(alpha = 0.94f), shape)
+            .border(1.dp, Color.White.copy(alpha = 0.12f), shape)
+    }
     return Modifier.drawBackdrop(
         backdrop = pageBackdrop,
         shape = { shape },
