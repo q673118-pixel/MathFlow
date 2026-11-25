@@ -3,7 +3,7 @@ name: MathFlow Android build
 on:
   workflow_dispatch:
   push:
-    branches: [ "main", "redesign-ui" ]
+    branches: [ "main", "redesign-ui", "liquid-glass-rx-parity" ]
   pull_request:
     branches: [ "redesign-ui" ]
 
