@@ -74,7 +74,7 @@ fun MathFlowRxDock(
             if (tick) HapticFeedbackConstants.CLOCK_TICK else HapticFeedbackConstants.KEYBOARD_TAP
         )
     }
-    val glassEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !scrollConnection.isInline
+    val glassEnabled = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val glassContentTint = if (dark) Color.White else Color.Black
     val glassSurface: @Composable () -> Modifier = {
         rxDockGlass(shape, pageBackdrop, dark)
