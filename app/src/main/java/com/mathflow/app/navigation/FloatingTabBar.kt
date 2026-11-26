@@ -583,13 +583,15 @@ private fun SharedTransitionScope.InlineStandaloneTab(
         isInline = true,
         isStandalone = true,
         modifier = modifier
-            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
-            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
                 zIndexInOverlay = 1f
             )
+            // Apply both scales inside the shared element so its expanded/inline
+            // transition carries the selected size instead of resetting it.
+            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .shadow(
                 shape = shapes.standaloneTabShape,
                 elevation = elevations.inlineElevation
@@ -1062,13 +1064,15 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
         isInline = false,
         isStandalone = true,
         modifier = modifier
-            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
-            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
                 zIndexInOverlay = 1f
             )
+            // Apply both scales inside the shared element so its expanded/inline
+            // transition carries the selected size instead of resetting it.
+            .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .shadow(
                 shape = shapes.standaloneTabShape,
                 elevation = elevations.expandedElevation
