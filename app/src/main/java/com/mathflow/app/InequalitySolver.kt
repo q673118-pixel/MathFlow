@@ -90,8 +90,8 @@ class InequalitySolver {
                 var lowValue = a
                 repeat(70) {
                     val middle = (low + high) * 0.5
-                    val middleValue = valueAt(middle)
-                    if (middleValue == null) {
+                    val middleValue = valueAt(middle) ?: Double.NaN
+                    if (!middleValue.isFinite()) {
                         high = middle
                     } else if ((middleValue < 0.0) == (lowValue < 0.0)) {
                         low = middle
