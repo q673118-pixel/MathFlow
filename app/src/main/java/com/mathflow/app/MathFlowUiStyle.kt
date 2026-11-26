@@ -55,9 +55,9 @@ internal enum class MathFlowUiStyle(
      * Calculator keys retain generous rounding in every visual system.
      * This token is intentionally independent from generic control geometry.
      */
-    /** Material You keeps its dock surface matte but uses the theme-tinted glass selection droplet. */
+    /** The refractive selection droplet is exclusive to the Liquid Glass style. */
     val liquidGlassPill: Boolean
-        get() = liquidGlassNavigation || this == MATERIAL_YOU
+        get() = liquidGlassNavigation
 
     val calculatorKeyRadiusDp: Int
         get() = 28
