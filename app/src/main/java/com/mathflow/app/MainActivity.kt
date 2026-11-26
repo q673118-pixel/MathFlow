@@ -2331,13 +2331,27 @@ private fun EquationSolverPage() {
     var systemSecond by rememberSaveable { mutableStateOf("x - y = 1") }
     var systemThird by rememberSaveable { mutableStateOf("x + y + z = 6") }
     var expressionToSimplify by rememberSaveable { mutableStateOf("2(x + 3) - x") }
+    var inequalityLeft by rememberSaveable { mutableStateOf("x^2 - 4") }
+    var inequalityRight by rememberSaveable { mutableStateOf("0") }
+    var inequalityRelation by rememberSaveable { mutableStateOf("≤") }
+    var nonlinearFirst by rememberSaveable { mutableStateOf("x^2 + y^2 = 1") }
+    var nonlinearSecond by rememberSaveable { mutableStateOf("x - y = 0") }
+    var isSolvingNumerically by remember { mutableStateOf(false) }
+    val solverScope = rememberCoroutineScope()
 
     PageColumn(tx("solver")) {
-        Segmented(listOf("Уравнение", "Система", "Упростить"), mode) {
-            mode = it
-            answer = null
-            steps = emptyList()
-            error = null
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("Уравнение", "Система", "Неравенство", "Нелинейная система", "Упростить").forEach { option ->
+                Chip(option, mode == option) {
+                    mode = option
+                    answer = null
+                    steps = emptyList()
+                    error = null
+                }
+            }
         }
         if (mode == "Уравнение") {
             Panel {
@@ -2376,7 +2390,7 @@ private fun EquationSolverPage() {
                 }
             }
             Text(displayText("Поддерживаются линейные выражения, скобки, дробные коэффициенты и точные рациональные ответы."), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
-        } else {
+        } else if (mode == "Упростить") {
             Panel {
                 Text(displayText("Упрощение многочленов от одной переменной x (до 4-й степени)."), color = p.muted, fontSize = 12.sp)
                 Field(expressionToSimplify, { expressionToSimplify = it; answer = null; error = null }, "Выражение", Modifier.fillMaxWidth(), numeric = false)
@@ -2392,6 +2406,80 @@ private fun EquationSolverPage() {
                 }
             }
             Text(displayText("Поддерживаются точные дробные коэффициенты, скобки, раскрытие произведений и приведение подобных слагаемых. Деление на выражение с x не поддерживается."), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        } else if (mode == "Неравенство") {
+            Panel {
+                Text("Численное решение неравенств одной переменной", color = p.muted, fontSize = 12.sp)
+                Field(inequalityLeft, { inequalityLeft = it; answer = null; error = null }, "Левая часть", Modifier.fillMaxWidth(), numeric = false)
+                Segmented(listOf("<", "≤", ">", "≥"), inequalityRelation) { inequalityRelation = it; answer = null; error = null }
+                Field(inequalityRight, { inequalityRight = it; answer = null; error = null }, "Правая часть", Modifier.fillMaxWidth(), numeric = false)
+                ActionButton(if (isSolvingNumerically) "Вычисление…" else "Решить неравенство") {
+                    if (!isSolvingNumerically) {
+                        isSolvingNumerically = true
+                        solverScope.launch {
+                            val result = withContext(Dispatchers.Default) {
+                                runCatching {
+                                    InequalitySolver().solve(
+                                        inequalityLeft,
+                                        when (inequalityRelation) { "≤" -> "<="; "≥" -> ">="; else -> inequalityRelation },
+                                        inequalityRight
+                                    )
+                                }
+                            }
+                            result.onSuccess { solution ->
+                                answer = if (solution.intervals.isEmpty()) {
+                                    "На проверенном интервале решений не найдено"
+                                } else {
+                                    "x ∈ " + solution.intervals.joinToString(" ∪ ") { interval ->
+                                        (if (interval.leftIncluded) "[" else "(") +
+                                            "%.4f".format(Locale.US, interval.left) + "; " +
+                                            "%.4f".format(Locale.US, interval.right) +
+                                            (if (interval.rightIncluded) "]" else ")")
+                                    }
+                                }
+                                steps = solution.explanation + listOf("Критические точки: " +
+                                    (solution.criticalPoints.joinToString { "%.5f".format(Locale.US, it) }.ifBlank { "не обнаружены" }))
+                                error = null
+                            }.onFailure {
+                                answer = null
+                                steps = emptyList()
+                                error = it.message ?: "Не удалось решить неравенство"
+                            }
+                            isSolvingNumerically = false
+                        }
+                    }
+                }
+            }
+            Text("Метод численный: область поиска ограничена от −100 до 100. Для доказательного решения рациональных и квадратных неравенств потребуется отдельная точная процедура.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        } else {
+            Panel {
+                Text("Две нелинейные системы с неизвестными x и y", color = p.muted, fontSize = 12.sp)
+                Field(nonlinearFirst, { nonlinearFirst = it; answer = null; error = null }, "Уравнение 1", Modifier.fillMaxWidth(), numeric = false)
+                Field(nonlinearSecond, { nonlinearSecond = it; answer = null; error = null }, "Уравнение 2", Modifier.fillMaxWidth(), numeric = false)
+                ActionButton(if (isSolvingNumerically) "Вычисление…" else "Найти решения") {
+                    if (!isSolvingNumerically) {
+                        isSolvingNumerically = true
+                        solverScope.launch {
+                            val result = withContext(Dispatchers.Default) {
+                                runCatching { NonlinearSystemSolver().solve(nonlinearFirst, nonlinearSecond) }
+                            }
+                            result.onSuccess { solution ->
+                                answer = if (solution.roots.isEmpty()) "На выбранной области решения не найдены" else
+                                    solution.roots.joinToString("; ") {
+                                        "(x = %.5f; y = %.5f)".format(Locale.US, it.x, it.y)
+                                    }
+                                steps = solution.explanation + listOf("Проверено начальных приближений: " + solution.searchedSeeds)
+                                error = null
+                            }.onFailure {
+                                answer = null
+                                steps = emptyList()
+                                error = it.message ?: "Не удалось решить систему"
+                            }
+                            isSolvingNumerically = false
+                        }
+                    }
+                }
+            }
+            Text("Используется метод Ньютона с несколькими начальными приближениями в области [−10; 10] × [−10; 10]. Возможны пропущенные решения; результат нужно проверять.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = error != null,
