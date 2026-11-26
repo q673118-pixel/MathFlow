@@ -272,11 +272,11 @@ class MathGraphEngine {
             if ((a < 0.0) != (b < 0.0)) {
                 var low = x0
                 var high = x1
-                var lowValue = a
+                var lowValue: Double = a
                 repeat(60) {
                     val middle = (low + high) * 0.5
-                    val middleValue = differenceAt(middle)
-                    if (middleValue == null) high = middle
+                    val middleValue: Double = differenceAt(middle) ?: Double.NaN
+                    if (!middleValue.isFinite()) high = middle
                     else if ((middleValue < 0.0) == (lowValue < 0.0)) {
                         low = middle
                         lowValue = middleValue
