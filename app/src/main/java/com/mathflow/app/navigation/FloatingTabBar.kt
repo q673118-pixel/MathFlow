@@ -221,6 +221,13 @@ fun FloatingTabBar(
     content: FloatingTabBarScope.() -> Unit
 ) {
     val scope = remember(contentKey) { FloatingTabBarScopeImpl().apply { content() } }
+    // One selection-scale animation survives AnimatedContent mode changes.
+    val settingsSelected = scope.standaloneTab?.key == selectedTabKey
+    val settingsScale by animateFloatAsState(
+        targetValue = if (settingsSelected) 1.06f else 1f,
+        animationSpec = spring(dampingRatio = 0.80f, stiffness = 360f),
+        label = "SettingsButtonScale"
+    )
 
     val isAccessoryShared = inlineAccessory != null && expandedAccessory != null
 
@@ -234,6 +241,7 @@ fun FloatingTabBar(
                 InlineBar(
                     scope = scope,
                     selectedTabKey = selectedTabKey,
+                    settingsScale = settingsScale,
                     accessory = inlineAccessory,
                     isAccessoryShared = isAccessoryShared,
                     onInlineTabClick = { scrollConnection.expand() },
@@ -248,6 +256,7 @@ fun FloatingTabBar(
                 ExpandedBar(
                     scope = scope,
                     selectedTabKey = selectedTabKey,
+                    settingsScale = settingsScale,
                     accessory = expandedAccessory,
                     isAccessoryShared = isAccessoryShared,
                     colors = colors,
@@ -415,6 +424,7 @@ interface FloatingTabBarScope {
 private fun SharedTransitionScope.InlineBar(
     scope: FloatingTabBarScopeImpl,
     selectedTabKey: Any?,
+    settingsScale: Float,
     accessory: (@Composable SharedTransitionScope.(Modifier, AnimatedVisibilityScope) -> Unit)?,
     isAccessoryShared: Boolean,
     onInlineTabClick: () -> Unit,
@@ -473,6 +483,7 @@ private fun SharedTransitionScope.InlineBar(
             InlineStandaloneTab(
                 standaloneTab = standaloneTab,
                 isSelected = standaloneTab.key == selectedTabKey,
+                settingsScale = settingsScale,
                 onInlineTabClick = onInlineTabClick,
                 shapes = shapes,
                 colors = colors,
@@ -549,6 +560,7 @@ private fun SharedTransitionScope.InlineTab(
 private fun SharedTransitionScope.InlineStandaloneTab(
     standaloneTab: FloatingTabBarTab,
     isSelected: Boolean,
+    settingsScale: Float,
     onInlineTabClick: () -> Unit,
     shapes: FloatingTabBarShapes,
     colors: FloatingTabBarColors,
@@ -557,14 +569,7 @@ private fun SharedTransitionScope.InlineStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
-    // Selection scale and touch feedback are deliberately independent animations.
-    // Lower spring stiffness by 1 / 1.2² to make the selection-scale transition
-    // approximately 20% slower without changing its target size.
-    val settingsScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.06f else 1f,
-        animationSpec = spring(dampingRatio = 0.80f, stiffness = 360f),
-        label = "SettingsButtonScaleInline"
-    )
+    // Touch feedback remains local and independent from the hoisted selection scale.
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
@@ -652,6 +657,7 @@ private fun SharedTransitionScope.InlineAccessory(
 private fun SharedTransitionScope.ExpandedBar(
     scope: FloatingTabBarScopeImpl,
     selectedTabKey: Any?,
+    settingsScale: Float,
     accessory: (@Composable SharedTransitionScope.(Modifier, AnimatedVisibilityScope) -> Unit)?,
     isAccessoryShared: Boolean,
     colors: FloatingTabBarColors,
@@ -713,6 +719,7 @@ private fun SharedTransitionScope.ExpandedBar(
                 ExpandedStandaloneTab(
                     standaloneTab = standaloneTab,
                     isSelected = standaloneTab.key == selectedTabKey,
+                    settingsScale = settingsScale,
                     shapes = shapes,
                     colors = colors,
                     elevations = elevations,
@@ -1033,6 +1040,7 @@ private fun SharedTransitionScope.ExpandedTabs(
 private fun SharedTransitionScope.ExpandedStandaloneTab(
     standaloneTab: FloatingTabBarTab,
     isSelected: Boolean,
+    settingsScale: Float,
     shapes: FloatingTabBarShapes,
     colors: FloatingTabBarColors,
     elevations: FloatingTabBarElevations,
@@ -1040,12 +1048,7 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
-    // Keep touch feedback separate from the selected-state enlargement.
-    val settingsScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.06f else 1f,
-        animationSpec = spring(dampingRatio = 0.80f, stiffness = 360f),
-        label = "SettingsButtonScaleExpanded"
-    )
+    // Touch feedback remains local and independent from the hoisted selection scale.
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
