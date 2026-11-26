@@ -115,6 +115,22 @@ class MathExtensionsTest {
         assertTrue(result.intervals.first().rightIncluded)
     }
 
+    @Test fun inequalitySolverSplitsAtRationalPolesWithoutTreatingThemAsRoots() {
+        val result = InequalitySolver().solve("1/(x-1)", ">", "0", -5.0, 5.0, 2000)
+        assertEquals(1, result.intervals.size)
+        assertEquals(1.0, result.intervals.first().left, 1e-3)
+        assertFalse(result.intervals.first().leftIncluded)
+        assertTrue(result.intervals.first().rightIncluded)
+        assertTrue(result.domainExclusions.any { kotlin.math.abs(it - 1.0) < 1e-3 })
+    }
+
+    @Test fun inequalitySolverMergesIntervalsWhenTheSharedRootIsIncluded() {
+        val result = InequalitySolver().solve("x^2", ">=", "0", -5.0, 5.0, 2000)
+        assertEquals(1, result.intervals.size)
+        assertEquals(-5.0, result.intervals.first().left, 1e-3)
+        assertEquals(5.0, result.intervals.first().right, 1e-3)
+    }
+
     @Test fun inequalitySolverFindsBoundedSolutionIntervals() {
         val result = InequalitySolver().solve("x^2", "<=", "4", -5.0, 5.0, 2000)
         assertEquals(1, result.intervals.size)

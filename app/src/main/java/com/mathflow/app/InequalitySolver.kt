@@ -12,10 +12,14 @@ data class InequalitySolution(
     val intervals: List<SolutionInterval>,
     val criticalPoints: List<Double>,
     val searchedRange: ClosedFloatingPointRange<Double>,
-    val explanation: List<String>
+    val explanation: List<String>,
+    val domainExclusions: List<Double> = emptyList()
 )
 
-/** Numerical interval method for inequalities; explicitly reports its finite search domain. */
+/**
+ * Numerical sign-chart solver. Roots and detected domain breaks are separate:
+ * poles must split intervals but must never be reported as roots.
+ */
 class InequalitySolver {
     fun solve(
         leftExpression: String,
@@ -32,23 +36,38 @@ class InequalitySolver {
         val right = MathExpression.parse(rightExpression)
         fun valueAt(x: Double): Double? = runCatching {
             val vars = mapOf("x" to x)
-            val a = left.evaluate(vars)
-            val b = right.evaluate(vars)
-            (a - b).takeIf { it.isFinite() }
+            val value = left.evaluate(vars) - right.evaluate(vars)
+            value.takeIf { it.isFinite() }
         }.getOrNull()
+        fun satisfies(value: Double): Boolean =
+            when (relation) {
+                "<", "<=" -> value < 0.0
+                ">", ">=" -> value > 0.0
+                else -> false
+            }
 
         val step = (upperBound - lowerBound) / sampleCount
         val values = Array(sampleCount + 1) { i -> valueAt(lowerBound + i * step) }
         val roots = ArrayList<Double>()
-        fun addRoot(x: Double) {
-            if (x.isFinite() && abs(valueAt(x) ?: Double.POSITIVE_INFINITY) < 1.0e-7 &&
-                roots.none { abs(it - x) < step * 0.1 }) roots += x
+        val domainBreaks = ArrayList<Double>()
+        fun addUnique(target: MutableList<Double>, x: Double) {
+            if (x.isFinite() && target.none { abs(it - x) < step * 0.2 }) target += x
         }
+        fun addRoot(x: Double) {
+            if (abs(valueAt(x) ?: Double.POSITIVE_INFINITY) < 1.0e-7) addUnique(roots, x)
+            else addUnique(domainBreaks, x)
+        }
+
         for (i in 0 until sampleCount) {
-            val a = values[i] ?: continue
-            val b = values[i + 1] ?: continue
+            val a = values[i]
+            val b = values[i + 1]
             val x0 = lowerBound + i * step
             val x1 = x0 + step
+            if (a == null || b == null) {
+                if (a == null && b != null) addUnique(domainBreaks, x1)
+                if (a != null && b == null) addUnique(domainBreaks, x0)
+                continue
+            }
             if (abs(a) < 1.0e-10) addRoot(x0)
             if ((a < 0.0) != (b < 0.0)) {
                 var low = x0
@@ -56,9 +75,10 @@ class InequalitySolver {
                 var lowValue = a
                 repeat(70) {
                     val middle = (low + high) * 0.5
-                    val middleValue = valueAt(middle) ?: Double.NaN
-                    if (!middleValue.isFinite()) high = middle
-                    else if ((middleValue < 0.0) == (lowValue < 0.0)) {
+                    val middleValue = valueAt(middle)
+                    if (middleValue == null) {
+                        high = middle
+                    } else if ((middleValue < 0.0) == (lowValue < 0.0)) {
                         low = middle
                         lowValue = middleValue
                     } else high = middle
@@ -66,6 +86,7 @@ class InequalitySolver {
                 addRoot((low + high) * 0.5)
             }
         }
+
         // Detect even-multiplicity roots, which do not change the sign.
         for (i in 1 until sampleCount) {
             val before = values[i - 1] ?: continue
@@ -85,36 +106,36 @@ class InequalitySolver {
         }
         if (abs(values.last() ?: Double.POSITIVE_INFINITY) < 1.0e-10) addRoot(upperBound)
 
-        val cuts = (listOf(lowerBound) + roots.sorted() + listOf(upperBound)).distinct()
+        val rootsSorted = roots.sorted()
+        val breaksSorted = domainBreaks.filter { point -> roots.none { abs(it - point) < step * 0.2 } }.sorted()
+        val cuts = (listOf(lowerBound) + rootsSorted + breaksSorted + listOf(upperBound)).distinct().sorted()
         val intervals = ArrayList<SolutionInterval>()
         for (i in 0 until cuts.lastIndex) {
-            val left = cuts[i]
-            val right = cuts[i + 1]
-            val probe = left + (right - left) * 0.5
-            val value = valueAt(probe) ?: continue
-            val included = when (relation) {
-                "<", "<=" -> value < 0.0
-                ">", ">=" -> value > 0.0
-                else -> false
+            val leftEdge = cuts[i]
+            val rightEdge = cuts[i + 1]
+            val probe = leftEdge + (rightEdge - leftEdge) * 0.5
+            val probeValue = valueAt(probe) ?: continue
+            if (!satisfies(probeValue)) continue
+            fun boundaryIncluded(x: Double): Boolean {
+                if (breaksSorted.any { abs(it - x) < step * 0.2 }) return false
+                if (rootsSorted.any { abs(it - x) < step * 0.2 }) {
+                    return relation == "<=" || relation == ">="
+                }
+                return valueAt(x)?.let(::satisfies) == true
             }
-            if (included) {
-                val leftRoot = roots.any { abs(it - left) < step * 0.2 }
-                val rightRoot = roots.any { abs(it - right) < step * 0.2 }
-                val includeBoundary = relation == "<=" || relation == ">="
-                intervals += SolutionInterval(left, right,
-                    if (leftRoot) includeBoundary else valueAt(left) != null,
-                    if (rightRoot) includeBoundary else valueAt(right) != null)
-            }
+            intervals += SolutionInterval(
+                leftEdge,
+                rightEdge,
+                boundaryIncluded(leftEdge),
+                boundaryIncluded(rightEdge)
+            )
         }
+
         if (relation == "<=" || relation == ">=") {
-            fun satisfies(value: Double): Boolean =
-                if (relation == "<=") value <= 0.0 else value >= 0.0
-            roots.forEach { root ->
+            rootsSorted.forEach { root ->
                 val epsilon = (step * 0.5).coerceAtLeast(1.0e-7)
-                val leftValue = valueAt(root - epsilon)
-                val rightValue = valueAt(root + epsilon)
-                val leftSatisfied = leftValue?.let(::satisfies) == true
-                val rightSatisfied = rightValue?.let(::satisfies) == true
+                val leftSatisfied = valueAt(root - epsilon)?.let(::satisfies) == true
+                val rightSatisfied = valueAt(root + epsilon)?.let(::satisfies) == true
                 val alreadyIncluded = intervals.any {
                     (abs(it.left - root) < step && it.leftIncluded) ||
                         (abs(it.right - root) < step && it.rightIncluded)
@@ -124,11 +145,27 @@ class InequalitySolver {
                 }
             }
         }
+
+        // Merge touching intervals only when their shared point is included.
+        val merged = ArrayList<SolutionInterval>()
+        intervals.sortedBy { it.left }.forEach { current ->
+            val previous = merged.lastOrNull()
+            if (previous != null &&
+                abs(previous.right - current.left) < step * 0.2 &&
+                (previous.rightIncluded || current.leftIncluded)
+            ) {
+                merged[merged.lastIndex] = previous.copy(
+                    right = current.right,
+                    rightIncluded = current.rightIncluded
+                )
+            } else merged += current
+        }
+
         val explanation = listOf(
-            "Найдены критические точки численно, затем проверен знак выражения на каждом промежутке.",
+            "Найдены нули и обнаруженные точки разрыва; знак проверен внутри каждого промежутка.",
             "Область поиска: [" + lowerBound + "; " + upperBound + "].",
-            "Численный метод не доказывает отсутствие решений за пределами этого интервала и может требовать уточнения около разрывов."
+            "Метод численный: он не доказывает отсутствие решений за пределами интервала и может пропускать очень близкие корни."
         )
-        return InequalitySolution(intervals.sortedBy { it.left }, roots.sorted(), lowerBound..upperBound, explanation)
+        return InequalitySolution(merged, rootsSorted, lowerBound..upperBound, explanation, breaksSorted)
     }
 }

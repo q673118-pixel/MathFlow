@@ -2655,8 +2655,10 @@ private fun EquationSolverPage() {
                                             (if (interval.rightIncluded) "]" else ")")
                                     }
                                 }
-                                steps = solution.explanation + listOf("Критические точки: " +
-                                    (solution.criticalPoints.joinToString { "%.5f".format(Locale.US, it) }.ifBlank { "не обнаружены" }))
+                                steps = solution.explanation + listOf(
+                                    "Нули: " + solution.criticalPoints.joinToString { "%.5f".format(Locale.US, it) }.ifBlank { "не обнаружены" },
+                                    "Точки исключения ОДЗ: " + solution.domainExclusions.joinToString { "%.5f".format(Locale.US, it) }.ifBlank { "не обнаружены" }
+                                )
                                 error = null
                             }.onFailure {
                                 answer = null
