@@ -107,7 +107,7 @@ fun MathFlowRxDock(
         LocalDockReduceMotion provides effectiveReduceMotion,
         LocalDockAnimationScale provides animationScale,
         LocalDockGlassEnabled provides glassEnabled,
-        LocalDockPillGlassEnabled provides liquidGlassPillEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+        LocalDockPillGlassEnabled provides (liquidGlassPillEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S),
         LocalDockAccent provides accent,
         LocalDockHaptic provides haptic
     ) {
