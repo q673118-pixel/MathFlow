@@ -1,0 +1,223 @@
+package com.mathflow.app
+
+import java.math.BigDecimal
+import kotlin.math.abs
+import kotlin.math.max
+
+data class GraphPoint(val x: Double, val y: Double?)
+data class GraphCurve(val expression: String, val points: List<GraphPoint>)
+data class GraphSegment(val startX: Double, val startY: Double, val endX: Double, val endY: Double)
+data class GraphRegionCell(val left: Double, val top: Double, val right: Double, val bottom: Double, val included: Boolean)
+
+data class GraphViewport(
+    val xMin: Double = -10.0,
+    val xMax: Double = 10.0,
+    val yMin: Double = -10.0,
+    val yMax: Double = 10.0
+) {
+    init {
+        require(xMin.isFinite() && xMax.isFinite() && yMin.isFinite() && yMax.isFinite())
+        require(xMin < xMax && yMin < yMax) { "Некорректные границы графика" }
+    }
+}
+
+/**
+ * CPU-only graph sampler shared by function, implicit-equation and inequality views.
+ * Expression evaluation is performed off the UI thread by callers.
+ */
+class MathGraphEngine {
+    fun sampleFunctions(
+        expressions: List<String>,
+        viewport: GraphViewport,
+        targetSegments: Int = 240,
+        maxPointsPerCurve: Int = 5000
+    ): List<GraphCurve> {
+        require(expressions.size in 1..12) { "Можно построить от 1 до 12 графиков" }
+        return expressions.map { expression ->
+            GraphCurve(
+                expression = expression,
+                points = sampleFunction(expression, viewport, targetSegments, maxPointsPerCurve)
+            )
+        }
+    }
+
+    fun sampleFunction(
+        expression: String,
+        viewport: GraphViewport,
+        targetSegments: Int = 240,
+        maxPoints: Int = 5000
+    ): List<GraphPoint> {
+        require(expression.isNotBlank()) { "Введите функцию" }
+        require(targetSegments in 16..2000 && maxPoints in 64..10000)
+        val evaluator = ExpressionEngine(AngleMode.RADIANS)
+        val cache = HashMap<Long, Double?>()
+        fun evaluate(x: Double): Double? {
+            val key = java.lang.Double.doubleToLongBits(x)
+            if (cache.containsKey(key)) return cache[key]
+            val value = runCatching {
+                evaluator.calculate(
+                    expression,
+                    variables = mapOf("x" to BigDecimal.valueOf(x)),
+                    includeSteps = false
+                ).decimalValue.toDouble()
+            }.getOrNull()?.takeIf { it.isFinite() && abs(it) <= 1.0e12 }
+            cache[key] = value
+            return value
+        }
+
+        val output = ArrayList<GraphPoint>(minOf(maxPoints, targetSegments * 2))
+        val pixelYScale = 900.0 / (viewport.yMax - viewport.yMin)
+        val maxVisibleJump = (viewport.yMax - viewport.yMin) * 1.8
+        fun append(x: Double, y: Double?) {
+            if (output.size >= maxPoints) return
+            val previous = output.lastOrNull()
+            if (previous != null && previous.y != null && y != null) {
+                val jump = abs(y - previous.y)
+                if (jump > maxVisibleJump || jump * pixelYScale > 1600.0) {
+                    output += GraphPoint(x, null)
+                }
+            }
+            output += GraphPoint(x, y?.takeIf { it in (viewport.yMin - maxVisibleJump)..(viewport.yMax + maxVisibleJump) })
+        }
+
+        fun refine(x0: Double, y0: Double?, x1: Double, y1: Double?, depth: Int) {
+            if (output.size >= maxPoints - 2) {
+                append(x1, y1)
+                return
+            }
+            val xm = x0 + (x1 - x0) * 0.5
+            val ym = evaluate(xm)
+            val shouldSplit = if (depth < 10 && output.size < maxPoints - 2) {
+                if (y0 == null || y1 == null || ym == null) {
+                    depth < 5 && (y0 != null || y1 != null || ym != null)
+                } else {
+                    val linearMid = (y0 + y1) * 0.5
+                    val errorPx = abs(ym - linearMid) * pixelYScale
+                    val visible = max(abs(y0), max(abs(y1), abs(ym))) < max(abs(viewport.yMin), abs(viewport.yMax)) * 40.0 + 100.0
+                    visible && errorPx > 1.4
+                }
+            } else false
+            if (shouldSplit) {
+                refine(x0, y0, xm, ym, depth + 1)
+                refine(xm, ym, x1, y1, depth + 1)
+            } else {
+                append(x1, y1)
+            }
+        }
+
+        val initialCount = targetSegments.coerceAtMost(600)
+        var x0 = viewport.xMin
+        var y0 = evaluate(x0)
+        append(x0, y0)
+        for (index in 1..initialCount) {
+            val x1 = viewport.xMin + (viewport.xMax - viewport.xMin) * index / initialCount
+            val y1 = evaluate(x1)
+            refine(x0, y0, x1, y1, 0)
+            x0 = x1
+            y0 = y1
+            if (output.size >= maxPoints) break
+        }
+        return output
+    }
+
+    /** Marching-squares contour for an implicit equation F(x,y)=0. */
+    fun sampleImplicit(
+        expression: String,
+        viewport: GraphViewport,
+        columns: Int = 80,
+        rows: Int = 80
+    ): List<GraphSegment> {
+        require(expression.isNotBlank())
+        require(columns in 8..240 && rows in 8..240)
+        val engine = ExpressionEngine(AngleMode.RADIANS)
+        val dx = (viewport.xMax - viewport.xMin) / columns
+        val dy = (viewport.yMax - viewport.yMin) / rows
+        fun value(x: Double, y: Double): Double? = runCatching {
+            engine.calculate(
+                expression,
+                variables = mapOf("x" to BigDecimal.valueOf(x), "y" to BigDecimal.valueOf(y)),
+                includeSteps = false
+            ).decimalValue.toDouble()
+        }.getOrNull()?.takeIf { it.isFinite() && abs(it) < 1.0e12 }
+
+        val segments = ArrayList<GraphSegment>()
+        for (row in 0 until rows) {
+            for (column in 0 until columns) {
+                val left = viewport.xMin + column * dx
+                val top = viewport.yMin + row * dy
+                val p = listOf(
+                    left to top,
+                    (left + dx) to top,
+                    (left + dx) to (top + dy),
+                    left to (top + dy)
+                )
+                val v = p.map { value(it.first, it.second) }
+                if (v.any { it == null }) continue
+                val edges = listOf(0 to 1, 1 to 2, 2 to 3, 3 to 0)
+                val crossings = edges.mapNotNull { (a, b) ->
+                    val va = v[a]!!
+                    val vb = v[b]!!
+                    if ((va < 0.0) == (vb < 0.0)) null
+                    else {
+                        val t = (va / (va - vb)).coerceIn(0.0, 1.0)
+                        (p[a].first + (p[b].first - p[a].first) * t) to
+                            (p[a].second + (p[b].second - p[a].second) * t)
+                    }
+                }
+                if (crossings.size >= 2) {
+                    for (i in 0 until crossings.size - 1 step 2) {
+                        val a = crossings[i]
+                        val b = crossings[i + 1]
+                        segments += GraphSegment(a.first, a.second, b.first, b.second)
+                    }
+                }
+            }
+        }
+        return segments
+    }
+
+    /** Grid mask for F(x,y) relation 0; cells are suitable for translucent Canvas fills. */
+    fun sampleInequality(
+        expression: String,
+        relation: String,
+        viewport: GraphViewport,
+        columns: Int = 64,
+        rows: Int = 64
+    ): List<GraphRegionCell> {
+        require(relation in setOf("<", "<=", ">", ">=")) { "Неизвестный знак неравенства" }
+        require(columns in 8..160 && rows in 8..160)
+        val engine = ExpressionEngine(AngleMode.RADIANS)
+        val dx = (viewport.xMax - viewport.xMin) / columns
+        val dy = (viewport.yMax - viewport.yMin) / rows
+        val result = ArrayList<GraphRegionCell>()
+        for (row in 0 until rows) {
+            for (column in 0 until columns) {
+                val x = viewport.xMin + (column + 0.5) * dx
+                val y = viewport.yMin + (row + 0.5) * dy
+                val value = runCatching {
+                    engine.calculate(
+                        expression,
+                        variables = mapOf("x" to BigDecimal.valueOf(x), "y" to BigDecimal.valueOf(y)),
+                        includeSteps = false
+                    ).decimalValue.toDouble()
+                }.getOrNull()?.takeIf { it.isFinite() } ?: continue
+                val included = when (relation) {
+                    "<" -> value < 0.0
+                    "<=" -> value <= 0.0
+                    ">" -> value > 0.0
+                    else -> value >= 0.0
+                }
+                if (included) {
+                    result += GraphRegionCell(
+                        viewport.xMin + column * dx,
+                        viewport.yMin + row * dy,
+                        viewport.xMin + (column + 1) * dx,
+                        viewport.yMin + (row + 1) * dy,
+                        true
+                    )
+                }
+            }
+        }
+        return result
+    }
+}
