@@ -891,7 +891,6 @@ private fun SharedTransitionScope.ExpandedTabs(
                     // beyond the bar, unlike the refractive pill sibling below.
                     .then(tabBarContentModifier())
                     .padding(contentPadding)
-                    .animateContentSize()
             ) {
                 if (showPill && (!glassPill || pill.isFlat)) {
                     FlatSelectionPill(
