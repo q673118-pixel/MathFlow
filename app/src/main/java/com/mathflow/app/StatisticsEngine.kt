@@ -21,15 +21,22 @@ data class StatisticsSummary(
 
 class StatisticsEngine {
     fun parseValues(source: String): List<Double> {
-        val tokens = source.trim().split(Regex("[,;\\s]+")).filter { it.isNotBlank() }
-        require(tokens.isNotEmpty()) { "Введите хотя бы одно число" }
+        val trimmed = source.trim()
+        require(trimmed.isNotEmpty()) { "Введите хотя бы одно число" }
+        val normalized = if (!trimmed.contains(';') && !trimmed.any(Char::isWhitespace) &&
+            trimmed.count { it == ',' } == 1) {
+            trimmed.replace(',', '.')
+        } else {
+            trimmed.replace(';', ' ').replace(',', ' ')
+        }
+        val tokens = normalized.split(Regex("\\s+")).filter { it.isNotBlank() }
         require(tokens.size <= 10000) { "Допускается не более 10 000 значений" }
         return tokens.map {
-            val value = it.replace(',', '.').toDoubleOrNull()
+            val value = it.toDoubleOrNull()
                 ?: throw IllegalArgumentException("Некорректное число: " + it)
             require(value.isFinite()) { "Все значения должны быть конечными числами" }
             value
-        }
+        }.also { require(it.isNotEmpty()) { "Введите хотя бы одно число" } }
     }
 
     fun analyze(values: List<Double>, requestedBins: Int? = null): StatisticsSummary {
@@ -65,9 +72,11 @@ class StatisticsEngine {
             }
             HistogramBin(lower, upper, frequency)
         }
-        val cumulative = frequencies.runningFold(0 to 0) { acc, entry ->
-            entry.value to (acc.second + entry.frequency)
-        }.drop(1)
+        var cumulativeCount = 0
+        val cumulative = frequencies.map { entry ->
+            cumulativeCount += entry.frequency
+            entry.value to cumulativeCount
+        }
         return StatisticsSummary(
             count, sum, mean, median, mode, max - min, variance, sqrt(variance),
             frequencies,
