@@ -1,6 +1,5 @@
 package com.mathflow.app
 
-import java.math.BigDecimal
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -24,12 +23,15 @@ class NonlinearSystemSolver {
         require(seedCountPerAxis in 3..21)
         val first = splitEquation(firstEquation)
         val second = splitEquation(secondEquation)
-        val engine = ExpressionEngine(AngleMode.RADIANS)
+        val firstLeft = MathExpression.parse(first.first)
+        val firstRight = MathExpression.parse(first.second)
+        val secondLeft = MathExpression.parse(second.first)
+        val secondRight = MathExpression.parse(second.second)
         fun eval(pair: Pair<String, String>, x: Double, y: Double): Double? = runCatching {
-            val vars = mapOf("x" to BigDecimal.valueOf(x), "y" to BigDecimal.valueOf(y))
-            val a = engine.calculate(pair.first, vars, false).decimalValue.toDouble()
-            val b = engine.calculate(pair.second, vars, false).decimalValue.toDouble()
-            (a - b).takeIf { it.isFinite() }
+            val vars = mapOf("x" to x, "y" to y)
+            val left = if (pair === first) firstLeft else secondLeft
+            val right = if (pair === first) firstRight else secondRight
+            (left.evaluate(vars) - right.evaluate(vars)).takeIf { it.isFinite() }
         }.getOrNull()
         fun residual(x: Double, y: Double): Pair<Double, Double>? {
             val a = eval(first, x, y) ?: return null

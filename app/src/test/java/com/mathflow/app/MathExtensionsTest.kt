@@ -6,6 +6,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MathExtensionsTest {
+    @Test fun expressionAstSupportsVariablesFunctionsAndImplicitMultiplication() {
+        val expression = MathExpression.parse("2x + sin(pi/2) + |y|")
+        assertEquals(8.0, expression.evaluate(mapOf("x" to 3.0, "y" to 1.0)), 1e-9)
+    }
+
+    @Test fun expressionAstRejectsUndefinedDomains() {
+        val expression = MathExpression.parse("sqrt(x)")
+        try {
+            expression.evaluate(mapOf("x" to -1.0))
+            throw AssertionError("Expected domain validation")
+        } catch (_: IllegalArgumentException) {
+            // Expected.
+        }
+    }
+
     @Test fun graphEngineSamplesFunctionsAndBreaksAtPoles() {
         val engine = MathGraphEngine()
         val points = engine.sampleFunction("x^2", GraphViewport(-2.0, 2.0, -1.0, 5.0), 40)
@@ -70,7 +85,7 @@ class MathExtensionsTest {
         )
         assertEquals(12.0, result.perimeter, 1e-9)
         assertEquals(6.0, result.area, 1e-9)
-        assertEquals(90.0, result.angleC, 1e-9)
+        assertEquals(90.0, result.angleA, 1e-9)
     }
 
     @Test fun inequalitySolverFindsBoundedSolutionIntervals() {

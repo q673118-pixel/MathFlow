@@ -1,6 +1,5 @@
 package com.mathflow.app
 
-import java.math.BigDecimal
 import kotlin.math.abs
 
 data class SolutionInterval(
@@ -29,11 +28,12 @@ class InequalitySolver {
         require(relation in setOf("<", "<=", ">", ">=")) { "Поддерживаются знаки <, ≤, >, ≥" }
         require(lowerBound.isFinite() && upperBound.isFinite() && lowerBound < upperBound)
         require(sampleCount in 100..50000)
-        val engine = ExpressionEngine(AngleMode.RADIANS)
+        val left = MathExpression.parse(leftExpression)
+        val right = MathExpression.parse(rightExpression)
         fun valueAt(x: Double): Double? = runCatching {
-            val vars = mapOf("x" to BigDecimal.valueOf(x))
-            val a = engine.calculate(leftExpression, vars, false).decimalValue.toDouble()
-            val b = engine.calculate(rightExpression, vars, false).decimalValue.toDouble()
+            val vars = mapOf("x" to x)
+            val a = left.evaluate(vars)
+            val b = right.evaluate(vars)
             (a - b).takeIf { it.isFinite() }
         }.getOrNull()
 

@@ -1,6 +1,5 @@
 package com.mathflow.app
 
-import java.math.BigDecimal
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -49,17 +48,13 @@ class MathGraphEngine {
     ): List<GraphPoint> {
         require(expression.isNotBlank()) { "Введите функцию" }
         require(targetSegments in 16..2000 && maxPoints in 64..10000)
-        val evaluator = ExpressionEngine(AngleMode.RADIANS)
+        val evaluator = MathExpression.parse(expression)
         val cache = HashMap<Long, Double?>()
         fun evaluate(x: Double): Double? {
             val key = java.lang.Double.doubleToLongBits(x)
             if (cache.containsKey(key)) return cache[key]
             val value = runCatching {
-                evaluator.calculate(
-                    expression,
-                    variables = mapOf("x" to BigDecimal.valueOf(x)),
-                    includeSteps = false
-                ).decimalValue.toDouble()
+                evaluator.evaluate(mapOf("x" to x))
             }.getOrNull()?.takeIf { it.isFinite() && abs(it) <= 1.0e12 }
             cache[key] = value
             return value
@@ -129,15 +124,11 @@ class MathGraphEngine {
     ): List<GraphSegment> {
         require(expression.isNotBlank())
         require(columns in 8..240 && rows in 8..240)
-        val engine = ExpressionEngine(AngleMode.RADIANS)
+        val engine = MathExpression.parse(expression)
         val dx = (viewport.xMax - viewport.xMin) / columns
         val dy = (viewport.yMax - viewport.yMin) / rows
         fun value(x: Double, y: Double): Double? = runCatching {
-            engine.calculate(
-                expression,
-                variables = mapOf("x" to BigDecimal.valueOf(x), "y" to BigDecimal.valueOf(y)),
-                includeSteps = false
-            ).decimalValue.toDouble()
+            engine.evaluate(mapOf("x" to x, "y" to y))
         }.getOrNull()?.takeIf { it.isFinite() && abs(it) < 1.0e12 }
 
         val segments = ArrayList<GraphSegment>()
@@ -195,11 +186,7 @@ class MathGraphEngine {
                 val x = viewport.xMin + (column + 0.5) * dx
                 val y = viewport.yMin + (row + 0.5) * dy
                 val value = runCatching {
-                    engine.calculate(
-                        expression,
-                        variables = mapOf("x" to BigDecimal.valueOf(x), "y" to BigDecimal.valueOf(y)),
-                        includeSteps = false
-                    ).decimalValue.toDouble()
+                    engine.evaluate(mapOf("x" to x, "y" to y))
                 }.getOrNull()?.takeIf { it.isFinite() } ?: continue
                 val included = when (relation) {
                     "<" -> value < 0.0
