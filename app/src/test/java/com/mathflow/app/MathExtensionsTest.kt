@@ -52,6 +52,18 @@ class MathExtensionsTest {
         assertTrue(segments.size > 20)
     }
 
+    @Test fun graphEngineFindsCrossingAndTangentIntersections() {
+        val engine = MathGraphEngine()
+        val viewport = GraphViewport(-2.0, 2.0, -2.0, 2.0)
+        val crossing = engine.findIntersections("y=x^2", "y=1", viewport)
+        assertEquals(2, crossing.size)
+        assertEquals(-1.0, crossing.first().x, 1e-4)
+        assertEquals(1.0, crossing.last().x, 1e-4)
+        val tangent = engine.findIntersections("x^2", "0", viewport)
+        assertEquals(1, tangent.size)
+        assertEquals(0.0, tangent.first().x, 1e-4)
+    }
+
     @Test fun graphEngineFindsImplicitCircleContour() {
         val segments = MathGraphEngine().sampleImplicit(
             "x^2+y^2-1",

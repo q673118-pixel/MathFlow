@@ -7,6 +7,7 @@ data class GraphPoint(val x: Double, val y: Double?)
 data class GraphCurve(val expression: String, val points: List<GraphPoint>)
 data class GraphSegment(val startX: Double, val startY: Double, val endX: Double, val endY: Double)
 data class GraphRegionCell(val left: Double, val top: Double, val right: Double, val bottom: Double, val included: Boolean)
+data class GraphIntersection(val x: Double, val y: Double)
 
 data class GraphViewport(
     val xMin: Double = -10.0,
@@ -231,5 +232,86 @@ class MathGraphEngine {
         require(left.isNotEmpty() && right.isNotEmpty()) { "Заполните обе части уравнения" }
         return "(" + left + ")-(" + right + ")"
     }
+
+    fun findIntersections(
+        firstExpression: String,
+        secondExpression: String,
+        viewport: GraphViewport,
+        sampleCount: Int = 1200
+    ): List<GraphIntersection> {
+        require(sampleCount in 100..5000)
+        val first = MathExpression.parse(normalizeFunctionExpression(firstExpression))
+        val second = MathExpression.parse(normalizeFunctionExpression(secondExpression))
+        fun valuesAt(x: Double): Pair<Double, Double>? = runCatching {
+            val variables = mapOf("x" to x)
+            val a = first.evaluate(variables)
+            val b = second.evaluate(variables)
+            if (a.isFinite() && b.isFinite()) a to b else null
+        }.getOrNull()
+        fun differenceAt(x: Double): Double? =
+            valuesAt(x)?.let { (a, b) -> (a - b).takeIf { it.isFinite() } }
+
+        val step = (viewport.xMax - viewport.xMin) / sampleCount
+        val differences = Array(sampleCount + 1) { index ->
+            differenceAt(viewport.xMin + index * step)
+        }
+        val roots = ArrayList<Double>()
+        fun addRoot(x: Double) {
+            val pair = valuesAt(x) ?: return
+            if (abs(pair.first - pair.second) <= 1.0e-6 &&
+                roots.none { abs(it - x) < step * 0.2 }
+            ) roots += x
+        }
+
+        for (index in 0 until sampleCount) {
+            val a = differences[index] ?: continue
+            val b = differences[index + 1] ?: continue
+            val x0 = viewport.xMin + index * step
+            val x1 = x0 + step
+            if (abs(a) < 1.0e-10) addRoot(x0)
+            if ((a < 0.0) != (b < 0.0)) {
+                var low = x0
+                var high = x1
+                var lowValue = a
+                repeat(60) {
+                    val middle = (low + high) * 0.5
+                    val middleValue = differenceAt(middle)
+                    if (middleValue == null) high = middle
+                    else if ((middleValue < 0.0) == (lowValue < 0.0)) {
+                        low = middle
+                        lowValue = middleValue
+                    } else high = middle
+                }
+                addRoot((low + high) * 0.5)
+            }
+        }
+
+        // A tangent intersection has no sign change, so minimize |f(x)-g(x)| near local minima.
+        for (index in 1 until sampleCount) {
+            val before = differences[index - 1] ?: continue
+            val current = differences[index] ?: continue
+            val after = differences[index + 1] ?: continue
+            if (abs(current) > abs(before) || abs(current) > abs(after) || abs(current) > 0.02) continue
+            var low = viewport.xMin + (index - 1) * step
+            var high = viewport.xMin + (index + 1) * step
+            repeat(40) {
+                val leftProbe = low + (high - low) / 3.0
+                val rightProbe = high - (high - low) / 3.0
+                val leftValue = abs(differenceAt(leftProbe) ?: Double.POSITIVE_INFINITY)
+                val rightValue = abs(differenceAt(rightProbe) ?: Double.POSITIVE_INFINITY)
+                if (leftValue <= rightValue) high = rightProbe else low = leftProbe
+            }
+            addRoot((low + high) * 0.5)
+        }
+
+        if (abs(differences.last() ?: Double.POSITIVE_INFINITY) < 1.0e-10) addRoot(viewport.xMax)
+        return roots.sorted().mapNotNull { x ->
+            valuesAt(x)?.let { (a, b) -> GraphIntersection(x, (a + b) * 0.5) }
+        }
+    }
+
+    fun evaluateFunction(expression: String, x: Double): Double? = runCatching {
+        MathExpression.parse(normalizeFunctionExpression(expression)).evaluate(mapOf("x" to x))
+    }.getOrNull()?.takeIf { it.isFinite() }
 
 }
