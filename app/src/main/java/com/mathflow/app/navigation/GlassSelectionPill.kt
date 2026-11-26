@@ -530,16 +530,21 @@ internal fun FlatSelectionPill(
 internal fun GlassSelectionPill(
     motion: GlassPillMotion,
     fillColor: Color,
+    glassTintColor: Color,
     barGlass: LayerBackdrop,
     tabRow: LayerBackdrop,
     modifier: Modifier,
 ) {
     val page = LocalDockAppBackdrop.current
     val shape = remember { RoundedCornerShape(percent = 50) }
-    val backdrop = remember(page, barGlass, tabRow, fillColor) {
-        SelectionPillBackdrop(page, barGlass, tabRow) {
-            fillColor.copy(alpha = fillColor.alpha * (1f - motion.material))
-        }
+    val backdrop = remember(page, barGlass, tabRow, fillColor, glassTintColor) {
+        SelectionPillBackdrop(
+            page = page,
+            bar = barGlass,
+            tabs = tabRow,
+            fill = { fillColor.copy(alpha = fillColor.alpha * (1f - motion.material)) },
+            tint = { glassTintColor.copy(alpha = 0.22f * motion.material) }
+        )
     }
     Box(
         modifier.drawBackdrop(
@@ -588,6 +593,7 @@ private class SelectionPillBackdrop(
     private val bar: Backdrop,
     private val tabs: Backdrop,
     private val fill: () -> Color,
+    private val tint: () -> Color,
 ) : Backdrop {
 
     override val isCoordinatesDependent: Boolean = true
@@ -599,6 +605,14 @@ private class SelectionPillBackdrop(
     ) {
         with(page) { drawBackdrop(density, coordinates, layerBlock) }
         with(bar) { drawBackdrop(density, coordinates, layerBlock) }
+        val glassTint = tint()
+        if (glassTint.alpha > 0f) {
+            drawRect(
+                color = glassTint,
+                topLeft = Offset(-size.width, -size.height),
+                size = Size(size.width * 3, size.height * 3),
+            )
+        }
         val color = fill()
         if (color.alpha > 0f) {
             // Past every edge: the recorded area includes the lens's padding.
