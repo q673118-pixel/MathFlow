@@ -23,16 +23,15 @@ class StatisticsEngine {
     fun parseValues(source: String): List<Double> {
         val trimmed = source.trim()
         require(trimmed.isNotEmpty()) { "Введите хотя бы одно число" }
-        val normalized = if (!trimmed.contains(';') && !trimmed.any(Char::isWhitespace) &&
-            trimmed.count { it == ',' } == 1) {
-            trimmed.replace(',', '.')
-        } else {
-            trimmed.replace(';', ' ').replace(',', ' ')
-        }
-        val tokens = normalized.split(Regex("\\s+")).filter { it.isNotBlank() }
+        val tokens = when {
+            trimmed.contains(';') -> trimmed.split(';').map { it.trim() }
+            trimmed.any(Char::isWhitespace) -> trimmed.split(Regex("\\s+")).map { it.trim().removeSuffix(",") }
+            trimmed.count { it == ',' } == 1 -> listOf(trimmed)
+            else -> trimmed.split(',')
+        }.filter { it.isNotBlank() }
         require(tokens.size <= 10000) { "Допускается не более 10 000 значений" }
         return tokens.map {
-            val value = it.toDoubleOrNull()
+            val value = it.replace(',', '.').toDoubleOrNull()
                 ?: throw IllegalArgumentException("Некорректное число: " + it)
             require(value.isFinite()) { "Все значения должны быть конечными числами" }
             value

@@ -57,15 +57,31 @@ class InequalitySolver {
                 repeat(70) {
                     val middle = (low + high) * 0.5
                     val middleValue = valueAt(middle) ?: Double.NaN
-                    if (!middleValue.isFinite()) {
-                        high = middle
-                    } else if ((middleValue < 0.0) == (lowValue < 0.0)) {
+                    if (!middleValue.isFinite()) high = middle
+                    else if ((middleValue < 0.0) == (lowValue < 0.0)) {
                         low = middle
                         lowValue = middleValue
                     } else high = middle
                 }
                 addRoot((low + high) * 0.5)
             }
+        }
+        // Detect even-multiplicity roots, which do not change the sign.
+        for (i in 1 until sampleCount) {
+            val before = values[i - 1] ?: continue
+            val current = values[i] ?: continue
+            val after = values[i + 1] ?: continue
+            if (abs(current) > abs(before) || abs(current) > abs(after) || abs(current) > 0.02) continue
+            var low = lowerBound + (i - 1) * step
+            var high = lowerBound + (i + 1) * step
+            repeat(45) {
+                val leftProbe = low + (high - low) / 3.0
+                val rightProbe = high - (high - low) / 3.0
+                val leftValue = abs(valueAt(leftProbe) ?: Double.POSITIVE_INFINITY)
+                val rightValue = abs(valueAt(rightProbe) ?: Double.POSITIVE_INFINITY)
+                if (leftValue <= rightValue) high = rightProbe else low = leftProbe
+            }
+            addRoot((low + high) * 0.5)
         }
         if (abs(values.last() ?: Double.POSITIVE_INFINITY) < 1.0e-10) addRoot(upperBound)
 

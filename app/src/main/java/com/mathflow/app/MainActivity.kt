@@ -2154,6 +2154,161 @@ private fun ToolsPage() {
         }
     }
 }
+@Composable
+private fun StatisticsContent() {
+    val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
+    var source by rememberSaveable { mutableStateOf("1; 2; 2; 3; 4; 4; 5") }
+    var chartType by rememberSaveable { mutableStateOf("Полигон частот") }
+    var summary by remember { mutableStateOf<StatisticsSummary?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    Field(source, { source = it; error = null }, "Данные: числа через ; или пробел", Modifier.fillMaxWidth(), numeric = false)
+    Segmented(listOf("Частоты", "Полигон частот", "Гистограмма", "Накопленная частота"), chartType) { chartType = it }
+    ActionButton("Рассчитать статистику") {
+        runCatching {
+            val engine = StatisticsEngine()
+            engine.analyze(engine.parseValues(source))
+        }.onSuccess { summary = it; error = null }.onFailure { summary = null; error = it.message ?: "Ошибка анализа данных" }
+    }
+    error?.let { Text(it, color = p.error, fontSize = 13.sp) }
+    summary?.let { data ->
+        val values = when (chartType) {
+            "Гистограмма" -> data.histogram.map { it.frequency.toDouble() }
+            "Накопленная частота" -> data.cumulativeFrequencies.map { it.second.toDouble() }
+            else -> data.frequencies.map { it.frequency.toDouble() }
+        }
+        val maxValue = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0)
+        Canvas(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp)).background(p.key)) {
+            val count = values.size.coerceAtLeast(1)
+            val slot = size.width / count
+            for (i in 0..4) {
+                val y = size.height * i / 4f
+                drawLine(p.muted.copy(alpha = 0.16f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+            }
+            if (chartType == "Гистограмма") {
+                values.forEachIndexed { index, value ->
+                    val barHeight = (value / maxValue * (size.height - 12.dp.toPx())).toFloat()
+                    drawRect(p.accent.copy(alpha = 0.78f), Offset(index * slot + 1.dp.toPx(), size.height - barHeight),
+                        Size((slot - 2.dp.toPx()).coerceAtLeast(1f), barHeight))
+                }
+            } else {
+                val path = Path()
+                values.forEachIndexed { index, value ->
+                    val x = if (count == 1) size.width / 2f else slot * (index + 0.5f)
+                    val y = size.height - (value / maxValue * (size.height - 12.dp.toPx())).toFloat()
+                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    drawCircle(p.accent, 3.dp.toPx(), Offset(x, y))
+                }
+                if (chartType != "Частоты") drawPath(path, p.accent, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+                else values.forEachIndexed { index, value ->
+                    val x = slot * (index + 0.5f)
+                    val y = size.height - (value / maxValue * (size.height - 12.dp.toPx())).toFloat()
+                    drawLine(p.accent, Offset(x, size.height), Offset(x, y), 2.dp.toPx())
+                }
+            }
+        }
+        Text("n = ${data.count}   Σx = ${"%.3f".format(Locale.US, data.sum)}   Среднее = ${"%.3f".format(Locale.US, data.mean)}", color = p.text, fontSize = 13.sp)
+        Text("Медиана = ${"%.3f".format(Locale.US, data.median)}   Размах = ${"%.3f".format(Locale.US, data.range)}", color = p.text, fontSize = 13.sp)
+        Text("Дисперсия = ${"%.3f".format(Locale.US, data.variance)}   σ = ${"%.3f".format(Locale.US, data.standardDeviation)}", color = p.text, fontSize = 13.sp)
+        Text("Частоты: " + data.frequencies.joinToString { it.value.toString() + " — " + it.frequency }, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+    }
+}
+
+@Composable
+private fun GeometryToolsContent() {
+    val p = LocalPalette.current
+    var mode by rememberSaveable { mutableStateOf("Фигуры") }
+    var operation by rememberSaveable { mutableStateOf("Расстояние AB") }
+    var shape by rememberSaveable { mutableStateOf("Прямоугольник") }
+    var sideA by rememberSaveable { mutableStateOf("5") }
+    var sideB by rememberSaveable { mutableStateOf("3") }
+    var sideC by rememberSaveable { mutableStateOf("4") }
+    var ax by rememberSaveable { mutableStateOf("0") }
+    var ay by rememberSaveable { mutableStateOf("0") }
+    var bx by rememberSaveable { mutableStateOf("3") }
+    var byValue by rememberSaveable { mutableStateOf("4") }
+    var cx by rememberSaveable { mutableStateOf("0") }
+    var cy by rememberSaveable { mutableStateOf("3") }
+    var ux by rememberSaveable { mutableStateOf("1") }
+    var uy by rememberSaveable { mutableStateOf("2") }
+    var vx by rememberSaveable { mutableStateOf("3") }
+    var vy by rememberSaveable { mutableStateOf("4") }
+    var result by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    Segmented(listOf("Фигуры", "Координаты", "Векторы"), mode) { mode = it; result = ""; error = null }
+    if (mode == "Фигуры") {
+        Segmented(listOf("Прямоугольник", "Круг", "Треугольник"), shape) { shape = it; result = ""; error = null }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(sideA, { sideA = it }, if (shape == "Круг") "Радиус" else "Сторона a", Modifier.weight(1f))
+            if (shape != "Круг") Field(sideB, { sideB = it }, "Сторона b", Modifier.weight(1f))
+            if (shape == "Треугольник") Field(sideC, { sideC = it }, "Сторона c", Modifier.weight(1f))
+        }
+        ActionButton("Рассчитать") {
+            runCatching {
+                when (shape) {
+                    "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
+                    "Круг" -> GeometryTools.circle(sideA)
+                    else -> GeometryTools.triangle(sideA, sideB, sideC)
+                }
+            }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
+        }
+    } else if (mode == "Координаты") {
+        Segmented(listOf("Расстояние AB", "Середина AB", "Прямая AB", "Площадь ABC"), operation) { operation = it; result = ""; error = null }
+        Text("Точка A", color = p.muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(ax, { ax = it }, "x₁", Modifier.weight(1f)); Field(ay, { ay = it }, "y₁", Modifier.weight(1f))
+        }
+        Text("Точка B", color = p.muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(bx, { bx = it }, "x₂", Modifier.weight(1f)); Field(byValue, { byValue = it }, "y₂", Modifier.weight(1f))
+        }
+        if (operation == "Площадь ABC") {
+            Text("Точка C", color = p.muted, fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Field(cx, { cx = it }, "x₃", Modifier.weight(1f)); Field(cy, { cy = it }, "y₃", Modifier.weight(1f))
+            }
+        }
+        ActionButton("Вычислить") {
+            runCatching {
+                val g = CoordinateGeometry()
+                val a = CoordinatePoint(ax.toDouble(), ay.toDouble())
+                val b = CoordinatePoint(bx.toDouble(), byValue.toDouble())
+                when (operation) {
+                    "Расстояние AB" -> "AB = " + "%.4f".format(Locale.US, g.distance(a, b))
+                    "Середина AB" -> g.midpoint(a, b).let { "M(${it.x}; ${it.y})" }
+                    "Прямая AB" -> g.lineThrough(a, b).let { "%.4fx %+.4fy %+.4f = 0".format(Locale.US, it.a, it.b, it.c) }
+                    else -> g.triangle(a, b, CoordinatePoint(cx.toDouble(), cy.toDouble())).let {
+                        "Площадь = %.4f; периметр = %.4f".format(Locale.US, it.area, it.perimeter)
+                    }
+                }
+            }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
+        }
+    } else {
+        Segmented(listOf("Сложение", "Разность", "Скалярное произведение", "Угол"), operation) { operation = it; result = ""; error = null }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(ux, { ux = it }, "uₓ", Modifier.weight(1f)); Field(uy, { uy = it }, "uᵧ", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(vx, { vx = it }, "vₓ", Modifier.weight(1f)); Field(vy, { vy = it }, "vᵧ", Modifier.weight(1f))
+        }
+        ActionButton("Вычислить") {
+            runCatching {
+                val g = CoordinateGeometry()
+                val u = GeometryVector(ux.toDouble(), uy.toDouble())
+                val v = GeometryVector(vx.toDouble(), vy.toDouble())
+                when (operation) {
+                    "Сложение" -> g.add(u, v).let { "u + v = (${it.x}; ${it.y})" }
+                    "Разность" -> g.subtract(u, v).let { "u − v = (${it.x}; ${it.y})" }
+                    "Скалярное произведение" -> "u · v = " + g.dot(u, v)
+                    else -> "Угол = %.3f°".format(Locale.US, g.angleDegrees(u, v))
+                }
+            }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
+        }
+    }
+    error?.let { Text(it, color = p.error, fontSize = 13.sp) }
+    if (result.isNotBlank()) ResultBox(result, null)
+}
+
 private data class SelectedGraphPoint(val curveIndex: Int, val point: GraphPoint)
 
 @Composable
