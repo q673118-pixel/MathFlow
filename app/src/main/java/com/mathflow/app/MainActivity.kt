@@ -2236,7 +2236,12 @@ private fun GeometryToolsContent() {
     var vy by rememberSaveable { mutableStateOf("4") }
     var result by rememberSaveable { mutableStateOf("") }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
-    Segmented(listOf("Фигуры", "Координаты", "Векторы"), mode) { mode = it; result = ""; error = null }
+    Segmented(listOf("Фигуры", "Координаты", "Векторы"), mode) {
+        mode = it
+        operation = if (it == "Координаты") "Расстояние AB" else if (it == "Векторы") "Сложение" else operation
+        result = ""
+        error = null
+    }
     if (mode == "Фигуры") {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("Прямоугольник", "Квадрат", "Круг", "Треугольник", "Параллелограмм", "Трапеция", "Ромб").forEach { option ->
@@ -2264,8 +2269,6 @@ private fun GeometryToolsContent() {
         ActionButton("Рассчитать") {
             runCatching {
                 val a = sideA.replace(',', '.').toDouble()
-                val bValue = sideB.replace(',', '.').toDouble()
-                val cValue = sideC.replace(',', '.').toDouble()
                 require(a > 0.0 && a.isFinite()) { "Размеры должны быть положительными" }
                 when (shape) {
                     "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
@@ -2273,17 +2276,22 @@ private fun GeometryToolsContent() {
                     "Круг" -> GeometryTools.circle(sideA)
                     "Треугольник" -> GeometryTools.triangle(sideA, sideB, sideC)
                     "Параллелограмм" -> {
-                        require(bValue > 0.0 && cValue > 0.0) { "Размеры должны быть положительными" }
-                        "Площадь = " + (a * cValue) + "; периметр = " + (2.0 * (a + bValue))
+                        val side = sideB.replace(',', '.').toDouble()
+                        val height = sideC.replace(',', '.').toDouble()
+                        require(side > 0.0 && height > 0.0) { "Размеры должны быть положительными" }
+                        "Площадь = " + (a * height) + "; периметр = " + (2.0 * (a + side))
                     }
                     "Трапеция" -> {
-                        require(bValue > 0.0 && cValue > 0.0) { "Размеры должны быть положительными" }
-                        "Площадь = " + ((a + bValue) * cValue / 2.0)
+                        val secondBase = sideB.replace(',', '.').toDouble()
+                        val height = sideC.replace(',', '.').toDouble()
+                        require(secondBase > 0.0 && height > 0.0) { "Размеры должны быть положительными" }
+                        "Площадь = " + ((a + secondBase) * height / 2.0)
                     }
                     else -> {
-                        require(bValue > 0.0) { "Диагонали должны быть положительными" }
-                        val area = a * bValue / 2.0
-                        val side = Math.sqrt(a * a + bValue * bValue) / 2.0
+                        val secondDiagonal = sideB.replace(',', '.').toDouble()
+                        require(secondDiagonal > 0.0) { "Диагонали должны быть положительными" }
+                        val area = a * secondDiagonal / 2.0
+                        val side = Math.sqrt(a * a + secondDiagonal * secondDiagonal) / 2.0
                         "Площадь = " + area + "; периметр = " + (4.0 * side)
                     }
                 }
