@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
@@ -175,10 +176,15 @@ private fun rxDockGlass(
     val tint = if (dark) Color(0xFF121212) else Color(0xFFFAFAFA)
     val dynamicGlassEnabled = LocalDockGlassEnabled.current
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !dynamicGlassEnabled) {
-        // The shape is applied to the surface itself, not as a content clip:
-        // the Material selection pill must be allowed to rise beyond the dock.
-        return Modifier.background(tint.copy(alpha = 0.90f), shape)
+        // Keep Material You's dock matte, but record that matte surface so its
+        // independently enabled glass selection pill can refract it.
+        val matteSurface = Modifier.background(tint.copy(alpha = 0.90f), shape)
             .border(1.dp, if (dark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.22f), shape)
+        return if (exported != null && LocalDockPillGlassEnabled.current) {
+            matteSurface.layerBackdrop(exported)
+        } else {
+            matteSurface
+        }
     }
     return Modifier.drawBackdrop(
         backdrop = pageBackdrop,
