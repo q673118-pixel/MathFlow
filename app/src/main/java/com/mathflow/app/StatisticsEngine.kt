@@ -54,11 +54,14 @@ class StatisticsEngine {
         val mode = if (maxFrequency == 1 && frequencies.size > 1) emptyList()
             else frequencies.filter { it.frequency == maxFrequency }.map { it.value }
         val variance = values.sumOf { (it - mean) * (it - mean) } / count
+        require(variance.isFinite()) { "Дисперсия выходит за допустимый числовой диапазон" }
         val bins = requestedBins ?: kotlin.math.ceil(1.0 + 3.322 * kotlin.math.log10(count.toDouble())).toInt().coerceAtLeast(1)
         require(bins in 1..100) { "Число интервалов должно быть от 1 до 100" }
         val min = sorted.first()
         val max = sorted.last()
-        val width = if (max == min) 1.0 else (max - min) / bins
+        val range = max - min
+        require(range.isFinite()) { "Размах выходит за допустимый числовой диапазон" }
+        val width = if (max == min) 1.0 else range / bins
         val histogram = List(bins) { index ->
             val lower = min + index * width
             val upper = if (index == bins - 1) max else lower + width
@@ -78,7 +81,7 @@ class StatisticsEngine {
             entry.value to cumulativeCount
         }
         return StatisticsSummary(
-            count, sum, mean, median, mode, max - min, variance, sqrt(variance),
+            count, sum, mean, median, mode, range, variance, sqrt(variance),
             frequencies,
             frequencies.map { it.value to it.frequency },
             histogram,

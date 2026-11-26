@@ -20,8 +20,11 @@ import kotlin.math.tan
  * different variable values; safe to reuse across graph samples.
  */
 class MathExpression private constructor(private val root: Node) {
-    fun evaluate(variables: Map<String, Double> = emptyMap()): Double =
-        root.evaluate(variables.mapKeys { it.key.lowercase() })
+    fun evaluate(variables: Map<String, Double> = emptyMap()): Double {
+        val normalized = if (variables.keys.all { it == it.lowercase() }) variables
+            else variables.mapKeys { it.key.lowercase() }
+        return root.evaluate(normalized)
+    }
 
     private sealed interface Node {
         fun evaluate(variables: Map<String, Double>): Double

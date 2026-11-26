@@ -2452,7 +2452,8 @@ private fun GraphFunctionContent() {
                 "√x" to "sqrt(x)",
                 "sin x" to "sin(x)",
                 "cos x" to "cos(x)",
-                "tan x" to "tan(x)"
+                "tan x" to "tan(x)",
+                "cot x" to "cot(x)"
             ).forEach { (label, value) ->
                 Chip(label, false) { expression = if (expression.isBlank()) value else expression + ";" + value }
             }

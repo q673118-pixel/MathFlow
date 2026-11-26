@@ -102,6 +102,11 @@ class MathExtensionsTest {
         val reflected = geometry.reflectAcrossLine(CoordinatePoint(2.0, 0.0), line)
         assertEquals(0.0, reflected.x, 1e-9)
         assertEquals(2.0, reflected.y, 1e-9)
+        val nonNormalizedLine = LineEquation(2.0, 0.0, -4.0)
+        assertEquals(1.0, geometry.distanceToLine(CoordinatePoint(3.0, 4.0), nonNormalizedLine), 1e-9)
+        val projection = geometry.projectionOnLine(CoordinatePoint(3.0, 4.0), nonNormalizedLine)
+        assertEquals(2.0, projection.x, 1e-9)
+        assertEquals(4.0, projection.y, 1e-9)
     }
 
     @Test fun coordinateGeometryComputesTriangleMetrics() {

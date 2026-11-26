@@ -24,7 +24,10 @@ data class TriangleMetrics(
 )
 
 class CoordinateGeometry {
-    fun distance(a: CoordinatePoint, b: CoordinatePoint): Double = hypot(b.x - a.x, b.y - a.y)
+    fun distance(a: CoordinatePoint, b: CoordinatePoint): Double {
+        require(a.x.isFinite() && a.y.isFinite() && b.x.isFinite() && b.y.isFinite())
+        return hypot(b.x - a.x, b.y - a.y)
+    }
 
     fun midpoint(a: CoordinatePoint, b: CoordinatePoint) =
         CoordinatePoint((a.x + b.x) / 2.0, (a.y + b.y) / 2.0)
@@ -80,8 +83,8 @@ class CoordinateGeometry {
             "Точки не образуют треугольник"
         }
         val semiperimeter = (sideA + sideB + sideC) / 2.0
-        val area = sqrt(semiperimeter * (semiperimeter - sideA) *
-            (semiperimeter - sideB) * (semiperimeter - sideC))
+        val area = sqrt(max(0.0, semiperimeter * (semiperimeter - sideA) *
+            (semiperimeter - sideB) * (semiperimeter - sideC)))
         fun angle(opposite: Double, adjacentA: Double, adjacentB: Double): Double =
             Math.toDegrees(acos(((adjacentA * adjacentA + adjacentB * adjacentB - opposite * opposite) /
                 (2.0 * adjacentA * adjacentB)).coerceIn(-1.0, 1.0)))
@@ -180,15 +183,18 @@ class CoordinateGeometry {
         return vertices * side * side / (4.0 * kotlin.math.tan(PI / vertices))
     }
 
+    private fun lineNormSquared(line: LineEquation): Double {
+        val normSquared = line.a * line.a + line.b * line.b
+        require(normSquared.isFinite() && normSquared > 1.0e-20) { "Уравнение прямой задано некорректно" }
+        return normSquared
+    }
+
     fun distanceToLine(point: CoordinatePoint, line: LineEquation): Double =
-        abs(line.evaluate(point))
+        abs(line.evaluate(point)) / sqrt(lineNormSquared(line))
 
     fun projectionOnLine(point: CoordinatePoint, line: LineEquation): CoordinatePoint {
-        val signedDistance = line.evaluate(point)
-        return CoordinatePoint(
-            point.x - line.a * signedDistance,
-            point.y - line.b * signedDistance
-        )
+        val factor = line.evaluate(point) / lineNormSquared(line)
+        return CoordinatePoint(point.x - line.a * factor, point.y - line.b * factor)
     }
 
     fun reflectAcrossLine(point: CoordinatePoint, line: LineEquation): CoordinatePoint {
@@ -199,8 +205,8 @@ class CoordinateGeometry {
     fun sideByCosineLaw(firstSide: Double, secondSide: Double, includedAngleDegrees: Double): Double {
         require(firstSide > 0.0 && secondSide > 0.0 && includedAngleDegrees in 0.0..180.0)
         val angle = Math.toRadians(includedAngleDegrees)
-        return sqrt(firstSide * firstSide + secondSide * secondSide -
-            2.0 * firstSide * secondSide * kotlin.math.cos(angle))
+        return sqrt(max(0.0, firstSide * firstSide + secondSide * secondSide -
+            2.0 * firstSide * secondSide * kotlin.math.cos(angle)))
     }
 
     fun sideBySineLaw(knownSide: Double, knownOppositeAngleDegrees: Double, targetAngleDegrees: Double): Double {
