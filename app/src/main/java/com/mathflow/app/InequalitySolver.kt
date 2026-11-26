@@ -106,11 +106,29 @@ class InequalitySolver {
                     if (rightRoot) includeBoundary else valueAt(right) != null)
             }
         }
+        if (relation == "<=" || relation == ">=") {
+            fun satisfies(value: Double): Boolean =
+                if (relation == "<=") value <= 0.0 else value >= 0.0
+            roots.forEach { root ->
+                val epsilon = (step * 0.5).coerceAtLeast(1.0e-7)
+                val leftValue = valueAt(root - epsilon)
+                val rightValue = valueAt(root + epsilon)
+                val leftSatisfied = leftValue?.let(::satisfies) == true
+                val rightSatisfied = rightValue?.let(::satisfies) == true
+                val alreadyIncluded = intervals.any {
+                    (abs(it.left - root) < step && it.leftIncluded) ||
+                        (abs(it.right - root) < step && it.rightIncluded)
+                }
+                if (!leftSatisfied && !rightSatisfied && !alreadyIncluded) {
+                    intervals += SolutionInterval(root, root, true, true)
+                }
+            }
+        }
         val explanation = listOf(
             "Найдены критические точки численно, затем проверен знак выражения на каждом промежутке.",
             "Область поиска: [" + lowerBound + "; " + upperBound + "].",
             "Численный метод не доказывает отсутствие решений за пределами этого интервала и может требовать уточнения около разрывов."
         )
-        return InequalitySolution(intervals, roots.sorted(), lowerBound..upperBound, explanation)
+        return InequalitySolution(intervals.sortedBy { it.left }, roots.sorted(), lowerBound..upperBound, explanation)
     }
 }

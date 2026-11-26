@@ -96,4 +96,61 @@ class CoordinateGeometry {
 
     fun slope(a: CoordinatePoint, b: CoordinatePoint): Double? =
         if (abs(b.x - a.x) < 1.0e-12) null else (b.y - a.y) / (b.x - a.x)
+    fun polygonArea(points: List<CoordinatePoint>): Double {
+        require(points.size >= 3) { "Для многоугольника нужны минимум три точки" }
+        val twiceArea = points.indices.sumOf { index ->
+            val current = points[index]
+            val next = points[(index + 1) % points.size]
+            current.x * next.y - next.x * current.y
+        }
+        val area = abs(twiceArea) / 2.0
+        require(area > 1.0e-12) { "Площадь многоугольника должна быть положительной" }
+        return area
+    }
+
+    fun polygonPerimeter(points: List<CoordinatePoint>): Double {
+        require(points.size >= 3) { "Для многоугольника нужны минимум три точки" }
+        return points.indices.sumOf { index -> distance(points[index], points[(index + 1) % points.size]) }
+    }
+
+    fun translate(point: CoordinatePoint, dx: Double, dy: Double) =
+        CoordinatePoint(point.x + dx, point.y + dy)
+
+    fun reflectAcrossX(point: CoordinatePoint) = CoordinatePoint(point.x, -point.y)
+    fun reflectAcrossY(point: CoordinatePoint) = CoordinatePoint(-point.x, point.y)
+
+    fun rotate(point: CoordinatePoint, center: CoordinatePoint, angleDegrees: Double): CoordinatePoint {
+        val angle = Math.toRadians(angleDegrees)
+        val dx = point.x - center.x
+        val dy = point.y - center.y
+        return CoordinatePoint(
+            center.x + dx * kotlin.math.cos(angle) - dy * kotlin.math.sin(angle),
+            center.y + dx * kotlin.math.sin(angle) + dy * kotlin.math.cos(angle)
+        )
+    }
+
+    fun homothety(point: CoordinatePoint, center: CoordinatePoint, factor: Double): CoordinatePoint {
+        require(factor.isFinite() && factor != 0.0) { "Коэффициент гомотетии должен быть конечным и ненулевым" }
+        return CoordinatePoint(
+            center.x + factor * (point.x - center.x),
+            center.y + factor * (point.y - center.y)
+        )
+    }
+
+    fun circleEquation(circle: CircleEquation): String {
+        val x = circle.center.x
+        val y = circle.center.y
+        return "(x - " + x + ")² + (y - " + y + ")² = " + (circle.radius * circle.radius)
+    }
+
+    fun arcLength(radius: Double, angleDegrees: Double): Double {
+        require(radius > 0.0 && radius.isFinite() && angleDegrees.isFinite())
+        return 2.0 * PI * radius * abs(angleDegrees) / 360.0
+    }
+
+    fun sectorArea(radius: Double, angleDegrees: Double): Double {
+        require(radius > 0.0 && radius.isFinite() && angleDegrees.isFinite())
+        return PI * radius * radius * abs(angleDegrees) / 360.0
+    }
+
 }

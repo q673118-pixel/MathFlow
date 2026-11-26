@@ -2342,7 +2342,7 @@ private fun GraphFunctionContent() {
             runCatching {
                 val engine = MathGraphEngine()
                 val viewport = GraphViewport(-range.toDouble(), range.toDouble(), -range.toDouble(), range.toDouble())
-                when (graphMode) {
+                val computed: Triple<List<GraphCurve>, List<GraphSegment>, List<GraphRegionCell>> = when (graphMode) {
                     "Функции" -> {
                         val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
                         require(expressions.size in 1..12) { "Введите от 1 до 12 функций через ;" }
@@ -2357,6 +2357,7 @@ private fun GraphFunctionContent() {
                         64
                     ))
                 }
+                computed
             }
         }
         result.onSuccess {
