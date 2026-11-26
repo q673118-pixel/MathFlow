@@ -112,7 +112,7 @@ class MathExtensionsTest {
         assertEquals(1.0, rotated.y, 1e-9)
         assertEquals(CoordinatePoint(-1.0, 2.0), geometry.homothety(CoordinatePoint(1.0, 2.0), CoordinatePoint(0.0, 2.0), -1.0))
         assertEquals(PI, geometry.sectorArea(2.0, 90.0), 1e-9)
-        assertEquals(12.0, geometry.trapezoidArea(4.0, 2.0, 2.0), 1e-9)
+        assertEquals(6.0, geometry.trapezoidArea(4.0, 2.0, 2.0), 1e-9)
         assertEquals(6.0, geometry.rhombusArea(3.0, 4.0), 1e-9)
         val line = geometry.lineThrough(CoordinatePoint(0.0, 0.0), CoordinatePoint(2.0, 2.0))
         val reflected = geometry.reflectAcrossLine(CoordinatePoint(2.0, 0.0), line)
