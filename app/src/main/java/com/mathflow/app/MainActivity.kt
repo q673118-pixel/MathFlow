@@ -793,7 +793,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                     // Keep capture enabled for the whole Liquid Glass style; tying it to inline state
                     // would rebuild the backdrop layer during the dock's fold animation.
                     val activeUiStyle = MathFlowUiStyle.fromId(uiStyleId)
-                    val capturePageBackdrop = activeUiStyle.liquidGlassNavigation || activeUiStyle.liquidGlassPill
+                    val capturePageBackdrop = activeUiStyle.liquidGlassNavigation
                     val themeBloom = remember { Animatable(1f) }
                     LaunchedEffect(themeId) {
                         themeBloom.snapTo(0f)
@@ -3888,8 +3888,6 @@ private fun SettingsPage(
                         when {
                             uiStyle.liquidGlassNavigation ->
                                 "Liquid Glass применяется к панели навигации и движущейся капле. Остальные панели сохраняют обычное оформление."
-                            uiStyle.liquidGlassPill ->
-                                "В Material You движущаяся капля использует преломляющее стекло с акцентным цветом темы; корпус панели остаётся матовым."
                             else ->
                                 "Панель и индикатор используют оформление выбранного стиля: ${uiStyle.title}."
                         },
