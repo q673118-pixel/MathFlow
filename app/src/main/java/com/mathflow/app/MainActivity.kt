@@ -2378,6 +2378,8 @@ private fun GraphFunctionContent() {
     val uiStyle = LocalMathFlowUiStyle.current
     var expression by rememberSaveable { mutableStateOf("x^2") }
     var range by rememberSaveable { mutableStateOf(5) }
+    var centerX by rememberSaveable { mutableStateOf(0.0) }
+    var centerY by rememberSaveable { mutableStateOf(0.0) }
     var graphMode by rememberSaveable { mutableStateOf("Функции") }
     var relation by rememberSaveable { mutableStateOf("≤") }
     var parabolaA by rememberSaveable { mutableStateOf("1") }
@@ -2386,12 +2388,15 @@ private fun GraphFunctionContent() {
     var curves by remember { mutableStateOf(emptyList<GraphCurve>()) }
     var implicitSegments by remember { mutableStateOf(emptyList<GraphSegment>()) }
     var regionCells by remember { mutableStateOf(emptyList<GraphRegionCell>()) }
+    var intersections by remember { mutableStateOf(emptyList<GraphIntersection>()) }
     var selectedPoint by remember { mutableStateOf<SelectedGraphPoint?>(null) }
     var isCalculating by remember { mutableStateOf(false) }
     var graphError by remember { mutableStateOf<String?>(null) }
+    val graphEngine = remember { MathGraphEngine() }
 
-    LaunchedEffect(expression, range, graphMode, relation) {
+    LaunchedEffect(expression, range, graphMode, relation, centerX, centerY) {
         selectedPoint = null
+        intersections = emptyList()
         graphError = null
         if (expression.isBlank()) {
             curves = emptyList()
@@ -2405,22 +2410,45 @@ private fun GraphFunctionContent() {
         val result = withContext(Dispatchers.Default) {
             runCatching {
                 val engine = MathGraphEngine()
-                val viewport = GraphViewport(-range.toDouble(), range.toDouble(), -range.toDouble(), range.toDouble())
-                val computed: Triple<List<GraphCurve>, List<GraphSegment>, List<GraphRegionCell>> = when (graphMode) {
-                    "Функции" -> {
-                        val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
-                        require(expressions.size in 1..12) { "Введите от 1 до 12 функций через ;" }
-                        Triple(engine.sampleFunctions(expressions, viewport.copy(yMin = -10000.0, yMax = 10000.0), 240, 4000), emptyList<GraphSegment>(), emptyList<GraphRegionCell>())
+                val viewport = GraphViewport(
+                    centerX - range,
+                    centerX + range,
+                    centerY - range,
+                    centerY + range
+                )
+                val computed: Triple<List<GraphCurve>, List<GraphSegment>, List<GraphRegionCell>> =
+                    when (graphMode) {
+                        "Функции" -> {
+                            val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+                            require(expressions.size in 1..12) { "Введите от 1 до 12 функций через ;" }
+                            Triple(
+                                engine.sampleFunctions(
+                                    expressions,
+                                    viewport.copy(yMin = centerY - 10000.0, yMax = centerY + 10000.0),
+                                    240,
+                                    4000
+                                ),
+                                emptyList(),
+                                emptyList()
+                            )
+                        }
+                        "Неявный график" -> Triple(
+                            emptyList(),
+                            engine.sampleImplicit(expression, viewport, 96, 96),
+                            emptyList()
+                        )
+                        else -> Triple(
+                            emptyList(),
+                            emptyList(),
+                            engine.sampleInequality(
+                                expression,
+                                when (relation) { "≤" -> "<="; "≥" -> ">="; else -> relation },
+                                viewport,
+                                64,
+                                64
+                            )
+                        )
                     }
-                    "Неявный график" -> Triple(emptyList<GraphCurve>(), engine.sampleImplicit(expression, viewport, 96, 96), emptyList<GraphRegionCell>())
-                    else -> Triple(emptyList<GraphCurve>(), emptyList<GraphSegment>(), engine.sampleInequality(
-                        expression,
-                        when (relation) { "≤" -> "<="; "≥" -> ">="; else -> relation },
-                        viewport,
-                        64,
-                        64
-                    ))
-                }
                 computed
             }
         }
@@ -2435,6 +2463,23 @@ private fun GraphFunctionContent() {
             graphError = it.message ?: "Не удалось построить график"
         }
         isCalculating = false
+    }
+
+    LaunchedEffect(curves, graphMode, range, centerX, centerY) {
+        if (graphMode != "Функции" || curves.size < 2) {
+            intersections = emptyList()
+            return@LaunchedEffect
+        }
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                MathGraphEngine().findIntersections(
+                    curves[0].expression,
+                    curves[1].expression,
+                    GraphViewport(centerX - range, centerX + range, centerY - 10000.0, centerY + 10000.0)
+                )
+            }
+        }
+        intersections = result.getOrElse { emptyList() }
     }
 
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2489,9 +2534,9 @@ private fun GraphFunctionContent() {
             }
         }
     } else if (graphMode == "Неявный график") {
-        Text("Введите уравнение в виде F(x,y)=0 без знака равенства, например x^2+y^2-9.", color = p.muted, fontSize = 12.sp)
+        Text("Введите уравнение в виде F(x,y)=0, например x^2+y^2=9.", color = p.muted, fontSize = 12.sp)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("Окружность" to "x^2+y^2-9", "Эллипс" to "x^2/9+y^2/4-1", "Гипербола" to "x^2-y^2-1", "Парабола" to "y-x^2").forEach { (label, value) ->
+            listOf("Окружность" to "x^2+y^2=9", "Эллипс" to "x^2/9+y^2/4=1", "Гипербола" to "x^2-y^2=1", "Парабола" to "y=x^2").forEach { (label, value) ->
                 Chip(label, false) { expression = value }
             }
         }
@@ -2504,27 +2549,44 @@ private fun GraphFunctionContent() {
             }
         }
     }
+
     Text(tx("graph_range"), color = p.muted, fontSize = 12.sp)
     Segmented(listOf("±5", "±10", "±20"), "±$range") {
         range = it.removePrefix("±").toIntOrNull() ?: 5
+    }
+    Text("Перемещение области графика", color = p.muted, fontSize = 12.sp)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Chip("←", false) { centerX -= range / 2.0 }
+        Chip("→", false) { centerX += range / 2.0 }
+        Chip("↑", false) { centerY += range / 2.0 }
+        Chip("↓", false) { centerY -= range / 2.0 }
+        Chip("Сброс", false) { centerX = 0.0; centerY = 0.0 }
     }
 
     val validValues = curves.flatMap { it.points.mapNotNull { point -> point.y } }.filter { it.isFinite() }.sorted()
     val low = if (validValues.isEmpty()) -1.0 else validValues[(validValues.size * 0.05).toInt().coerceIn(0, validValues.lastIndex)]
     val high = if (validValues.isEmpty()) 1.0 else validValues[((validValues.size * 0.95).toInt()).coerceIn(0, validValues.lastIndex)]
     val padding = ((high - low) * 0.08).coerceAtLeast(0.5)
-    val yMin = low - padding
-    val yMax = high + padding
+    val yMin = low - padding + centerY
+    val yMax = high + padding + centerY
     val colors = listOf(p.accent, p.keyEquals, p.text, p.muted, p.onKeyEquals)
-    val viewport = GraphViewport(-range.toDouble(), range.toDouble(), -range.toDouble(), range.toDouble())
+    val viewport = GraphViewport(centerX - range, centerX + range, centerY - range, centerY + range)
+    val tableEntries = remember(curves, centerX, range) {
+        curves.firstOrNull()?.let { curve ->
+            (0..8).map { index ->
+                val x = centerX - range + (2.0 * range * index / 8.0)
+                x to graphEngine.evaluateFunction(curve.expression, x)
+            }
+        }.orEmpty()
+    }
 
     Canvas(
         Modifier.fillMaxWidth().height(260.dp)
             .clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp))
             .background(p.key)
-            .pointerInput(curves, range) {
+            .pointerInput(curves, range, centerX) {
                 detectTapGestures { tap ->
-                    val targetX = -range + (tap.x / size.width.coerceAtLeast(1)) * range * 2.0
+                    val targetX = centerX - range + (tap.x / size.width.coerceAtLeast(1)) * range * 2.0
                     selectedPoint = curves.mapIndexedNotNull { index, curve ->
                         curve.points.filter { it.y != null }.minByOrNull { abs(it.x - targetX) }
                             ?.let { SelectedGraphPoint(index, it) }
@@ -2533,7 +2595,7 @@ private fun GraphFunctionContent() {
             }
     ) {
         if (curves.isEmpty() && implicitSegments.isEmpty() && regionCells.isEmpty()) return@Canvas
-        fun plotX(x: Double) = ((x + range) / (range * 2.0) * size.width).toFloat()
+        fun plotX(x: Double) = ((x - (centerX - range)) / (range * 2.0) * size.width).toFloat()
         fun plotY(y: Double, minY: Double, maxY: Double) =
             (size.height - (y - minY) / (maxY - minY).coerceAtLeast(1.0) * size.height).toFloat()
         for (i in 0..8) {
@@ -2582,6 +2644,13 @@ private fun GraphFunctionContent() {
             }
             drawPath(path, p.accent, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
         }
+        intersections.forEach { point ->
+            if (point.x in viewport.xMin..viewport.xMax && point.y in yMin..yMax) {
+                val center = Offset(plotX(point.x), plotY(point.y, yMin, yMax))
+                drawCircle(p.keyEquals, 6.dp.toPx(), center)
+                drawCircle(p.key, 2.5.dp.toPx(), center)
+            }
+        }
         selectedPoint?.let { selected ->
             selected.point.y?.let { y ->
                 if (y in yMin..yMax) {
@@ -2592,6 +2661,7 @@ private fun GraphFunctionContent() {
             }
         }
     }
+
     when {
         isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
         graphError != null -> Text(graphError!!, color = p.error, fontSize = 12.sp)
@@ -2608,6 +2678,34 @@ private fun GraphFunctionContent() {
                 color = colors[selected.curveIndex % colors.size],
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
+            )
+        }
+    }
+    if (graphMode == "Функции" && curves.isNotEmpty()) {
+        Text("Таблица значений: " + curves.first().expression, color = p.muted, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            tableEntries.forEach { (x, y) ->
+                Column(
+                    Modifier.clip(RoundedCornerShape(10.dp)).background(p.key).padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("x", color = p.muted, fontSize = 10.sp)
+                    Text("%.2f".format(Locale.US, x), color = p.text, fontSize = 11.sp)
+                    Text("y", color = p.muted, fontSize = 10.sp)
+                    Text(y?.let { "%.3f".format(Locale.US, it) } ?: "—", color = p.text, fontSize = 11.sp)
+                }
+            }
+        }
+        if (curves.size >= 2) {
+            Text("Пересечения первых двух функций", color = p.muted, fontSize = 12.sp)
+            Text(
+                if (intersections.isEmpty()) "Отдельные точки пересечения не найдены (или графики совпадают)."
+                else intersections.joinToString(" · ") {
+                    "(%.3f; %.3f)".format(Locale.US, it.x, it.y)
+                },
+                color = p.text,
+                fontSize = 12.sp,
+                lineHeight = 17.sp
             )
         }
     }
