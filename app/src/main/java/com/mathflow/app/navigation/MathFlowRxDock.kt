@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
@@ -176,15 +175,31 @@ private fun rxDockGlass(
     val tint = if (dark) Color(0xFF121212) else Color(0xFFFAFAFA)
     val dynamicGlassEnabled = LocalDockGlassEnabled.current
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || !dynamicGlassEnabled) {
-        // Keep Material You's dock matte, but record that matte surface so its
-        // independently enabled glass selection pill can refract it.
-        val matteSurface = Modifier.background(tint.copy(alpha = 0.90f), shape)
-            .border(1.dp, if (dark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.22f), shape)
-        return if (exported != null && LocalDockPillGlassEnabled.current) {
-            matteSurface.layerBackdrop(exported)
+        // Material You keeps the dock matte. When its glass pill is enabled,
+        // export the matte surface itself (not its child icons) for refraction.
+        val matteSurface = if (
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            exported != null &&
+            LocalDockPillGlassEnabled.current
+        ) {
+            Modifier.drawBackdrop(
+                backdrop = pageBackdrop,
+                shape = { shape },
+                effects = {},
+                highlight = null,
+                shadow = null,
+                exportedBackdrop = exported,
+                onDrawSurface = { drawRect(tint.copy(alpha = 0.90f)) },
+                backdropScale = 0.33f
+            )
         } else {
-            matteSurface
+            Modifier.background(tint.copy(alpha = 0.90f), shape)
         }
+        return matteSurface.border(
+            1.dp,
+            if (dark) Color.White.copy(alpha = 0.18f) else Color.Black.copy(alpha = 0.22f),
+            shape
+        )
     }
     return Modifier.drawBackdrop(
         backdrop = pageBackdrop,
