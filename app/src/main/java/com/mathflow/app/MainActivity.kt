@@ -2162,7 +2162,7 @@ private fun StatisticsContent() {
     var chartType by rememberSaveable { mutableStateOf("Полигон частот") }
     var summary by remember { mutableStateOf<StatisticsSummary?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
-    Field(source, { source = it; error = null }, "Данные: числа через ; или пробел", Modifier.fillMaxWidth(), numeric = false)
+    Field(source, { source = it; error = null; summary = null }, "Данные: числа через ; или пробел", Modifier.fillMaxWidth(), numeric = false)
     Segmented(listOf("Частоты", "Полигон частот", "Гистограмма", "Накопленная частота"), chartType) { chartType = it }
     ActionButton("Рассчитать статистику") {
         runCatching {
@@ -2210,6 +2210,7 @@ private fun StatisticsContent() {
         Text("n = ${data.count}   Σx = ${"%.3f".format(Locale.US, data.sum)}   Среднее = ${"%.3f".format(Locale.US, data.mean)}", color = p.text, fontSize = 13.sp)
         Text("Медиана = ${"%.3f".format(Locale.US, data.median)}   Размах = ${"%.3f".format(Locale.US, data.range)}", color = p.text, fontSize = 13.sp)
         Text("Дисперсия = ${"%.3f".format(Locale.US, data.variance)}   σ = ${"%.3f".format(Locale.US, data.standardDeviation)}", color = p.text, fontSize = 13.sp)
+        Text("Мода: " + data.mode.joinToString().ifBlank { "нет единственной моды" }, color = p.text, fontSize = 13.sp)
         Text("Частоты: " + data.frequencies.joinToString { it.value.toString() + " — " + it.frequency }, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
     }
 }
@@ -2237,23 +2238,63 @@ private fun GeometryToolsContent() {
     var error by rememberSaveable { mutableStateOf<String?>(null) }
     Segmented(listOf("Фигуры", "Координаты", "Векторы"), mode) { mode = it; result = ""; error = null }
     if (mode == "Фигуры") {
-        Segmented(listOf("Прямоугольник", "Круг", "Треугольник"), shape) { shape = it; result = ""; error = null }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Прямоугольник", "Квадрат", "Круг", "Треугольник", "Параллелограмм", "Трапеция", "Ромб").forEach { option ->
+                Chip(option, shape == option) { shape = option; result = ""; error = null }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Field(sideA, { sideA = it }, if (shape == "Круг") "Радиус" else "Сторона a", Modifier.weight(1f))
-            if (shape != "Круг") Field(sideB, { sideB = it }, "Сторона b", Modifier.weight(1f))
-            if (shape == "Треугольник") Field(sideC, { sideC = it }, "Сторона c", Modifier.weight(1f))
+            Field(sideA, { sideA = it; result = "" }, when (shape) {
+                "Круг" -> "Радиус"
+                "Ромб" -> "Диагональ d₁"
+                "Трапеция" -> "Основание a"
+                else -> if (shape == "Квадрат") "Сторона" else "Сторона a"
+            }, Modifier.weight(1f))
+            if (shape in setOf("Прямоугольник", "Треугольник", "Параллелограмм", "Трапеция", "Ромб")) {
+                Field(sideB, { sideB = it; result = "" }, when (shape) {
+                    "Ромб" -> "Диагональ d₂"
+                    "Трапеция" -> "Основание b"
+                    else -> "Сторона b"
+                }, Modifier.weight(1f))
+            }
+            if (shape in setOf("Треугольник", "Параллелограмм", "Трапеция")) {
+                Field(sideC, { sideC = it; result = "" }, if (shape == "Треугольник") "Сторона c" else "Высота", Modifier.weight(1f))
+            }
         }
         ActionButton("Рассчитать") {
             runCatching {
+                val a = sideA.replace(',', '.').toDouble()
+                val bValue = sideB.replace(',', '.').toDouble()
+                val cValue = sideC.replace(',', '.').toDouble()
+                require(a > 0.0 && a.isFinite()) { "Размеры должны быть положительными" }
                 when (shape) {
                     "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
+                    "Квадрат" -> "Площадь = " + (a * a) + "; периметр = " + (4.0 * a)
                     "Круг" -> GeometryTools.circle(sideA)
-                    else -> GeometryTools.triangle(sideA, sideB, sideC)
+                    "Треугольник" -> GeometryTools.triangle(sideA, sideB, sideC)
+                    "Параллелограмм" -> {
+                        require(bValue > 0.0 && cValue > 0.0) { "Размеры должны быть положительными" }
+                        "Площадь = " + (a * cValue) + "; периметр = " + (2.0 * (a + bValue))
+                    }
+                    "Трапеция" -> {
+                        require(bValue > 0.0 && cValue > 0.0) { "Размеры должны быть положительными" }
+                        "Площадь = " + ((a + bValue) * cValue / 2.0)
+                    }
+                    else -> {
+                        require(bValue > 0.0) { "Диагонали должны быть положительными" }
+                        val area = a * bValue / 2.0
+                        val side = Math.sqrt(a * a + bValue * bValue) / 2.0
+                        "Площадь = " + area + "; периметр = " + (4.0 * side)
+                    }
                 }
             }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
         }
     } else if (mode == "Координаты") {
-        Segmented(listOf("Расстояние AB", "Середина AB", "Прямая AB", "Площадь ABC"), operation) { operation = it; result = ""; error = null }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Расстояние AB", "Середина AB", "Прямая AB", "Площадь ABC", "Окружность AB", "Отражение Ox", "Поворот 90°", "Гомотетия ×2").forEach { option ->
+                Chip(option, operation == option) { operation = option; result = ""; error = null }
+            }
+        }
         Text("Точка A", color = p.muted, fontSize = 12.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Field(ax, { ax = it }, "x₁", Modifier.weight(1f)); Field(ay, { ay = it }, "y₁", Modifier.weight(1f))
@@ -2277,6 +2318,10 @@ private fun GeometryToolsContent() {
                     "Расстояние AB" -> "AB = " + "%.4f".format(Locale.US, g.distance(a, b))
                     "Середина AB" -> g.midpoint(a, b).let { "M(${it.x}; ${it.y})" }
                     "Прямая AB" -> g.lineThrough(a, b).let { "%.4fx %+.4fy %+.4f = 0".format(Locale.US, it.a, it.b, it.c) }
+                    "Окружность AB" -> g.circleEquation(g.circleThrough(a, b))
+                    "Отражение Ox" -> g.reflectAcrossX(a).let { "A′(${it.x}; ${it.y})" }
+                    "Поворот 90°" -> g.rotate(a, CoordinatePoint(0.0, 0.0), 90.0).let { "A′(${it.x}; ${it.y})" }
+                    "Гомотетия ×2" -> g.homothety(a, CoordinatePoint(0.0, 0.0), 2.0).let { "A′(${it.x}; ${it.y})" }
                     else -> g.triangle(a, b, CoordinatePoint(cx.toDouble(), cy.toDouble())).let {
                         "Площадь = %.4f; периметр = %.4f".format(Locale.US, it.area, it.perimeter)
                     }
@@ -2319,6 +2364,9 @@ private fun GraphFunctionContent() {
     var range by rememberSaveable { mutableStateOf(5) }
     var graphMode by rememberSaveable { mutableStateOf("Функции") }
     var relation by rememberSaveable { mutableStateOf("≤") }
+    var parabolaA by rememberSaveable { mutableStateOf("1") }
+    var parabolaH by rememberSaveable { mutableStateOf("0") }
+    var parabolaK by rememberSaveable { mutableStateOf("0") }
     var curves by remember { mutableStateOf(emptyList<GraphCurve>()) }
     var implicitSegments by remember { mutableStateOf(emptyList<GraphSegment>()) }
     var regionCells by remember { mutableStateOf(emptyList<GraphRegionCell>()) }
@@ -2402,6 +2450,23 @@ private fun GraphFunctionContent() {
             }
         }
         Text("Линейные, квадратичные, кубические, обратные, корневые и тригонометрические функции. Несколько кривых можно сравнивать одновременно.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        Text("Семейство парабол y = a(x − h)² + k", color = p.muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(parabolaA, { parabolaA = it }, "a", Modifier.weight(1f))
+            Field(parabolaH, { parabolaH = it }, "h", Modifier.weight(1f))
+            Field(parabolaK, { parabolaK = it }, "k", Modifier.weight(1f))
+        }
+        ActionButton("Построить параболу") {
+            val a = parabolaA.replace(',', '.').toDoubleOrNull()
+            val h = parabolaH.replace(',', '.').toDoubleOrNull()
+            val k = parabolaK.replace(',', '.').toDoubleOrNull()
+            if (a == null || h == null || k == null || !a.isFinite() || !h.isFinite() || !k.isFinite() || a == 0.0) {
+                graphError = "Введите конечные числа; коэффициент a не должен быть равен нулю"
+            } else {
+                graphMode = "Функции"
+                expression = a.toString() + "*(x-(" + h + "))^2+(" + k + ")"
+            }
+        }
     } else if (graphMode == "Неявный график") {
         Text("Введите уравнение в виде F(x,y)=0 без знака равенства, например x^2+y^2-9.", color = p.muted, fontSize = 12.sp)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

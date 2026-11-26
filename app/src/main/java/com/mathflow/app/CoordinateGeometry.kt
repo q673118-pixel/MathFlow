@@ -153,4 +153,62 @@ class CoordinateGeometry {
         return PI * radius * radius * abs(angleDegrees) / 360.0
     }
 
+    fun parallelogramArea(base: Double, height: Double): Double {
+        require(base > 0.0 && height > 0.0 && base.isFinite() && height.isFinite())
+        return base * height
+    }
+
+    fun trapezoidArea(firstBase: Double, secondBase: Double, height: Double): Double {
+        require(firstBase > 0.0 && secondBase > 0.0 && height > 0.0)
+        require(firstBase.isFinite() && secondBase.isFinite() && height.isFinite())
+        return (firstBase + secondBase) * height / 2.0
+    }
+
+    fun rhombusArea(firstDiagonal: Double, secondDiagonal: Double): Double {
+        require(firstDiagonal > 0.0 && secondDiagonal > 0.0)
+        require(firstDiagonal.isFinite() && secondDiagonal.isFinite())
+        return firstDiagonal * secondDiagonal / 2.0
+    }
+
+    fun regularPolygonPerimeter(side: Double, vertices: Int): Double {
+        require(side > 0.0 && side.isFinite() && vertices >= 3)
+        return side * vertices
+    }
+
+    fun regularPolygonArea(side: Double, vertices: Int): Double {
+        require(side > 0.0 && side.isFinite() && vertices >= 3)
+        return vertices * side * side / (4.0 * kotlin.math.tan(PI / vertices))
+    }
+
+    fun distanceToLine(point: CoordinatePoint, line: LineEquation): Double =
+        abs(line.evaluate(point))
+
+    fun projectionOnLine(point: CoordinatePoint, line: LineEquation): CoordinatePoint {
+        val signedDistance = line.evaluate(point)
+        return CoordinatePoint(
+            point.x - line.a * signedDistance,
+            point.y - line.b * signedDistance
+        )
+    }
+
+    fun reflectAcrossLine(point: CoordinatePoint, line: LineEquation): CoordinatePoint {
+        val projection = projectionOnLine(point, line)
+        return CoordinatePoint(2.0 * projection.x - point.x, 2.0 * projection.y - point.y)
+    }
+
+    fun sideByCosineLaw(firstSide: Double, secondSide: Double, includedAngleDegrees: Double): Double {
+        require(firstSide > 0.0 && secondSide > 0.0 && includedAngleDegrees in 0.0..180.0)
+        val angle = Math.toRadians(includedAngleDegrees)
+        return sqrt(firstSide * firstSide + secondSide * secondSide -
+            2.0 * firstSide * secondSide * kotlin.math.cos(angle))
+    }
+
+    fun sideBySineLaw(knownSide: Double, knownOppositeAngleDegrees: Double, targetAngleDegrees: Double): Double {
+        require(knownSide > 0.0 && knownSide.isFinite())
+        require(knownOppositeAngleDegrees in 0.0..180.0 && targetAngleDegrees in 0.0..180.0)
+        val denominator = kotlin.math.sin(Math.toRadians(knownOppositeAngleDegrees))
+        require(abs(denominator) > 1.0e-12)
+        return knownSide * kotlin.math.sin(Math.toRadians(targetAngleDegrees)) / denominator
+    }
+
 }
