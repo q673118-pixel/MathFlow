@@ -2162,63 +2162,103 @@ private fun GraphFunctionContent() {
     val uiStyle = LocalMathFlowUiStyle.current
     var expression by rememberSaveable { mutableStateOf("x^2") }
     var range by rememberSaveable { mutableStateOf(5) }
+    var graphMode by rememberSaveable { mutableStateOf("Функции") }
+    var relation by rememberSaveable { mutableStateOf("≤") }
     var curves by remember { mutableStateOf(emptyList<GraphCurve>()) }
+    var implicitSegments by remember { mutableStateOf(emptyList<GraphSegment>()) }
+    var regionCells by remember { mutableStateOf(emptyList<GraphRegionCell>()) }
     var selectedPoint by remember { mutableStateOf<SelectedGraphPoint?>(null) }
     var isCalculating by remember { mutableStateOf(false) }
     var graphError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(expression, range) {
+    LaunchedEffect(expression, range, graphMode, relation) {
         selectedPoint = null
         graphError = null
-        val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
-        if (expressions.isEmpty()) {
+        if (expression.isBlank()) {
             curves = emptyList()
+            implicitSegments = emptyList()
+            regionCells = emptyList()
             isCalculating = false
             return@LaunchedEffect
         }
-        if (expressions.size > 12) {
-            curves = emptyList()
-            graphError = "Можно построить не более 12 функций одновременно"
-            isCalculating = false
-            return@LaunchedEffect
-        }
-        delay(140L)
+        delay(120L)
         isCalculating = true
         val result = withContext(Dispatchers.Default) {
             runCatching {
-                MathGraphEngine().sampleFunctions(
-                    expressions,
-                    GraphViewport(-range.toDouble(), range.toDouble(), -10000.0, 10000.0),
-                    targetSegments = 240,
-                    maxPointsPerCurve = 4000
-                )
+                val engine = MathGraphEngine()
+                val viewport = GraphViewport(-range.toDouble(), range.toDouble(), -range.toDouble(), range.toDouble())
+                when (graphMode) {
+                    "Функции" -> {
+                        val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+                        require(expressions.size in 1..12) { "Введите от 1 до 12 функций через ;" }
+                        Triple(engine.sampleFunctions(expressions, viewport.copy(yMin = -10000.0, yMax = 10000.0), 240, 4000), emptyList(), emptyList())
+                    }
+                    "Неявный график" -> Triple(emptyList(), engine.sampleImplicit(expression, viewport, 96, 96), emptyList())
+                    else -> Triple(emptyList(), emptyList(), engine.sampleInequality(
+                        expression,
+                        when (relation) { "≤" -> "<="; "≥" -> ">="; else -> relation },
+                        viewport,
+                        64,
+                        64
+                    ))
+                }
             }
         }
-        result.onSuccess { curves = it }.onFailure {
+        result.onSuccess {
+            curves = it.first
+            implicitSegments = it.second
+            regionCells = it.third
+        }.onFailure {
             curves = emptyList()
+            implicitSegments = emptyList()
+            regionCells = emptyList()
             graphError = it.message ?: "Не удалось построить график"
         }
         isCalculating = false
     }
 
-    Field(expression, { expression = it }, "y=f(x); несколько функций разделяйте точкой с запятой", Modifier.fillMaxWidth(), numeric = false)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        listOf(
-            "x²" to "x^2",
-            "−x²+4" to "-x^2+4",
-            "2(x−1)²+3" to "2(x-1)^2+3",
-            "x²−4x+3" to "x^2-4x+3",
-            "x³" to "x^3",
-            "1/x" to "1/x",
-            "√x" to "sqrt(x)",
-            "sin x" to "sin(x)",
-            "cos x" to "cos(x)",
-            "tan x" to "tan(x)"
-        ).forEach { (label, value) ->
-            Chip(label, false) { expression = if (expression.isBlank()) value else expression + ";" + value }
+    Segmented(listOf("Функции", "Неявный график", "Неравенство"), graphMode) { graphMode = it }
+    Field(
+        expression,
+        { expression = it },
+        if (graphMode == "Функции") "y=f(x); несколько функций через ;" else "F(x,y)",
+        Modifier.fillMaxWidth(),
+        numeric = false
+    )
+    if (graphMode == "Функции") {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(
+                "x²" to "x^2",
+                "−x²+4" to "-x^2+4",
+                "2(x−1)²+3" to "2(x-1)^2+3",
+                "x²−4x+3" to "x^2-4x+3",
+                "x³" to "x^3",
+                "1/x" to "1/x",
+                "√x" to "sqrt(x)",
+                "sin x" to "sin(x)",
+                "cos x" to "cos(x)",
+                "tan x" to "tan(x)"
+            ).forEach { (label, value) ->
+                Chip(label, false) { expression = if (expression.isBlank()) value else expression + ";" + value }
+            }
+        }
+        Text("Линейные, квадратичные, кубические, обратные, корневые и тригонометрические функции. Несколько кривых можно сравнивать одновременно.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+    } else if (graphMode == "Неявный график") {
+        Text("Введите уравнение в виде F(x,y)=0 без знака равенства, например x^2+y^2-9.", color = p.muted, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Окружность" to "x^2+y^2-9", "Эллипс" to "x^2/9+y^2/4-1", "Гипербола" to "x^2-y^2-1", "Парабола" to "y-x^2").forEach { (label, value) ->
+                Chip(label, false) { expression = value }
+            }
+        }
+    } else {
+        Text("Область, где F(x,y) удовлетворяет выбранному знаку относительно нуля.", color = p.muted, fontSize = 12.sp)
+        Segmented(listOf("<", "≤", ">", "≥"), relation) { relation = it }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Круг" to "x^2+y^2-9", "Парабола" to "y-x^2", "Прямая" to "x+y-2").forEach { (label, value) ->
+                Chip(label, false) { expression = value }
+            }
         }
     }
-    Text("Графики функций: линейные, квадратичные, кубические, обратные, корневые и тригонометрические. Углы — в радианах.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
     Text(tx("graph_range"), color = p.muted, fontSize = 12.sp)
     Segmented(listOf("±5", "±10", "±20"), "±$range") {
         range = it.removePrefix("±").toIntOrNull() ?: 5
@@ -2231,6 +2271,7 @@ private fun GraphFunctionContent() {
     val yMin = low - padding
     val yMax = high + padding
     val colors = listOf(p.accent, p.keyEquals, p.text, p.muted, p.onKeyEquals)
+    val viewport = GraphViewport(-range.toDouble(), range.toDouble(), -range.toDouble(), range.toDouble())
 
     Canvas(
         Modifier.fillMaxWidth().height(260.dp)
@@ -2246,18 +2287,29 @@ private fun GraphFunctionContent() {
                 }
             }
     ) {
-        if (curves.isEmpty()) return@Canvas
-        val spanY = (yMax - yMin).coerceAtLeast(1.0)
+        if (curves.isEmpty() && implicitSegments.isEmpty() && regionCells.isEmpty()) return@Canvas
         fun plotX(x: Double) = ((x + range) / (range * 2.0) * size.width).toFloat()
-        fun plotY(y: Double) = (size.height - (y - yMin) / spanY * size.height).toFloat()
+        fun plotY(y: Double, minY: Double, maxY: Double) =
+            (size.height - (y - minY) / (maxY - minY).coerceAtLeast(1.0) * size.height).toFloat()
         for (i in 0..8) {
             val x = size.width * i / 8f
             val y = size.height * i / 8f
             drawLine(p.muted.copy(alpha = 0.15f), Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
             drawLine(p.muted.copy(alpha = 0.15f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
         }
-        if (yMin <= 0.0 && yMax >= 0.0) {
-            val axisY = plotY(0.0)
+        if (graphMode == "Неравенство") {
+            regionCells.forEach { cell ->
+                val left = plotX(cell.left)
+                val right = plotX(cell.right)
+                val top = plotY(cell.bottom, viewport.yMin, viewport.yMax)
+                val bottom = plotY(cell.top, viewport.yMin, viewport.yMax)
+                drawRect(p.accent.copy(alpha = 0.16f), Offset(left, top), Size(right - left, bottom - top))
+            }
+        }
+        val axisMin = if (graphMode == "Функции") yMin else viewport.yMin
+        val axisMax = if (graphMode == "Функции") yMax else viewport.yMax
+        if (axisMin <= 0.0 && axisMax >= 0.0) {
+            val axisY = plotY(0.0, axisMin, axisMax)
             drawLine(p.muted.copy(alpha = 0.65f), Offset(0f, axisY), Offset(size.width, axisY), 1.dp.toPx())
         }
         val axisX = plotX(0.0)
@@ -2270,17 +2322,25 @@ private fun GraphFunctionContent() {
                 if (y == null || y < yMin || y > yMax) {
                     drawing = false
                 } else {
-                    val offset = Offset(plotX(point.x), plotY(y))
+                    val offset = Offset(plotX(point.x), plotY(y, yMin, yMax))
                     if (drawing) path.lineTo(offset.x, offset.y) else path.moveTo(offset.x, offset.y)
                     drawing = true
                 }
             }
             drawPath(path, colors[curveIndex % colors.size], style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
+        if (implicitSegments.isNotEmpty()) {
+            val path = Path()
+            implicitSegments.forEach { segment ->
+                path.moveTo(plotX(segment.startX), plotY(segment.startY, viewport.yMin, viewport.yMax))
+                path.lineTo(plotX(segment.endX), plotY(segment.endY, viewport.yMin, viewport.yMax))
+            }
+            drawPath(path, p.accent, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+        }
         selectedPoint?.let { selected ->
             selected.point.y?.let { y ->
                 if (y in yMin..yMax) {
-                    val center = Offset(plotX(selected.point.x), plotY(y))
+                    val center = Offset(plotX(selected.point.x), plotY(y, yMin, yMax))
                     drawCircle(colors[selected.curveIndex % colors.size], 7.dp.toPx(), center)
                     drawCircle(p.key, 3.dp.toPx(), center)
                 }
@@ -2290,24 +2350,24 @@ private fun GraphFunctionContent() {
     when {
         isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
         graphError != null -> Text(graphError!!, color = p.error, fontSize = 12.sp)
-        curves.isEmpty() -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
-        selectedPoint != null -> {
+        graphMode == "Неявный график" && implicitSegments.isEmpty() -> Text("Кривая не найдена в выбранной области.", color = p.muted, fontSize = 12.sp)
+        graphMode == "Неравенство" && regionCells.isEmpty() -> Text("В выбранной области нет ячеек, удовлетворяющих неравенству.", color = p.muted, fontSize = 12.sp)
+        graphMode == "Функции" && curves.isEmpty() -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
+        selectedPoint != null && graphMode == "Функции" -> {
             val selected = selectedPoint!!
             val y = selected.point.y
-            if (y != null) {
-                AnimatedAnswerText(
-                    curves[selected.curveIndex].expression + ": x = " +
-                        "%.3f".format(Locale.US, selected.point.x) + ", y = " +
-                        "%.3f".format(Locale.US, y),
-                    color = colors[selected.curveIndex % colors.size],
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
+            if (y != null) AnimatedAnswerText(
+                curves[selected.curveIndex].expression + ": x = " +
+                    "%.3f".format(Locale.US, selected.point.x) + ", y = " +
+                    "%.3f".format(Locale.US, y),
+                color = colors[selected.curveIndex % colors.size],
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
         }
-        else -> Text("Нажмите на график, чтобы узнать координаты ближайшей точки.", color = p.muted, fontSize = 12.sp)
     }
 }
+
 
 private fun friendly(error: Throwable, fallback: String): String = when {
     error.message?.contains("Division by zero") == true -> "Деление на ноль"
