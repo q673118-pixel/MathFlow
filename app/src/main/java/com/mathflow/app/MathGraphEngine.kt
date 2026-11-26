@@ -240,8 +240,11 @@ class MathGraphEngine {
         sampleCount: Int = 1200
     ): List<GraphIntersection> {
         require(sampleCount in 100..5000)
-        val first = MathExpression.parse(normalizeFunctionExpression(firstExpression))
-        val second = MathExpression.parse(normalizeFunctionExpression(secondExpression))
+        val firstSource = normalizeFunctionExpression(firstExpression).filterNot(Char::isWhitespace)
+        val secondSource = normalizeFunctionExpression(secondExpression).filterNot(Char::isWhitespace)
+        if (firstSource == secondSource) return emptyList()
+        val first = MathExpression.parse(firstSource)
+        val second = MathExpression.parse(secondSource)
         fun valuesAt(x: Double): Pair<Double, Double>? = runCatching {
             val variables = mapOf("x" to x)
             val a = first.evaluate(variables)
@@ -255,6 +258,7 @@ class MathGraphEngine {
         val differences = Array(sampleCount + 1) { index ->
             differenceAt(viewport.xMin + index * step)
         }
+        if (differences.all { it != null && abs(it) < 1.0e-10 }) return emptyList()
         val roots = ArrayList<Double>()
         fun addRoot(x: Double) {
             val pair = valuesAt(x) ?: return
