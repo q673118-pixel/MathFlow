@@ -23,8 +23,8 @@ class MathFlowUiStyleTest {
     }
 
     @Test
-    fun materialYouUsesThemeTintedGlassPillWithoutGlassDockSurface() {
-        assertTrue(MathFlowUiStyle.MATERIAL_YOU.liquidGlassPill)
+    fun onlyLiquidGlassStyleUsesRefractiveSelectionPill() {
+        assertFalse(MathFlowUiStyle.MATERIAL_YOU.liquidGlassPill)
         assertFalse(MathFlowUiStyle.MATERIAL_YOU.liquidGlassNavigation)
         assertTrue(MathFlowUiStyle.LIQUID_GLASS.liquidGlassPill)
         assertTrue(MathFlowUiStyle.LIQUID_GLASS.liquidGlassNavigation)
