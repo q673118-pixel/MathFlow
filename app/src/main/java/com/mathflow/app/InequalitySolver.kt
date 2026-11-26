@@ -83,11 +83,13 @@ class InequalitySolver {
                 }
                 continue
             }
-            if (abs(a) < 1.0e-10) addRoot(x0)
-            if ((a < 0.0) != (b < 0.0)) {
+            val aValue: Double = a ?: continue
+            val bValue: Double = b ?: continue
+            if (abs(aValue) < 1.0e-10) addRoot(x0)
+            if ((aValue < 0.0) != (bValue < 0.0)) {
                 var low = x0
                 var high = x1
-                var lowValue = a
+                var lowValue: Double = aValue
                 repeat(70) {
                     val middle = (low + high) * 0.5
                     val middleValue = valueAt(middle) ?: Double.NaN
