@@ -192,4 +192,27 @@ class MathExtensionsTest {
         assertTrue(result.roots.any { it.x < 0.0 && it.y < 0.0 })
         assertFalse(result.roots.any { it.residual > 1e-7 })
     }
+    @Test fun parabolaTransformationExplainsReflectionStretchAndShifts() {
+        val result = ParabolaTransformation.explain(-2.0, 3.0, -4.0)
+        assertTrue(result.formula.contains("-2"))
+        assertTrue(result.steps.any { it.contains("Отразить") })
+        assertTrue(result.steps.any { it.contains("Растянуть") })
+        assertTrue(result.steps.any { it.contains("вправо на 3") })
+        assertTrue(result.steps.any { it.contains("вниз на 4") })
+    }
+
+    @Test fun parabolaTransformationExplainsVerticalCompression() {
+        val result = ParabolaTransformation.explain(0.5, 0.0, 0.0)
+        assertTrue(result.steps.any { it.contains("Сжать") && it.contains("2 раза") })
+    }
+
+    @Test fun parabolaTransformationRejectsZeroCoefficient() {
+        try {
+            ParabolaTransformation.explain(0.0, 0.0, 0.0)
+            throw AssertionError("Expected zero coefficient validation")
+        } catch (_: IllegalArgumentException) {
+            // Expected.
+        }
+    }
+
 }

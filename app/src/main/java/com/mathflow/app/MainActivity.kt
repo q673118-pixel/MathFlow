@@ -2385,6 +2385,8 @@ private fun GraphFunctionContent() {
     var parabolaA by rememberSaveable { mutableStateOf("1") }
     var parabolaH by rememberSaveable { mutableStateOf("0") }
     var parabolaK by rememberSaveable { mutableStateOf("0") }
+    var presetCategory by rememberSaveable { mutableStateOf("Параболы") }
+    var selectedPreset by rememberSaveable { mutableStateOf("x^2") }
     var curves by remember { mutableStateOf(emptyList<GraphCurve>()) }
     var implicitSegments by remember { mutableStateOf(emptyList<GraphSegment>()) }
     var regionCells by remember { mutableStateOf(emptyList<GraphRegionCell>()) }
@@ -2495,27 +2497,41 @@ private fun GraphFunctionContent() {
         numeric = false
     )
     if (graphMode == "Функции") {
+        val presetGroups = linkedMapOf(
+            "Линейные" to listOf("y=x" to "x", "y=2x+1" to "2x+1", "y=−x+3" to "-x+3", "y=½x" to "0.5x"),
+            "Параболы" to listOf("y=x²" to "x^2", "y=−x²" to "-x^2", "y=½x²" to "0.5x^2", "y=2x²" to "2x^2", "y=(x−2)²" to "(x-2)^2", "y=x²−4x+3" to "x^2-4x+3", "y=−2(x+1)²+3" to "-2(x+1)^2+3"),
+            "Степенные" to listOf("y=x³" to "x^3", "y=−x³" to "-x^3", "y=x⁴" to "x^4", "y=x⁵" to "x^5"),
+            "Обратные" to listOf("y=1/x" to "1/x", "y=2/x" to "2/x", "y=−1/x" to "-1/x", "y=1/x²" to "1/x^2"),
+            "Корни" to listOf("y=√x" to "sqrt(x)", "y=√(x+2)" to "sqrt(x+2)", "y=−√x" to "-sqrt(x)"),
+            "Модуль" to listOf("y=|x|" to "abs(x)", "y=|x−2|" to "abs(x-2)", "y=−|x|+3" to "-abs(x)+3"),
+            "Тригонометрия" to listOf("sin x" to "sin(x)", "cos x" to "cos(x)", "tg x" to "tan(x)", "ctg x" to "cot(x)"),
+            "Логарифмы" to listOf("ln x" to "ln(x)", "lg x" to "log(x)", "eˣ" to "exp(x)")
+        )
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf(
-                "x" to "x",
-                "2x+1" to "2x+1",
-                "3x" to "3x",
-                "x²" to "x^2",
-                "−x²+4" to "-x^2+4",
-                "2(x−1)²+3" to "2(x-1)^2+3",
-                "x²−4x+3" to "x^2-4x+3",
-                "x³" to "x^3",
-                "1/x" to "1/x",
-                "√x" to "sqrt(x)",
-                "sin x" to "sin(x)",
-                "cos x" to "cos(x)",
-                "tan x" to "tan(x)",
-                "cot x" to "cot(x)"
-            ).forEach { (label, value) ->
-                Chip(label, false) { expression = if (expression.isBlank()) value else expression + ";" + value }
+            presetGroups.keys.forEach { category ->
+                Chip(category, presetCategory == category) { presetCategory = category }
             }
         }
-        Text("Линейные, квадратичные, кубические, обратные, корневые и тригонометрические функции. Несколько кривых можно сравнивать одновременно.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            presetGroups[presetCategory].orEmpty().forEach { (label, value) ->
+                Chip(label, selectedPreset == value) {
+                    selectedPreset = value
+                    expression = value
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionButton("Добавить к графикам") {
+                val existing = expression.split(";").map { it.trim() }
+                if (selectedPreset !in existing && existing.size < 12) {
+                    expression = if (expression.isBlank()) selectedPreset else "$expression; $selectedPreset"
+                } else if (existing.size >= 12 && selectedPreset !in existing) {
+                    graphError = "Можно сравнить не более 12 функций"
+                }
+            }
+            ActionButton("Очистить") { expression = selectedPreset }
+        }
+        Text("Выберите семейство функций, затем пример. Чтобы сравнить несколько кривых, добавляйте их по одной.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
         Text("Семейство парабол y = a(x − h)² + k", color = p.muted, fontSize = 12.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Field(parabolaA, { parabolaA = it }, "a", Modifier.weight(1f))
@@ -2531,6 +2547,23 @@ private fun GraphFunctionContent() {
             } else {
                 graphMode = "Функции"
                 expression = a.toString() + "*(x-(" + h + "))^2+(" + k + ")"
+            }
+        }
+        val parabolaValues = listOf(parabolaA, parabolaH, parabolaK).map { it.replace(',', '.').toDoubleOrNull() }
+        val parabolaAnalysis = if (parabolaValues.all { it != null && it.isFinite() } && parabolaValues[0] != 0.0) {
+            ParabolaTransformation.explain(parabolaValues[0]!!, parabolaValues[1]!!, parabolaValues[2]!!)
+        } else null
+        if (parabolaAnalysis != null) {
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp))
+                    .background(p.key).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text("Как изменился график", color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text("Итог: y = ${parabolaAnalysis.formula}", color = p.accent, fontSize = 13.sp)
+                parabolaAnalysis.steps.forEachIndexed { index, step ->
+                    Text("${index + 1}. $step", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                }
             }
         }
     } else if (graphMode == "Неявный график") {
