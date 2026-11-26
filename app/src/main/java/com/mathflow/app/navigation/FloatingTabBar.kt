@@ -61,6 +61,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -70,6 +71,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -555,10 +557,20 @@ private fun SharedTransitionScope.InlineStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
+    // Selection scale and touch feedback are deliberately independent animations.
+    // Lower spring stiffness by 1 / 1.2² to make the selection-scale transition
+    // approximately 20% slower without changing its target size.
     val settingsScale by animateFloatAsState(
         targetValue = if (isSelected) 1.06f else 1f,
-        animationSpec = spring(dampingRatio = 0.76f, stiffness = 520f),
+        animationSpec = spring(dampingRatio = 0.80f, stiffness = 360f),
         label = "SettingsButtonScaleInline"
+    )
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = if (isPressed) tween(durationMillis = 90) else spring(stiffness = 700f),
+        label = "SettingsButtonPressInline"
     )
     Tab(
         icon = standaloneTab.icon,
@@ -567,6 +579,7 @@ private fun SharedTransitionScope.InlineStandaloneTab(
         isStandalone = true,
         modifier = modifier
             .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
@@ -588,7 +601,7 @@ private fun SharedTransitionScope.InlineStandaloneTab(
                     if (!isSelected) standaloneTab.onClick()
                 },
                 indication = standaloneTab.indication?.invoke(),
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             )
     )
 }
@@ -1027,10 +1040,18 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
     modifier: Modifier,
     tabBarContentModifier: @Composable () -> Modifier
 ) {
+    // Keep touch feedback separate from the selected-state enlargement.
     val settingsScale by animateFloatAsState(
         targetValue = if (isSelected) 1.06f else 1f,
-        animationSpec = spring(dampingRatio = 0.76f, stiffness = 520f),
+        animationSpec = spring(dampingRatio = 0.80f, stiffness = 360f),
         label = "SettingsButtonScaleExpanded"
+    )
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = if (isPressed) tween(durationMillis = 90) else spring(stiffness = 700f),
+        label = "SettingsButtonPressExpanded"
     )
     Tab(
         icon = standaloneTab.icon,
@@ -1039,6 +1060,7 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
         isStandalone = true,
         modifier = modifier
             .graphicsLayer { scaleX = settingsScale; scaleY = settingsScale }
+            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
@@ -1057,7 +1079,7 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
             .clickable(
                 onClick = standaloneTab.onClick,
                 indication = standaloneTab.indication?.invoke(),
-                interactionSource = remember { MutableInteractionSource() }
+                interactionSource = interactionSource
             )
     )
 }
