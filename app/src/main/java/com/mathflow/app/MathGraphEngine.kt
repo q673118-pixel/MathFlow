@@ -48,7 +48,7 @@ class MathGraphEngine {
     ): List<GraphPoint> {
         require(expression.isNotBlank()) { "Введите функцию" }
         require(targetSegments in 16..2000 && maxPoints in 64..10000)
-        val evaluator = MathExpression.parse(expression)
+        val evaluator = MathExpression.parse(normalizeFunctionExpression(expression))
         val cache = HashMap<Long, Double?>()
         fun evaluate(x: Double): Double? {
             val key = java.lang.Double.doubleToLongBits(x)
@@ -124,7 +124,7 @@ class MathGraphEngine {
     ): List<GraphSegment> {
         require(expression.isNotBlank())
         require(columns in 8..240 && rows in 8..240)
-        val engine = MathExpression.parse(expression)
+        val engine = MathExpression.parse(normalizeImplicitExpression(expression))
         val dx = (viewport.xMax - viewport.xMin) / columns
         val dy = (viewport.yMax - viewport.yMin) / rows
         fun value(x: Double, y: Double): Double? = runCatching {
@@ -207,4 +207,29 @@ class MathGraphEngine {
         }
         return result
     }
+    private fun normalizeFunctionExpression(source: String): String {
+        val text = source.trim()
+        val equals = text.indexOf('=')
+        if (equals < 0) return text
+        require(text.indexOf('=', equals + 1) < 0) { "В функции допускается только один знак =" }
+        val left = text.substring(0, equals).trim()
+        val right = text.substring(equals + 1).trim()
+        require(left == "y" || Regex("[A-Za-z][A-Za-z0-9]*\\\\(x\\\\)").matches(left)) {
+            "Функцию вводите как y = выражение или f(x) = выражение"
+        }
+        require(right.isNotEmpty()) { "После знака = нет выражения" }
+        return right
+    }
+
+    private fun normalizeImplicitExpression(source: String): String {
+        val text = source.trim()
+        val equals = text.indexOf('=')
+        if (equals < 0) return text
+        require(text.indexOf('=', equals + 1) < 0) { "В неявном уравнении допускается один знак =" }
+        val left = text.substring(0, equals).trim()
+        val right = text.substring(equals + 1).trim()
+        require(left.isNotEmpty() && right.isNotEmpty()) { "Заполните обе части уравнения" }
+        return "(" + left + ")-(" + right + ")"
+    }
+
 }

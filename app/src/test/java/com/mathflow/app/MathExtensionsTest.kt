@@ -36,6 +36,22 @@ class MathExtensionsTest {
         assertTrue(reciprocal.any { it.y == null })
     }
 
+    @Test fun graphEngineAcceptsYEqualsFunctionNotation() {
+        val points = MathGraphEngine().sampleFunction("y = 2x + 1", GraphViewport(-2.0, 2.0, -5.0, 5.0), 40)
+        assertEquals(-3.0, points.first().y!!, 1e-6)
+        assertEquals(5.0, points.last().y!!, 1e-6)
+    }
+
+    @Test fun graphEngineAcceptsImplicitEquationWithEqualsSign() {
+        val segments = MathGraphEngine().sampleImplicit(
+            "x^2 + y^2 = 1",
+            GraphViewport(-2.0, 2.0, -2.0, 2.0),
+            50,
+            50
+        )
+        assertTrue(segments.size > 20)
+    }
+
     @Test fun graphEngineFindsImplicitCircleContour() {
         val segments = MathGraphEngine().sampleImplicit(
             "x^2+y^2-1",
