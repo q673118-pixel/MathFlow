@@ -790,7 +790,7 @@ private fun SharedTransitionScope.ExpandedTabs(
     val selectedTabIndex = scope.tabs.indexOfFirst { it.key == selectedTabKey }
     val currentSelectedTabIndex by rememberUpdatedState(selectedTabIndex)
     val reduceAnimation = LocalDockReduceMotion.current
-    val reduceDynamicBlur = !LocalDockGlassEnabled.current
+    val reduceDynamicBlur = !LocalDockPillGlassEnabled.current
     val selectionSpec: AnimationSpec<Float> = if (reduceAnimation) snap() else spring(dampingRatio = 0.78f, stiffness = 420f)
     val haptics = LocalDockHaptic.current
 
@@ -1024,6 +1024,7 @@ private fun SharedTransitionScope.ExpandedTabs(
             GlassSelectionPill(
                 motion = pill,
                 fillColor = colors.indicatorColor,
+                glassTintColor = MaterialTheme.colorScheme.primary,
                 barGlass = barGlass,
                 tabRow = tabRow,
                 modifier = Modifier
