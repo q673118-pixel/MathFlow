@@ -2346,10 +2346,10 @@ private fun GraphFunctionContent() {
                     "Функции" -> {
                         val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
                         require(expressions.size in 1..12) { "Введите от 1 до 12 функций через ;" }
-                        Triple(engine.sampleFunctions(expressions, viewport.copy(yMin = -10000.0, yMax = 10000.0), 240, 4000), emptyList(), emptyList())
+                        Triple(engine.sampleFunctions(expressions, viewport.copy(yMin = -10000.0, yMax = 10000.0), 240, 4000), emptyList<GraphSegment>(), emptyList<GraphRegionCell>())
                     }
-                    "Неявный график" -> Triple(emptyList(), engine.sampleImplicit(expression, viewport, 96, 96), emptyList())
-                    else -> Triple(emptyList(), emptyList(), engine.sampleInequality(
+                    "Неявный график" -> Triple(emptyList<GraphCurve>(), engine.sampleImplicit(expression, viewport, 96, 96), emptyList<GraphRegionCell>())
+                    else -> Triple(emptyList<GraphCurve>(), emptyList<GraphSegment>(), engine.sampleInequality(
                         expression,
                         when (relation) { "≤" -> "<="; "≥" -> ">="; else -> relation },
                         viewport,
@@ -2384,6 +2384,9 @@ private fun GraphFunctionContent() {
     if (graphMode == "Функции") {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(
+                "x" to "x",
+                "2x+1" to "2x+1",
+                "3x" to "3x",
                 "x²" to "x^2",
                 "−x²+4" to "-x^2+4",
                 "2(x−1)²+3" to "2(x-1)^2+3",
