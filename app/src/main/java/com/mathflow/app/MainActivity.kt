@@ -792,7 +792,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                     )
                     // Keep capture enabled for the whole Liquid Glass style; tying it to inline state
                     // would rebuild the backdrop layer during the dock's fold animation.
-                    val capturePageBackdrop = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
+                    val activeUiStyle = MathFlowUiStyle.fromId(uiStyleId)
+                    val capturePageBackdrop = activeUiStyle.liquidGlassNavigation || activeUiStyle.liquidGlassPill
                     val themeBloom = remember { Animatable(1f) }
                     LaunchedEffect(themeId) {
                         themeBloom.snapTo(0f)
@@ -1102,7 +1103,8 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                 settings = bottomNavAnimationSettings,
                                 backdrop = backdrop,
                                 scrollConnection = navScrollConnection,
-                                liquidGlassEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation
+                                liquidGlassEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation,
+                                liquidGlassPillEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassPill
                             ) { page = it }
                         }
                         if (showWelcome && splashFinished) {
@@ -1472,6 +1474,7 @@ private fun BottomNav(
     preview: Boolean = false,
     scrollConnection: FloatingTabBarScrollConnection? = null,
     liquidGlassEnabled: Boolean = false,
+    liquidGlassPillEnabled: Boolean = liquidGlassEnabled,
     onSelect: (Page) -> Unit
 ) {
     val palette = LocalPalette.current
@@ -1514,6 +1517,7 @@ private fun BottomNav(
         reduceMotion = !settings.enabled || !android.animation.ValueAnimator.areAnimatorsEnabled(),
         animationDurationMs = settings.durationMs,
         liquidGlassEnabled = liquidGlassEnabled,
+        liquidGlassPillEnabled = liquidGlassPillEnabled,
         modifier = Modifier.fillMaxWidth(),
         useSystemInsets = !preview
     ) { key ->
@@ -3943,7 +3947,8 @@ private fun SettingsPage(
                                 pendingNavAnimationSettings,
                                 backdrop = navPreviewBackdrop,
                                 preview = true,
-                                 liquidGlassEnabled = MathFlowUiStyle.fromId(pendingUiStyleId).liquidGlassNavigation
+                                 liquidGlassEnabled = MathFlowUiStyle.fromId(pendingUiStyleId).liquidGlassNavigation,
+                                liquidGlassPillEnabled = MathFlowUiStyle.fromId(pendingUiStyleId).liquidGlassPill
                             ) { navPreviewPage = it }
                         }
                     }
