@@ -47,6 +47,7 @@ internal val LocalDockReduceMotion = compositionLocalOf { false }
 internal val LocalDockAnimationScale = compositionLocalOf { 1f }
 internal val LocalDockGlassEnabled = compositionLocalOf { true }
 internal val LocalDockPillGlassEnabled = compositionLocalOf { true }
+internal val LocalDockAccent = compositionLocalOf { Color.Unspecified }
 internal val LocalDockHaptic = compositionLocalOf<(Boolean) -> Unit> { {} }
 
 data class RxDockItem(
@@ -107,6 +108,7 @@ fun MathFlowRxDock(
         LocalDockAnimationScale provides animationScale,
         LocalDockGlassEnabled provides glassEnabled,
         LocalDockPillGlassEnabled provides liquidGlassPillEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S,
+        LocalDockAccent provides accent,
         LocalDockHaptic provides haptic
     ) {
         FloatingTabBar(
