@@ -23,6 +23,23 @@ class MathFlowUiStyleTest {
     }
 
     @Test
+    fun materialYouUsesThemeTintedGlassPillWithoutGlassDockSurface() {
+        assertTrue(MathFlowUiStyle.MATERIAL_YOU.liquidGlassPill)
+        assertFalse(MathFlowUiStyle.MATERIAL_YOU.liquidGlassNavigation)
+        assertTrue(MathFlowUiStyle.LIQUID_GLASS.liquidGlassPill)
+        assertTrue(MathFlowUiStyle.LIQUID_GLASS.liquidGlassNavigation)
+        listOf(
+            MathFlowUiStyle.FLUENT,
+            MathFlowUiStyle.ONE_UI,
+            MathFlowUiStyle.MINIMAL,
+            MathFlowUiStyle.SOFT_UI
+        ).forEach { style ->
+            assertFalse(style.liquidGlassPill)
+            assertFalse(style.liquidGlassNavigation)
+        }
+    }
+
+    @Test
     fun onlyGlobalLiquidGlassStyleEnablesTheRefractiveNavigationRenderer() {
         MathFlowUiStyle.entries.forEach { style ->
             assertEqualsExpected(
