@@ -64,8 +64,23 @@ class InequalitySolver {
             val x0 = lowerBound + i * step
             val x1 = x0 + step
             if (a == null || b == null) {
-                if (a == null && b != null) addUnique(domainBreaks, x1)
-                if (a != null && b == null) addUnique(domainBreaks, x0)
+                if (a == null && b != null) {
+                    var invalid = x0
+                    var valid = x1
+                    repeat(55) {
+                        val middle = (invalid + valid) * 0.5
+                        if (valueAt(middle) == null) invalid = middle else valid = middle
+                    }
+                    addUnique(domainBreaks, (invalid + valid) * 0.5)
+                } else if (a != null && b == null) {
+                    var valid = x0
+                    var invalid = x1
+                    repeat(55) {
+                        val middle = (valid + invalid) * 0.5
+                        if (valueAt(middle) == null) invalid = middle else valid = middle
+                    }
+                    addUnique(domainBreaks, (valid + invalid) * 0.5)
+                }
                 continue
             }
             if (abs(a) < 1.0e-10) addRoot(x0)
