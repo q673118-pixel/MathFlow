@@ -177,7 +177,7 @@ class MathGraphEngine {
     ): List<GraphRegionCell> {
         require(relation in setOf("<", "<=", ">", ">=")) { "Неизвестный знак неравенства" }
         require(columns in 8..160 && rows in 8..160)
-        val engine = ExpressionEngine(AngleMode.RADIANS)
+        val engine = MathExpression.parse(expression)
         val dx = (viewport.xMax - viewport.xMin) / columns
         val dy = (viewport.yMax - viewport.yMin) / rows
         val result = ArrayList<GraphRegionCell>()

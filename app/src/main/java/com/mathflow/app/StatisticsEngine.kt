@@ -45,14 +45,15 @@ class StatisticsEngine {
         val sorted = values.sorted()
         val count = sorted.size
         val sum = values.sum()
+        require(sum.isFinite()) { "Сумма выходит за допустимый числовой диапазон" }
         val mean = sum / count
         val median = if (count % 2 == 1) sorted[count / 2]
             else (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0
         val frequencies = sorted.groupingBy { it }.eachCount().entries
             .sortedBy { it.key }.map { FrequencyEntry(it.key, it.value) }
         val maxFrequency = frequencies.maxOf { it.frequency }
-        val mode = frequencies.filter { it.frequency == maxFrequency }
-            .map { it.value }.takeIf { it.size != frequencies.size }.orEmpty()
+        val mode = if (maxFrequency == 1 && frequencies.size > 1) emptyList()
+            else frequencies.filter { it.frequency == maxFrequency }.map { it.value }
         val variance = values.sumOf { (it - mean) * (it - mean) } / count
         val bins = requestedBins ?: kotlin.math.ceil(1.0 + 3.322 * kotlin.math.log10(count.toDouble())).toInt().coerceAtLeast(1)
         require(bins in 1..100) { "Число интервалов должно быть от 1 до 100" }

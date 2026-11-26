@@ -46,24 +46,24 @@ class NonlinearSystemSolver {
                 attempted++
                 var x = searchMin + (searchMax - searchMin) * ix / (seedCountPerAxis - 1)
                 var y = searchMin + (searchMax - searchMin) * iy / (seedCountPerAxis - 1)
-                repeat(80) {
-                    val f = residual(x, y) ?: return@repeat
+                for (iteration in 0 until 80) {
+                    val f = residual(x, y) ?: break
                     val norm = max(abs(f.first), abs(f.second))
-                    if (norm < 1.0e-9) return@repeat
+                    if (norm < 1.0e-9) break
                     val h = 1.0e-5 * max(1.0, max(abs(x), abs(y)))
-                    val fx = residual(x + h, y) ?: return@repeat
-                    val fy = residual(x, y + h) ?: return@repeat
+                    val fx = residual(x + h, y) ?: break
+                    val fy = residual(x, y + h) ?: break
                     val a = (fx.first - f.first) / h
                     val b = (fy.first - f.first) / h
                     val c = (fx.second - f.second) / h
                     val d = (fy.second - f.second) / h
                     val determinant = a * d - b * c
-                    if (!determinant.isFinite() || abs(determinant) < 1.0e-12) return@repeat
+                    if (!determinant.isFinite() || abs(determinant) < 1.0e-12) break
                     val dx = (d * f.first - b * f.second) / determinant
                     val dy = (-c * f.first + a * f.second) / determinant
                     var factor = 1.0
                     var accepted = false
-                    repeat(12) {
+                    for (lineSearch in 0 until 12) {
                         val nx = x - factor * dx
                         val ny = y - factor * dy
                         val next = residual(nx, ny)
@@ -71,11 +71,11 @@ class NonlinearSystemSolver {
                             x = nx
                             y = ny
                             accepted = true
-                            return@repeat
+                            break
                         }
                         factor *= 0.5
                     }
-                    if (!accepted) return@repeat
+                    if (!accepted) break
                 }
                 val final = residual(x, y) ?: continue
                 val error = max(abs(final.first), abs(final.second))
