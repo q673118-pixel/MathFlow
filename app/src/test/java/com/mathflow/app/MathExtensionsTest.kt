@@ -91,7 +91,9 @@ class MathExtensionsTest {
         )
         assertEquals(4.0, geometry.polygonArea(square), 1e-9)
         assertEquals(8.0, geometry.polygonPerimeter(square), 1e-9)
-        assertEquals(CoordinatePoint(0.0, 1.0), geometry.rotate(CoordinatePoint(1.0, 0.0), CoordinatePoint(0.0, 0.0), 90.0))
+        val rotated = geometry.rotate(CoordinatePoint(1.0, 0.0), CoordinatePoint(0.0, 0.0), 90.0)
+        assertEquals(0.0, rotated.x, 1e-9)
+        assertEquals(1.0, rotated.y, 1e-9)
         assertEquals(CoordinatePoint(-1.0, 2.0), geometry.homothety(CoordinatePoint(1.0, 2.0), CoordinatePoint(0.0, 2.0), -1.0))
         assertEquals(PI, geometry.sectorArea(2.0, 90.0), 1e-9)
     }
