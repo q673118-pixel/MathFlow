@@ -2163,7 +2163,11 @@ private fun StatisticsContent() {
     var summary by remember { mutableStateOf<StatisticsSummary?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     Field(source, { source = it; error = null; summary = null }, "Данные: числа через ; или пробел", Modifier.fillMaxWidth(), numeric = false)
-    Segmented(listOf("Частоты", "Полигон частот", "Гистограмма", "Накопленная частота"), chartType) { chartType = it }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf("Частоты", "Полигон частот", "Гистограмма", "Накопленная частота").forEach { option ->
+            Chip(option, chartType == option) { chartType = option }
+        }
+    }
     ActionButton("Рассчитать статистику") {
         runCatching {
             val engine = StatisticsEngine()
@@ -2337,7 +2341,11 @@ private fun GeometryToolsContent() {
             }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
         }
     } else {
-        Segmented(listOf("Сложение", "Разность", "Скалярное произведение", "Угол"), operation) { operation = it; result = ""; error = null }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Сложение", "Разность", "Скалярное произведение", "Угол").forEach { option ->
+                Chip(option, operation == option) { operation = option; result = ""; error = null }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Field(ux, { ux = it }, "uₓ", Modifier.weight(1f)); Field(uy, { uy = it }, "uᵧ", Modifier.weight(1f))
         }
@@ -2429,7 +2437,11 @@ private fun GraphFunctionContent() {
         isCalculating = false
     }
 
-    Segmented(listOf("Функции", "Неявный график", "Неравенство"), graphMode) { graphMode = it }
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf("Функции", "Неявный график", "Неравенство").forEach { option ->
+            Chip(option, graphMode == option) { graphMode = option }
+        }
+    }
     Field(
         expression,
         { expression = it },
