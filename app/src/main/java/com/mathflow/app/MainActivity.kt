@@ -3885,10 +3885,13 @@ private fun SettingsPage(
                 Panel {
                     Text("СТИЛЬ ПАНЕЛИ НАВИГАЦИИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
                     Text(
-                        if (uiStyle.liquidGlassNavigation) {
-                            "Liquid Glass применяется только к панели навигации и движущейся капле. Остальные панели сохраняют обычное оформление."
-                        } else {
-                            "Панель и индикатор используют оформление выбранного стиля: ${uiStyle.title}."
+                        when {
+                            uiStyle.liquidGlassNavigation ->
+                                "Liquid Glass применяется к панели навигации и движущейся капле. Остальные панели сохраняют обычное оформление."
+                            uiStyle.liquidGlassPill ->
+                                "В Material You движущаяся капля использует преломляющее стекло с акцентным цветом темы; корпус панели остаётся матовым."
+                            else ->
+                                "Панель и индикатор используют оформление выбранного стиля: ${uiStyle.title}."
                         },
                         color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
                     )
