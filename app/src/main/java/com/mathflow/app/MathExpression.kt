@@ -168,7 +168,7 @@ class MathExpression private constructor(private val root: Node) {
         }
 
         private fun startsFactor(token: String?): Boolean =
-            token == "(" || token == "|" ||
+            token == "(" ||
                 token?.firstOrNull()?.isDigit() == true ||
                 token?.firstOrNull()?.isLetter() == true
 

@@ -2061,7 +2061,7 @@ private fun ToolsPage() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf("Дроби", "Проценты", "Геометрия", "Конвертер", "График").forEach { option ->
+                listOf("Дроби", "Проценты", "Геометрия", "Статистика", "Конвертер", "График").forEach { option ->
                     Chip(option, tool == option) { tool = option }
                 }
             }
@@ -2144,33 +2144,8 @@ private fun ToolsPage() {
                         ResultBox(percentResult, percentError)
                     }
                 }
-                "Геометрия" -> {
-                    Segmented(listOf("Прямоугольник", "Круг", "Треугольник"), shape) { shape = it }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Field(sideA, { sideA = it }, if (shape == "Круг") "Радиус" else "Сторона a", Modifier.weight(1f))
-                        if (shape != "Круг") Field(sideB, { sideB = it }, "Сторона b", Modifier.weight(1f))
-                        if (shape == "Треугольник") Field(sideC, { sideC = it }, "Сторона c", Modifier.weight(1f))
-                    }
-                    ActionButton(tx("calculate")) {
-                        runCatching {
-                            when (shape) {
-                                "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
-                                "Круг" -> GeometryTools.circle(sideA)
-                                else -> GeometryTools.triangle(sideA, sideB, sideC)
-                            }
-                        }.onSuccess { geometryResult = it; geometryError = null }
-                            .onFailure { geometryError = friendly(it, sizesFallback); geometryResult = "" }
-                    }
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = geometryResult.isNotEmpty() || geometryError != null,
-                        enter = androidx.compose.animation.fadeIn(tween(190)) +
-                            androidx.compose.animation.expandVertically(tween(190)),
-                        exit = androidx.compose.animation.fadeOut(tween(110)) +
-                            androidx.compose.animation.shrinkVertically(tween(110))
-                    ) {
-                        ResultBox(geometryResult, geometryError)
-                    }
-                }
+                "Геометрия" -> GeometryToolsContent()
+                "Статистика" -> StatisticsContent()
                 "Конвертер" -> UnitConverterContent()
                 "График" -> GraphFunctionContent()
                     }
@@ -2179,7 +2154,7 @@ private fun ToolsPage() {
         }
     }
 }
-private data class GraphSample(val x: Double, val y: Double?)
+private data class SelectedGraphPoint(val curveIndex: Int, val point: GraphPoint)
 
 @Composable
 private fun GraphFunctionContent() {
@@ -2187,72 +2162,99 @@ private fun GraphFunctionContent() {
     val uiStyle = LocalMathFlowUiStyle.current
     var expression by rememberSaveable { mutableStateOf("x^2") }
     var range by rememberSaveable { mutableStateOf(5) }
-    var samples by remember { mutableStateOf(emptyList<GraphSample>()) }
-    var selectedPoint by remember { mutableStateOf<GraphSample?>(null) }
+    var curves by remember { mutableStateOf(emptyList<GraphCurve>()) }
+    var selectedPoint by remember { mutableStateOf<SelectedGraphPoint?>(null) }
     var isCalculating by remember { mutableStateOf(false) }
-    var hasValidPoints by remember { mutableStateOf(false) }
+    var graphError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(expression, range) {
         selectedPoint = null
-        if (expression.isBlank()) {
-            samples = emptyList()
-            hasValidPoints = false
+        graphError = null
+        val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+        if (expressions.isEmpty()) {
+            curves = emptyList()
+            isCalculating = false
+            return@LaunchedEffect
+        }
+        if (expressions.size > 12) {
+            curves = emptyList()
+            graphError = "Можно построить не более 12 функций одновременно"
             isCalculating = false
             return@LaunchedEffect
         }
         delay(140L)
         isCalculating = true
-        val computed = withContext(Dispatchers.Default) {
-            val engine = ExpressionEngine(AngleMode.RADIANS)
-            (0..120).map { index ->
-                val x = -range + (range * 2.0 * index / 120.0)
-                val y = runCatching {
-                    engine.calculate(expression, variables = mapOf("x" to BigDecimal.valueOf(x)), includeSteps = false).decimalValue.toDouble()
-                }.getOrNull()?.takeIf { it.isFinite() && abs(it) < 1.0e7 }
-                GraphSample(x, y)
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                MathGraphEngine().sampleFunctions(
+                    expressions,
+                    GraphViewport(-range.toDouble(), range.toDouble(), -10000.0, 10000.0),
+                    targetSegments = 240,
+                    maxPointsPerCurve = 4000
+                )
             }
         }
-        samples = computed
-        hasValidPoints = computed.any { it.y != null }
+        result.onSuccess { curves = it }.onFailure {
+            curves = emptyList()
+            graphError = it.message ?: "Не удалось построить график"
+        }
         isCalculating = false
     }
 
-    Field(expression, { expression = it }, tx("graph_input"), Modifier.fillMaxWidth(), numeric = false)
+    Field(expression, { expression = it }, "y=f(x); несколько функций разделяйте точкой с запятой", Modifier.fillMaxWidth(), numeric = false)
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Chip("x²", false) { expression = "x^2" }
-        Chip("sin(x)", false) { expression = "sin(x)" }
-        Chip("1/x", false) { expression = "1/x" }
-        Chip("2x+1", false) { expression = "2x+1" }
+        listOf(
+            "x²" to "x^2",
+            "−x²+4" to "-x^2+4",
+            "2(x−1)²+3" to "2(x-1)^2+3",
+            "x²−4x+3" to "x^2-4x+3",
+            "x³" to "x^3",
+            "1/x" to "1/x",
+            "√x" to "sqrt(x)",
+            "sin x" to "sin(x)",
+            "cos x" to "cos(x)",
+            "tan x" to "tan(x)"
+        ).forEach { (label, value) ->
+            Chip(label, false) { expression = if (expression.isBlank()) value else expression + ";" + value }
+        }
     }
+    Text("Графики функций: линейные, квадратичные, кубические, обратные, корневые и тригонометрические. Углы — в радианах.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
     Text(tx("graph_range"), color = p.muted, fontSize = 12.sp)
     Segmented(listOf("±5", "±10", "±20"), "±$range") {
         range = it.removePrefix("±").toIntOrNull() ?: 5
     }
+
+    val validValues = curves.flatMap { it.points.mapNotNull { point -> point.y } }.filter { it.isFinite() }.sorted()
+    val low = if (validValues.isEmpty()) -1.0 else validValues[(validValues.size * 0.05).toInt().coerceIn(0, validValues.lastIndex)]
+    val high = if (validValues.isEmpty()) 1.0 else validValues[((validValues.size * 0.95).toInt()).coerceIn(0, validValues.lastIndex)]
+    val padding = ((high - low) * 0.08).coerceAtLeast(0.5)
+    val yMin = low - padding
+    val yMax = high + padding
+    val colors = listOf(p.accent, p.keyEquals, p.text, p.muted, p.onKeyEquals)
+
     Canvas(
-        Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp)).background(p.key)
-            .pointerInput(samples, range) {
+        Modifier.fillMaxWidth().height(260.dp)
+            .clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp))
+            .background(p.key)
+            .pointerInput(curves, range) {
                 detectTapGestures { tap ->
-                    val fraction = tap.x.toDouble() / size.width.coerceAtLeast(1).toDouble()
-                    val targetX = -range + fraction * range * 2.0
-                    selectedPoint = samples.filter { it.y != null }.minByOrNull { abs(it.x - targetX) }
+                    val targetX = -range + (tap.x / size.width.coerceAtLeast(1)) * range * 2.0
+                    selectedPoint = curves.mapIndexedNotNull { index, curve ->
+                        curve.points.filter { it.y != null }.minByOrNull { abs(it.x - targetX) }
+                            ?.let { SelectedGraphPoint(index, it) }
+                    }.minByOrNull { abs(it.point.x - targetX) }
                 }
             }
     ) {
-        val validY = samples.mapNotNull { it.y }
-        if (validY.isEmpty()) return@Canvas
-        val rawMin = validY.minOrNull() ?: -1.0
-        val rawMax = validY.maxOrNull() ?: 1.0
-        val padding = ((rawMax - rawMin) * 0.08).coerceAtLeast(0.5)
-        val yMin = rawMin - padding
-        val yMax = rawMax + padding
-        val ySpan = (yMax - yMin).coerceAtLeast(1.0)
-        fun plotX(x: Double) = ((x + range) / (range * 2.0) * size.width.toDouble()).toFloat()
-        fun plotY(y: Double) = (size.height.toDouble() - ((y - yMin) / ySpan * size.height.toDouble())).toFloat()
-        for (i in 0..4) {
-            val x = size.width * i / 4f
-            val y = size.height * i / 4f
-            drawLine(p.muted.copy(alpha = 0.18f), Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
-            drawLine(p.muted.copy(alpha = 0.18f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+        if (curves.isEmpty()) return@Canvas
+        val spanY = (yMax - yMin).coerceAtLeast(1.0)
+        fun plotX(x: Double) = ((x + range) / (range * 2.0) * size.width).toFloat()
+        fun plotY(y: Double) = (size.height - (y - yMin) / spanY * size.height).toFloat()
+        for (i in 0..8) {
+            val x = size.width * i / 8f
+            val y = size.height * i / 8f
+            drawLine(p.muted.copy(alpha = 0.15f), Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
+            drawLine(p.muted.copy(alpha = 0.15f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
         }
         if (yMin <= 0.0 && yMax >= 0.0) {
             val axisY = plotY(0.0)
@@ -2260,46 +2262,53 @@ private fun GraphFunctionContent() {
         }
         val axisX = plotX(0.0)
         drawLine(p.muted.copy(alpha = 0.65f), Offset(axisX, 0f), Offset(axisX, size.height), 1.dp.toPx())
-        val path = Path()
-        var drawingSegment = false
-        samples.forEach { sample ->
-            val y = sample.y
-            if (y == null) drawingSegment = false
-            else {
-                val point = Offset(plotX(sample.x), plotY(y))
-                if (drawingSegment) path.lineTo(point.x, point.y) else path.moveTo(point.x, point.y)
-                drawingSegment = true
+        curves.forEachIndexed { curveIndex, curve ->
+            val path = Path()
+            var drawing = false
+            curve.points.forEach { point ->
+                val y = point.y
+                if (y == null || y < yMin || y > yMax) {
+                    drawing = false
+                } else {
+                    val offset = Offset(plotX(point.x), plotY(y))
+                    if (drawing) path.lineTo(offset.x, offset.y) else path.moveTo(offset.x, offset.y)
+                    drawing = true
+                }
             }
+            drawPath(path, colors[curveIndex % colors.size], style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
-        drawPath(path, p.accent, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        selectedPoint?.let { point -> point.y?.let { y ->
-            val center = Offset(plotX(point.x), plotY(y))
-            drawCircle(p.keyEquals, radius = 7.dp.toPx(), center = center)
-            drawCircle(p.onKeyEquals, radius = 3.dp.toPx(), center = center)
-        } }
-    }
-    when {
-        isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
-        !hasValidPoints -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
-        selectedPoint?.y != null -> androidx.compose.animation.AnimatedVisibility(
-            visible = true,
-            enter = androidx.compose.animation.fadeIn(tween(180)) +
-                androidx.compose.animation.expandVertically(tween(180))
-        ) {
-            selectedPoint?.let { point ->
-                point.y?.let { y ->
-                    AnimatedAnswerText(
-                        "x = ${"%.2f".format(Locale.US, point.x)}   y = ${"%.2f".format(Locale.US, y)}",
-                        color = p.accent,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+        selectedPoint?.let { selected ->
+            selected.point.y?.let { y ->
+                if (y in yMin..yMax) {
+                    val center = Offset(plotX(selected.point.x), plotY(y))
+                    drawCircle(colors[selected.curveIndex % colors.size], 7.dp.toPx(), center)
+                    drawCircle(p.key, 3.dp.toPx(), center)
                 }
             }
         }
-        else -> Text(tx("graph_hint"), color = p.muted, fontSize = 12.sp)
+    }
+    when {
+        isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
+        graphError != null -> Text(graphError!!, color = p.error, fontSize = 12.sp)
+        curves.isEmpty() -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
+        selectedPoint != null -> {
+            val selected = selectedPoint!!
+            val y = selected.point.y
+            if (y != null) {
+                AnimatedAnswerText(
+                    curves[selected.curveIndex].expression + ": x = " +
+                        "%.3f".format(Locale.US, selected.point.x) + ", y = " +
+                        "%.3f".format(Locale.US, y),
+                    color = colors[selected.curveIndex % colors.size],
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        else -> Text("Нажмите на график, чтобы узнать координаты ближайшей точки.", color = p.muted, fontSize = 12.sp)
     }
 }
+
 private fun friendly(error: Throwable, fallback: String): String = when {
     error.message?.contains("Division by zero") == true -> "Деление на ноль"
     error is IllegalArgumentException || error is ArithmeticException -> error.message ?: fallback
