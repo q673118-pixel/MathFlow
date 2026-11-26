@@ -22,7 +22,22 @@ object ParabolaTransformation {
                 if (it == "-0" || it.isEmpty()) "0" else it
             }
 
-        val formula = "y = ${number(a)}(x - (${number(h)}))² + (${number(k)})"
+        val xPart = when {
+            h > 0.0 -> "(x - ${number(h)})"
+            h < 0.0 -> "(x + ${number(abs(h))})"
+            else -> "x"
+        }
+        val coefficient = when (a) {
+            1.0 -> ""
+            -1.0 -> "−"
+            else -> number(a)
+        }
+        val verticalShift = when {
+            k > 0.0 -> " + ${number(k)}"
+            k < 0.0 -> " − ${number(abs(k))}"
+            else -> ""
+        }
+        val formula = "y = $coefficient$xPart²$verticalShift"
         val steps = mutableListOf<String>()
         if (a < 0.0) {
             steps += "Отразить параболу y = x² относительно оси Ox: ветви будут направлены вниз."
