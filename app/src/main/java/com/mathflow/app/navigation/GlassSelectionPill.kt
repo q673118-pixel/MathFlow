@@ -543,7 +543,7 @@ internal fun GlassSelectionPill(
             bar = barGlass,
             tabs = tabRow,
             fill = { fillColor.copy(alpha = fillColor.alpha * (1f - motion.material)) },
-            tint = { glassTintColor.copy(alpha = 0.22f * motion.material) }
+            tint = { glassTintColor.copy(alpha = 0.07f * motion.material) }
         )
     }
     Box(
@@ -555,7 +555,7 @@ internal fun GlassSelectionPill(
                     convexLens(
                         refractionHeight = LENS_HEIGHT.toPx() * motion.glassPresence,
                         refractionAmount = LENS_AMOUNT.toPx() * motion.material,
-                        magnification = 0.10f * motion.material,
+                        magnification = 0.22f * motion.material,
                     )
                 }
             },
@@ -574,8 +574,8 @@ internal fun GlassSelectionPill(
 /** The rim and its shadow are gone by the time the hand-off is 55% through. */
 private fun rimOf(presence: Float): Float = ((presence - 0.45f) / 0.55f).coerceIn(0f, 1f)
 
-private val LENS_HEIGHT = 12.dp
-private val LENS_AMOUNT = 14.dp
+private val LENS_HEIGHT = 18.dp
+private val LENS_AMOUNT = 24.dp
 
 private val PILL_SHADOW = Shadow(
     radius = 12.dp,
