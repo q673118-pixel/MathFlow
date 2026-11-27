@@ -131,7 +131,7 @@ half4 main(float2 coord) {
         float2 radial = centeredCoord / max(length(centeredCoord), 0.001);
         float2 grad = normalize(
             gradSdRoundedRect(centeredCoord, halfSize, gradRadius) +
-            0.18 * radial
+            0.28 * radial
         );
         sampleCoord += d * grad;
     }
