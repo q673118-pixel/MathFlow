@@ -222,62 +222,43 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
-    val density = LocalDensity.current
-    val startY = with(density) { (-450).dp.toPx() }
-    val firstBounceY = with(density) { (-42).dp.toPx() }
-    val secondBounceY = with(density) { (-14).dp.toPx() }
-    val mProgress = remember { Animatable(0f) }
-    val dotY = remember { Animatable(startY) }
-    val dotAlpha = remember { Animatable(0f) }
-    val dotScaleX = remember { Animatable(1f) }
-    val dotScaleY = remember { Animatable(1f) }
+private fun MathFlowIntroSplash(
+    palette: Palette,
+    speedMultiplier: Float,
+    onFinished: () -> Unit
+) {
+    val logoScale = remember { Animatable(0f) }
     val splashAlpha = remember { Animatable(1f) }
+    val speed = speedMultiplier.coerceIn(0.5f, 2f)
+    val duration = { baseMs: Int -> (baseMs / speed).roundToInt().coerceAtLeast(1) }
 
-    // Keep the existing intro timing and bouncing-dot choreography. Only replace
-    // the old bitmap M + separate dot with the exact Ocean vector geometry.
-    LaunchedEffect(Unit) {
-        delay(500L)
-        mProgress.animateTo(
-            1f,
-            tween(760, easing = androidx.compose.animation.core.Easing { f ->
-                1f - (1f - f) * (1f - f) * (1f - f)
-            })
+    LaunchedEffect(speed) {
+        // 0–100 ms: the logo is absent. At 100 ms it appears as a tiny central point.
+        delay(duration(100).toLong())
+        logoScale.snapTo(0.018f)
+
+        // 100–600 ms: expand quickly from the center, easing into the full M mark.
+        logoScale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = duration(500),
+                easing = androidx.compose.animation.core.CubicBezierEasing(0.10f, 0.88f, 0.22f, 1f)
+            )
         )
-        dotAlpha.snapTo(1f)
 
-        kotlinx.coroutines.coroutineScope {
-            launch {
-                dotY.animateTo(0f, tween(420, easing = androidx.compose.animation.core.Easing { it * it }))
-                delay(60L)
-                dotY.animateTo(firstBounceY, tween(190, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) }))
-                dotY.animateTo(0f, tween(170, easing = androidx.compose.animation.core.Easing { it * it }))
-                delay(45L)
-                dotY.animateTo(secondBounceY, tween(125, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) }))
-                dotY.animateTo(0f, tween(115, easing = androidx.compose.animation.core.Easing { it * it }))
-            }
-            launch {
-                delay(420L)
-                dotScaleX.animateTo(1.18f, tween(60))
-                dotScaleX.animateTo(0.90f, tween(190))
-                dotScaleX.animateTo(1.02f, tween(170))
-                dotScaleX.animateTo(1.12f, tween(45))
-                dotScaleX.animateTo(0.96f, tween(125))
-                dotScaleX.animateTo(1f, tween(115))
-            }
-            launch {
-                delay(420L)
-                dotScaleY.animateTo(0.78f, tween(60))
-                dotScaleY.animateTo(1.12f, tween(190))
-                dotScaleY.animateTo(0.98f, tween(170))
-                dotScaleY.animateTo(0.88f, tween(45))
-                dotScaleY.animateTo(1.04f, tween(125))
-                dotScaleY.animateTo(1f, tween(115))
-            }
-        }
+        // 600–1000 ms: contract the complete mark back into its central point.
+        logoScale.animateTo(
+            targetValue = 0.018f,
+            animationSpec = tween(
+                durationMillis = duration(400),
+                easing = FastOutSlowInEasing
+            )
+        )
 
-        delay(120L)
-        splashAlpha.animateTo(0f, tween(1100, easing = LinearOutSlowInEasing))
+        splashAlpha.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = duration(100), easing = LinearOutSlowInEasing)
+        )
         onFinished()
     }
 
@@ -294,7 +275,15 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.size(108.dp)) {
+        Canvas(
+            Modifier.size(108.dp)
+                // Scaling the complete vector around its center makes both the M
+                // and its upper dot collapse into one point without drifting.
+                .graphicsLayer {
+                    scaleX = logoScale.value
+                    scaleY = logoScale.value
+                }
+        ) {
             val scaleX = size.width / 108f
             val scaleY = size.height / 108f
             val oceanM = Path().apply {
@@ -306,34 +295,20 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                 quadraticTo(80f, 28f, 80f, 37f)
                 lineTo(80f, 78f)
             }
-            // The full Ocean contour is about 170 px long in this 108-unit
-            // coordinate space. Keep the visible dash longer than the contour:
-            // otherwise the last stroke segment falls into the dash gap.
-            val fullContourDash = 240f
             drawContext.transform.scale(scaleX, scaleY, pivot = Offset.Zero)
             drawPath(
                 path = oceanM,
                 color = palette.accent,
-                style = Stroke(
-                    width = 10f,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round,
-                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                        floatArrayOf((fullContourDash * mProgress.value).coerceAtLeast(0.001f), fullContourDash * 2f),
-                        0f
-                    )
-                )
+                style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
             drawCircle(
                 color = palette.accent,
-                radius = 4.5f * dotScaleX.value,
-                center = Offset(54f, 25f + (dotY.value / scaleY)),
-                alpha = dotAlpha.value
+                radius = 4.5f,
+                center = Offset(54f, 25f)
             )
         }
     }
 }
-
 private enum class Page(val title: String, val glyph: AppGlyph) {
     HOME("Главная", AppGlyph.HOME),
     TOOLS("Инструменты", AppGlyph.TOOLS),
@@ -663,10 +638,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     // The full page capture is only consumed by the Liquid Glass navigation.
     // Avoid recording the entire page for every other global visual style.
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
+    var introEnabled by remember { mutableStateOf(prefs.getBoolean("intro_enabled", true)) }
+    var introSpeed by remember { mutableFloatStateOf(prefs.getFloat("intro_speed", 1f).coerceIn(0.5f, 2f)) }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
     }
-    var splashFinished by remember { mutableStateOf(false) }
+    var splashFinished by remember { mutableStateOf(!introEnabled) }
 
     var customFont by remember { mutableStateOf<FontFamily?>(null) }
     LaunchedEffect(fontPath) {
@@ -1050,6 +1027,16 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .putBoolean("font_selection_initialized", true)
                                                         .apply()
                                                 },
+                                                introEnabled = introEnabled,
+                                                introSpeed = introSpeed,
+                                                onIntroEnabledChange = { enabled ->
+                                                    introEnabled = enabled
+                                                    prefs.edit().putBoolean("intro_enabled", enabled).apply()
+                                                },
+                                                onIntroSpeedChange = { speed ->
+                                                    introSpeed = speed.coerceIn(0.5f, 2f)
+                                                    prefs.edit().putFloat("intro_speed", introSpeed).apply()
+                                                },
                                                 appliedAnimationSettings = keyAnimationSettings,
                                                 onAnimationSettingsApplied = { settings ->
                                                     val normalized = settings.normalized()
@@ -1147,8 +1134,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                 }
                             )
                         }
-                        if (!splashFinished) {
-                            MathFlowIntroSplash(palette = palette, onFinished = { splashFinished = true })
+                        if (introEnabled && !splashFinished) {
+                            MathFlowIntroSplash(
+                                palette = palette,
+                                speedMultiplier = introSpeed,
+                                onFinished = { splashFinished = true }
+                            )
                         }
                     }
                 }
@@ -3176,7 +3167,7 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
 
-private enum class SettingsSection { MAIN, DISPLAY, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, ANIMATIONS, NAVIGATION, FONTS, CONFIGS }
+private enum class SettingsSection { MAIN, DISPLAY, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, INTRO, ANIMATIONS, NAVIGATION, FONTS, CONFIGS }
 
 private fun makeConfigSnapshot(
     theme: String, icon: String, fontScale: Float, fontPath: String?, language: String,
@@ -3304,6 +3295,10 @@ private fun SettingsPage(
     onLanguageSelected: (String) -> Unit,
     selectedMeasurementSystem: String,
     onMeasurementSystemSelected: (String) -> Unit,
+    introEnabled: Boolean,
+    introSpeed: Float,
+    onIntroEnabledChange: (Boolean) -> Unit,
+    onIntroSpeedChange: (Float) -> Unit,
     appliedAnimationSettings: KeyAnimationSettings,
     onAnimationSettingsApplied: (KeyAnimationSettings) -> Unit,
     appliedNavAnimationSettings: BottomNavAnimationSettings,
@@ -3537,6 +3532,12 @@ private fun SettingsPage(
                     SettingsEntry("Анимация кнопок", tx("animation_entry_subtitle"), AppGlyph.SETTINGS) {
                         pendingAnimationSettings = appliedAnimationSettings; section = SettingsSection.ANIMATIONS
                     }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry(
+                        "Интро приложения",
+                        if (introEnabled) "Включено · ${introSpeed}×" else "Выключено",
+                        AppGlyph.TUNE
+                    ) { section = SettingsSection.INTRO }
                 }
                 Panel {
                     Text("ПЕРСОНАЛИЗАЦИЯ ПРИЛОЖЕНИЯ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
@@ -3717,6 +3718,59 @@ private fun SettingsPage(
                             if (selected) AppIcon(AppGlyph.CHECK, contentDescription = null, tint = p.accent)
                         }
                     }
+                }
+            }
+
+            SettingsSection.INTRO -> PageColumn("Интро приложения") {
+                Text(
+                    "Настрой заставку MathFlow, которая появляется при каждом полноценном запуске приложения.",
+                    color = p.muted, fontSize = 13.sp, lineHeight = 18.sp
+                )
+                Panel {
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(
+                            value = introEnabled,
+                            role = Role.Switch,
+                            onValueChange = onIntroEnabledChange
+                        ).padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Показывать интро", color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (introEnabled) "Заставка включена" else "Заставка пропускается",
+                                color = p.muted, fontSize = 12.sp
+                            )
+                        }
+                        Switch(checked = introEnabled, onCheckedChange = null)
+                    }
+                }
+                Panel {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Скорость анимации", color = p.text, fontSize = 14.sp)
+                        Text("${"%.1f".format(Locale.ROOT, introSpeed)}×", color = p.accent, fontSize = 14.sp)
+                    }
+                    Slider(
+                        value = introSpeed,
+                        onValueChange = { onIntroSpeedChange((it * 10f).roundToInt() / 10f) },
+                        enabled = introEnabled,
+                        valueRange = 0.5f..2f,
+                        steps = 14,
+                        colors = SliderDefaults.colors(
+                            thumbColor = p.accent, activeTrackColor = p.accent,
+                            inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent
+                        )
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("0,5× · Медленно", color = p.muted, fontSize = 11.sp)
+                        Text("2,0× · Быстро", color = p.muted, fontSize = 11.sp)
+                    }
+                    Text(
+                        "Скорость меняет все фазы анимации пропорционально. Изменения сохраняются сразу.",
+                        color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
+                    )
                 }
             }
 
