@@ -4,8 +4,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 
 /**
  * Global visual systems. A UI style describes component geometry and surface
- * treatment only; it never owns colors. All colors continue to come from Palette,
- * so every style can be combined with every color theme.
+ * treatment only; it never owns colors. Liquid Glass is deliberately scoped to
+ * the droplet navigation surface, not to text-bearing content panels.
  */
 internal enum class MathFlowUiStyle(
     val id: String,
@@ -17,7 +17,7 @@ internal enum class MathFlowUiStyle(
     val surfaceAlpha: Float,
     val outlineAlpha: Float,
     val elevationDp: Float,
-    val glassSurface: Boolean = false,
+    val liquidGlassNavigation: Boolean = false,
     val compact: Boolean = false
 ) {
     MATERIAL_YOU(
@@ -27,8 +27,8 @@ internal enum class MathFlowUiStyle(
     ),
     LIQUID_GLASS(
         "liquid_glass", "Liquid Glass",
-        "Размытие фона, полупрозрачные поверхности и световые границы.",
-        28, 19, 24, 0.78f, 0.42f, 2f, glassSurface = true
+        "Стеклянная капля и преломление только в панели навигации; остальные поверхности остаются обычными.",
+        28, 19, 24, 1f, 0.42f, 2f, liquidGlassNavigation = true
     ),
     FLUENT(
         "fluent", "Fluent",
@@ -49,32 +49,16 @@ internal enum class MathFlowUiStyle(
         "soft_ui", "Soft UI",
         "Мягкая глубина и деликатное разделение поверхностей.",
         25, 18, 22, 0.96f, 0.10f, 4f
-    ),
-    PIXEL(
-        "pixel", "Pixel",
-        "Чёткая геометрия, строгие контуры и компактные элементы.",
-        12, 9, 12, 1f, 0.38f, 0f, compact = true
-    ),
-    NEO(
-        "neo", "Neo",
-        "Графичная геометрия, контрастные рамки и выразительные блоки.",
-        10, 8, 8, 1f, 0.82f, 0f, compact = true
-    ),
-    SKEUOMORPHIC(
-        "skeuomorphic", "Skeuomorphic",
-        "Тактильные поверхности, многослойные границы и заметная глубина.",
-        22, 18, 20, 0.98f, 0.18f, 5f
-    ),
-    RETRO_GRID(
-        "retro_grid", "Retro Grid",
-        "Ретро-терминальная эстетика, строгая сетка и угловатые элементы.",
-        5, 4, 5, 1f, 0.58f, 0f, compact = true
     );
 
     /**
      * Calculator keys retain generous rounding in every visual system.
      * This token is intentionally independent from generic control geometry.
      */
+    /** The refractive selection droplet is exclusive to the Liquid Glass style. */
+    val liquidGlassPill: Boolean
+        get() = liquidGlassNavigation
+
     val calculatorKeyRadiusDp: Int
         get() = 28
 
@@ -88,3 +72,11 @@ internal enum class MathFlowUiStyle(
 internal val LocalMathFlowUiStyle = staticCompositionLocalOf {
     MathFlowUiStyle.MATERIAL_YOU
 }
+
+
+/**
+ * A refractive navigation renderer is enabled only by the Liquid Glass navigation
+ * style and when a real backdrop source is available.
+ */
+internal fun MathFlowUiStyle.usesRefractiveNavigation(backdropAvailable: Boolean): Boolean =
+    liquidGlassNavigation && backdropAvailable

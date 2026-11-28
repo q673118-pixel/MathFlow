@@ -2,6 +2,7 @@ package com.mathflow.app
 
 import kotlin.math.roundToInt
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
@@ -28,11 +29,11 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +49,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -107,10 +109,13 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -119,20 +124,35 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.painterResource
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.mathflow.app.navigation.FloatingTabBarInlineBehavior
+import com.mathflow.app.navigation.FloatingTabBarScrollConnection
+import com.mathflow.app.navigation.MathFlowRxDock
+import com.mathflow.app.navigation.RxDockItem
+import com.mathflow.app.navigation.rememberFloatingTabBarScrollConnection
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
@@ -146,6 +166,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -201,62 +222,43 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
-    val density = LocalDensity.current
-    val startY = with(density) { (-450).dp.toPx() }
-    val firstBounceY = with(density) { (-42).dp.toPx() }
-    val secondBounceY = with(density) { (-14).dp.toPx() }
-    val mProgress = remember { Animatable(0f) }
-    val dotY = remember { Animatable(startY) }
-    val dotAlpha = remember { Animatable(0f) }
-    val dotScaleX = remember { Animatable(1f) }
-    val dotScaleY = remember { Animatable(1f) }
+private fun MathFlowIntroSplash(
+    palette: Palette,
+    speedMultiplier: Float,
+    onFinished: () -> Unit
+) {
+    val logoScale = remember { Animatable(0f) }
     val splashAlpha = remember { Animatable(1f) }
+    val speed = speedMultiplier.coerceIn(0.5f, 2f)
+    val duration = { baseMs: Int -> (baseMs / speed).roundToInt().coerceAtLeast(1) }
 
-    // Keep the existing intro timing and bouncing-dot choreography. Only replace
-    // the old bitmap M + separate dot with the exact Ocean vector geometry.
-    LaunchedEffect(Unit) {
-        delay(500L)
-        mProgress.animateTo(
-            1f,
-            tween(760, easing = androidx.compose.animation.core.Easing { f ->
-                1f - (1f - f) * (1f - f) * (1f - f)
-            })
+    LaunchedEffect(speed) {
+        // 0–100 ms: the logo is absent. At 100 ms it appears as a tiny central point.
+        delay(duration(100).toLong())
+        logoScale.snapTo(0.018f)
+
+        // 100–600 ms: expand quickly from the center, easing into the full M mark.
+        logoScale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = duration(500),
+                easing = androidx.compose.animation.core.CubicBezierEasing(0.10f, 0.88f, 0.22f, 1f)
+            )
         )
-        dotAlpha.snapTo(1f)
 
-        kotlinx.coroutines.coroutineScope {
-            launch {
-                dotY.animateTo(0f, tween(420, easing = androidx.compose.animation.core.Easing { it * it }))
-                delay(60L)
-                dotY.animateTo(firstBounceY, tween(190, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) }))
-                dotY.animateTo(0f, tween(170, easing = androidx.compose.animation.core.Easing { it * it }))
-                delay(45L)
-                dotY.animateTo(secondBounceY, tween(125, easing = androidx.compose.animation.core.Easing { 1f - (1f - it) * (1f - it) }))
-                dotY.animateTo(0f, tween(115, easing = androidx.compose.animation.core.Easing { it * it }))
-            }
-            launch {
-                delay(420L)
-                dotScaleX.animateTo(1.18f, tween(60))
-                dotScaleX.animateTo(0.90f, tween(190))
-                dotScaleX.animateTo(1.02f, tween(170))
-                dotScaleX.animateTo(1.12f, tween(45))
-                dotScaleX.animateTo(0.96f, tween(125))
-                dotScaleX.animateTo(1f, tween(115))
-            }
-            launch {
-                delay(420L)
-                dotScaleY.animateTo(0.78f, tween(60))
-                dotScaleY.animateTo(1.12f, tween(190))
-                dotScaleY.animateTo(0.98f, tween(170))
-                dotScaleY.animateTo(0.88f, tween(45))
-                dotScaleY.animateTo(1.04f, tween(125))
-                dotScaleY.animateTo(1f, tween(115))
-            }
-        }
+        // 600–1000 ms: contract the complete mark back into its central point.
+        logoScale.animateTo(
+            targetValue = 0.018f,
+            animationSpec = tween(
+                durationMillis = duration(400),
+                easing = FastOutSlowInEasing
+            )
+        )
 
-        delay(120L)
-        splashAlpha.animateTo(0f, tween(2200, easing = LinearOutSlowInEasing))
+        splashAlpha.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = duration(100), easing = LinearOutSlowInEasing)
+        )
         onFinished()
     }
 
@@ -273,7 +275,15 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
             },
         contentAlignment = Alignment.Center
     ) {
-        Canvas(Modifier.size(108.dp)) {
+        Canvas(
+            Modifier.size(108.dp)
+                // Scaling the complete vector around its center makes both the M
+                // and its upper dot collapse into one point without drifting.
+                .graphicsLayer {
+                    scaleX = logoScale.value
+                    scaleY = logoScale.value
+                }
+        ) {
             val scaleX = size.width / 108f
             val scaleY = size.height / 108f
             val oceanM = Path().apply {
@@ -285,34 +295,20 @@ private fun MathFlowIntroSplash(palette: Palette, onFinished: () -> Unit) {
                 quadraticTo(80f, 28f, 80f, 37f)
                 lineTo(80f, 78f)
             }
-            // The full Ocean contour is about 170 px long in this 108-unit
-            // coordinate space. Keep the visible dash longer than the contour:
-            // otherwise the last stroke segment falls into the dash gap.
-            val fullContourDash = 240f
             drawContext.transform.scale(scaleX, scaleY, pivot = Offset.Zero)
             drawPath(
                 path = oceanM,
                 color = palette.accent,
-                style = Stroke(
-                    width = 10f,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round,
-                    pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                        floatArrayOf((fullContourDash * mProgress.value).coerceAtLeast(0.001f), fullContourDash * 2f),
-                        0f
-                    )
-                )
+                style = Stroke(width = 10f, cap = StrokeCap.Round, join = StrokeJoin.Round)
             )
             drawCircle(
                 color = palette.accent,
-                radius = 4.5f * dotScaleX.value,
-                center = Offset(54f, 25f + (dotY.value / scaleY)),
-                alpha = dotAlpha.value
+                radius = 4.5f,
+                center = Offset(54f, 25f)
             )
         }
     }
 }
-
 private enum class Page(val title: String, val glyph: AppGlyph) {
     HOME("Главная", AppGlyph.HOME),
     TOOLS("Инструменты", AppGlyph.TOOLS),
@@ -346,65 +342,135 @@ private data class ThemeOption(
 )
 
 private val ThemeOptions = listOf(
-    ThemeOption("vanilla", "Vanilla", "Фирменная фиолетовая палитра MathFlow.", Palette(
-        Color(0xFF0C0B10), Color(0xFF16141C), Color(0xFF211F29), Color(0xFF54447F),
-        Color(0xFF6A5AA3), Color.White, Color(0xFFE9E5F3), Color(0xFF9A94AB),
-        Color(0xFFB9A8F0), Color(0xFF2E2942), Color(0xFFFF8A80), true
+    ThemeOption("vanilla", "Vanilla", "Фирменная насыщенная фиолетовая палитра MathFlow.", Palette(
+        Color(0xFF10091D), Color(0xFF1D1230), Color(0xFF2B1B43), Color(0xFF6335A8),
+        Color(0xFF8B45E8), Color.White, Color(0xFFF5EDFF), Color(0xFFB8A6D0),
+        Color(0xFFC28BFF), Color(0xFF3A225C), Color(0xFFFF756F), true
     )),
-    ThemeOption("black", "Black", "Почти чёрный интерфейс с нейтральными поверхностями.", Palette(
-        Color(0xFF08090D), Color(0xFF12141A), Color(0xFF20232B), Color(0xFF343945),
-        Color(0xFFB7A0FF), Color(0xFF1A1327), Color(0xFFF4F2FA), Color(0xFF9296A3),
-        Color(0xFFC9B8FF), Color(0xFF252833), Color(0xFFFF8A80), true
+    ThemeOption("black", "Black", "Глубокий чёрный с ярким фиолетовым свечением.", Palette(
+        Color(0xFF05060A), Color(0xFF10121A), Color(0xFF1C202C), Color(0xFF343B52),
+        Color(0xFF9B78FF), Color(0xFF211638), Color(0xFFF7F5FF), Color(0xFF9EA5BA),
+        Color(0xFFBDA4FF), Color(0xFF2B2148), Color(0xFFFF7777), true
     )),
-    ThemeOption("white", "White", "Светлая тема с чистыми белыми поверхностями.", Palette(
-        Color(0xFFF7F6FA), Color.White, Color(0xFFECEAF2), Color(0xFFE1D8F3),
-        Color(0xFF6A1B9A), Color.White, Color(0xFF17131F), Color(0xFF686274),
-        Color(0xFF7428B2), Color(0xFFE8DDF5), Color(0xFFB3261E), false
+    ThemeOption("white", "White", "Чистая светлая тема с выразительным фиолетовым акцентом.", Palette(
+        Color(0xFFF8F7FF), Color(0xFFFFFFFF), Color(0xFFEAE6F7), Color(0xFFD8C9F7),
+        Color(0xFF7138D4), Color.White, Color(0xFF191326), Color(0xFF655C78),
+        Color(0xFF7D35E8), Color(0xFFE5D8FF), Color(0xFFB32635), false
     )),
-    ThemeOption("purple", "Purple", "Глубокий фиолетовый с насыщенными акцентами.", Palette(
-        Color(0xFF10051B), Color(0xFF1C0C2B), Color(0xFF2C1240), Color(0xFF511C70),
-        Color(0xFF8A2CC2), Color.White, Color(0xFFF5E9FF), Color(0xFFB59BBF),
-        Color(0xFFD49AFF), Color(0xFF321343), Color(0xFFFF8A80), true
+    ThemeOption("purple", "Purple", "Сочный ультрафиолет и глубокие сливовые поверхности.", Palette(
+        Color(0xFF16051F), Color(0xFF260B35), Color(0xFF39124D), Color(0xFF7625A8),
+        Color(0xFFB33CFA), Color.White, Color(0xFFFFF0FF), Color(0xFFC49BCF),
+        Color(0xFFE06BFF), Color(0xFF4A1764), Color(0xFFFF777F), true
     )),
-    ThemeOption("ocean", "Ocean", "Холодные синие оттенки и яркий голубой акцент.", Palette(
-        Color(0xFF04142F), Color(0xFF081E43), Color(0xFF102D58), Color(0xFF075C9B),
-        Color(0xFF139EE0), Color.White, Color(0xFFEAF7FF), Color(0xFF8FB7D4),
-        Color(0xFF39C7FF), Color(0xFF0B3157), Color(0xFFFF8A80), true
+    ThemeOption("ocean", "Ocean", "Глубокий океан, насыщенный лазурный и электрический циан.", Palette(
+        Color(0xFF03152C), Color(0xFF062544), Color(0xFF0D3B62), Color(0xFF087CB8),
+        Color(0xFF00B7F4), Color.White, Color(0xFFEAFBFF), Color(0xFF8ABBD5),
+        Color(0xFF36D5FF), Color(0xFF075078), Color(0xFFFF7777), true
     )),
-    ThemeOption("emerald", "Emerald", "Тёмно-зелёная палитра с мятными акцентами.", Palette(
-        Color(0xFF031D17), Color(0xFF082B22), Color(0xFF104336), Color(0xFF14664C),
-        Color(0xFF13A67A), Color.White, Color(0xFFE8FFF6), Color(0xFF90C9B3),
-        Color(0xFF4BE2B2), Color(0xFF0D3A2C), Color(0xFFFF8A80), true
+    ThemeOption("emerald", "Emerald", "Изумрудные глубины с ярким зелёно-мятным свечением.", Palette(
+        Color(0xFF031B16), Color(0xFF062B21), Color(0xFF0D4332), Color(0xFF087B53),
+        Color(0xFF00C987), Color.White, Color(0xFFE8FFF5), Color(0xFF8CCAB1),
+        Color(0xFF38F0B0), Color(0xFF0B513A), Color(0xFFFF7777), true
     )),
-    ThemeOption("sunset", "Sunset", "Тёплые оттенки заката: коралл, оранжевый и розовый.", Palette(
-        Color(0xFF24101C), Color(0xFF351729), Color(0xFF4C2035), Color(0xFFB34B37),
-        Color(0xFFFF6D49), Color.White, Color(0xFFFFF2EA), Color(0xFFD3A6A0),
-        Color(0xFFFF9A66), Color(0xFF51243B), Color(0xFFFFB4AB), true
+    ThemeOption("sunset", "Sunset", "Контрастный закат: мандариновый, коралловый и тёплый розовый.", Palette(
+        Color(0xFF260D1A), Color(0xFF3A1524), Color(0xFF542034), Color(0xFFC34B32),
+        Color(0xFFFF7445), Color.White, Color(0xFFFFF3E9), Color(0xFFD7A79B),
+        Color(0xFFFFA15C), Color(0xFF64263C), Color(0xFFFFB4A8), true
     )),
-    ThemeOption("rose", "Rose", "Мягкая розовая тема с ярким малиновым акцентом.", Palette(
-        Color(0xFFFFF3F8), Color.White, Color(0xFFF8DDEB), Color(0xFFF5BBD5),
-        Color(0xFFE50070), Color.White, Color(0xFF39182B), Color(0xFF9C6B83),
-        Color(0xFFD60069), Color(0xFFF9D7E9), Color(0xFFB3261E), false
+    ThemeOption("rose", "Rose", "Яркая розовая палитра с малиновыми и фуксиевыми акцентами.", Palette(
+        Color(0xFFFFF0F7), Color(0xFFFFFBFE), Color(0xFFF8D9E9), Color(0xFFF3B6D5),
+        Color(0xFFD90070), Color.White, Color(0xFF351126), Color(0xFF98617E),
+        Color(0xFFED1685), Color(0xFFFFD5E9), Color(0xFFB32635), false
     )),
-    ThemeOption("midnight", "Midnight", "Ночная фиолетовая палитра с мягкими лавандовыми акцентами.", Palette(
-        Color(0xFF100521), Color(0xFF1A0B31), Color(0xFF2A124A), Color(0xFF6331A1),
-        Color(0xFFA66BFF), Color.White, Color(0xFFF6EDFF), Color(0xFFB5A0D1),
-        Color(0xFFC69AFF), Color(0xFF321957), Color(0xFFFF8A80), true
+    ThemeOption("midnight", "Midnight", "Ночная индиго-палитра с яркой лавандой и аметистом.", Palette(
+        Color(0xFF0C0823), Color(0xFF171039), Color(0xFF251954), Color(0xFF5636B5),
+        Color(0xFF906BFF), Color.White, Color(0xFFF4F0FF), Color(0xFFB0A4D8),
+        Color(0xFFB49AFF), Color(0xFF33206D), Color(0xFFFF777F), true
     )),
-    ThemeOption("graphite", "Graphite", "Спокойные графитовые оттенки с холодным светлым акцентом.", Palette(
-        Color(0xFF222431), Color(0xFF2D3040), Color(0xFF3A3D4F), Color(0xFF4A4D62),
-        Color(0xFFAEB4D8), Color(0xFF222431), Color(0xFFF1F2FF), Color(0xFFB0B4C9),
-        Color(0xFFD1D5FF), Color(0xFF3C4056), Color(0xFFFF8A80), true
+    ThemeOption("graphite", "Graphite", "Графитовая основа с холодным ледяным синим акцентом.", Palette(
+        Color(0xFF191D29), Color(0xFF252B3A), Color(0xFF343D50), Color(0xFF53627D),
+        Color(0xFF8BAEFF), Color(0xFF202A40), Color(0xFFF1F5FF), Color(0xFFABB8D1),
+        Color(0xFFB3CAFF), Color(0xFF3A4A68), Color(0xFFFF7777), true
     )),
-    ThemeOption("gray", "Gray", "Нейтральная графитово-серая палитра без цветового оттенка.", Palette(
-        Color(0xFF17191E), Color(0xFF22252C), Color(0xFF2E323A), Color(0xFF515965),
-        Color(0xFFD4D8E0), Color(0xFF20232A), Color(0xFFF2F3F5), Color(0xFFAEB3BD),
-        Color(0xFFDCE0E8), Color(0xFF393E48), Color(0xFFFF8A80), true
+    ThemeOption("gray", "Gray", "Нейтральный антрацит с чистым серебристым контрастом.", Palette(
+        Color(0xFF14171D), Color(0xFF20252D), Color(0xFF2D343E), Color(0xFF596574),
+        Color(0xFFB8C7DA), Color(0xFF202A36), Color(0xFFF5F7FA), Color(0xFFB0BAC7),
+        Color(0xFFDCEBFA), Color(0xFF394A5C), Color(0xFFFF7777), true
     )),
-    ThemeOption("transparent", "Transparent", "Полупрозрачные поверхности и холодные стеклянные оттенки.", Palette(
-        Color(0xFF10151C), Color(0xC01C2633), Color(0xA02C3948), Color(0xB34D6379),
-        Color(0xFFDCEBFA), Color(0xFF16202B), Color(0xFFF4F8FC), Color(0xFFB5C2D0),
-        Color(0xFFB7D9F5), Color(0x803B536B), Color(0xFFFF8A80), true
+    ThemeOption("transparent", "Transparent", "Холодное стекло с более насыщенными сине-голубыми акцентами.", Palette(
+        Color(0xFF0B1724), Color(0xD0182A3D), Color(0xB52B4058), Color(0xD04A789B),
+        Color(0xFFB5E7FF), Color(0xFF172D42), Color(0xFFF4FAFF), Color(0xFFB0C8DA),
+        Color(0xFF66CFFF), Color(0x99456F91), Color(0xFFFF7777), true
+    )),
+    ThemeOption("arctic", "Arctic", "Ледяная светлая тема с бирюзовым и полярно-синим.", Palette(
+        Color(0xFFF0FAFF), Color(0xFFFFFFFF), Color(0xFFDDF2FC), Color(0xFFB8E7F8),
+        Color(0xFF087FAE), Color.White, Color(0xFF102A3A), Color(0xFF5D7F91),
+        Color(0xFF009BCB), Color(0xFFD4F3FF), Color(0xFFB32635), false
+    )),
+    ThemeOption("cobalt", "Cobalt", "Насыщенный кобальт и электрический синий на тёмной основе.", Palette(
+        Color(0xFF06112B), Color(0xFF0B1D42), Color(0xFF122D61), Color(0xFF174CB0),
+        Color(0xFF347BFF), Color.White, Color(0xFFEEF4FF), Color(0xFF9CB5E2),
+        Color(0xFF5D9BFF), Color(0xFF173D83), Color(0xFFFF7777), true
+    )),
+    ThemeOption("crimson", "Crimson", "Глубокий бордовый, рубиновый и алый акцент.", Palette(
+        Color(0xFF21070F), Color(0xFF340B18), Color(0xFF4C1425), Color(0xFF8C1D3B),
+        Color(0xFFE52E59), Color.White, Color(0xFFFFEFF2), Color(0xFFD2A0AD),
+        Color(0xFFFF5278), Color(0xFF5B1830), Color(0xFFFFA0A0), true
+    )),
+    ThemeOption("amber", "Amber", "Тёмный янтарь с золотыми и медовыми акцентами.", Palette(
+        Color(0xFF211407), Color(0xFF34200B), Color(0xFF4B3010), Color(0xFF95600F),
+        Color(0xFFFFB52E), Color(0xFF2B1B08), Color(0xFFFFF6E5), Color(0xFFD0B98E),
+        Color(0xFFFFC44D), Color(0xFF5B3A0D), Color(0xFFFF7777), true
+    )),
+    ThemeOption("teal", "Teal", "Тёмная морская бирюза с ярким аквамариновым свечением.", Palette(
+        Color(0xFF031B20), Color(0xFF062A31), Color(0xFF0C414B), Color(0xFF08717B),
+        Color(0xFF00C8C8), Color.White, Color(0xFFE9FFFF), Color(0xFF91C6C9),
+        Color(0xFF39E3D8), Color(0xFF0B5058), Color(0xFFFF7777), true
+    )),
+    ThemeOption("lavender", "Lavender", "Светлая лавандовая тема с прохладными сиреневыми тонами.", Palette(
+        Color(0xFFF5F0FF), Color(0xFFFFFCFF), Color(0xFFE8DDFB), Color(0xFFD5C0F7),
+        Color(0xFF8050D8), Color.White, Color(0xFF241638), Color(0xFF79688F),
+        Color(0xFF925CFA), Color(0xFFE8DAFF), Color(0xFFB32635), false
+    )),
+    ThemeOption("mint", "Mint", "Светлая мятная палитра с прохладным зелёным акцентом.", Palette(
+        Color(0xFFEDFFF7), Color(0xFFFFFFFF), Color(0xFFD5F6E7), Color(0xFFB2EBD2),
+        Color(0xFF16865B), Color.White, Color(0xFF102D21), Color(0xFF638A78),
+        Color(0xFF0DAD70), Color(0xFFD0F8E5), Color(0xFFB32635), false
+    )),
+    ThemeOption("copper", "Copper", "Тёплая медь, бронза и глубокий шоколад.", Palette(
+        Color(0xFF21120D), Color(0xFF342018), Color(0xFF4A2D21), Color(0xFF99502E),
+        Color(0xFFE17A42), Color.White, Color(0xFFFFF1E8), Color(0xFFD0A995),
+        Color(0xFFFF9860), Color(0xFF613722), Color(0xFFFF7777), true
+    )),
+    ThemeOption("aurora", "Aurora", "Северное сияние: глубокий индиго, бирюза и лайм.", Palette(
+        Color(0xFF071326), Color(0xFF0D2038), Color(0xFF15334A), Color(0xFF126B78),
+        Color(0xFF28D6B0), Color.White, Color(0xFFEFFFFB), Color(0xFF9ABDBA),
+        Color(0xFF75F0C9), Color(0xFF174C59), Color(0xFFFF7777), true
+    )),
+    ThemeOption("cherry", "Cherry", "Светлая вишнёвая палитра с сочным красно-розовым акцентом.", Palette(
+        Color(0xFFFFF1F2), Color(0xFFFFFCFC), Color(0xFFF8DCDD), Color(0xFFF0BFC4),
+        Color(0xFFBF2345), Color.White, Color(0xFF35131B), Color(0xFF94636C),
+        Color(0xFFE52D55), Color(0xFFFFDDE2), Color(0xFFB32635), false
+    )),
+    ThemeOption("sand", "Sand", "Тёплый песочный фон с карамельными и терракотовыми акцентами.", Palette(
+        Color(0xFFFFF7E9), Color(0xFFFFFCF5), Color(0xFFF1E3C9), Color(0xFFE6C995),
+        Color(0xFF9B5A22), Color.White, Color(0xFF342414), Color(0xFF8A755A),
+        Color(0xFFB86A25), Color(0xFFF2E0C1), Color(0xFFB32635), false
+    )),
+    ThemeOption("neon", "Neon", "Высококонтрастный киберпанк: угольный, лайм и горячая фуксия.", Palette(
+        Color(0xFF090D13), Color(0xFF111923), Color(0xFF1C2935), Color(0xFF365047),
+        Color(0xFFB6FF3B), Color(0xFF21162C), Color(0xFFF4FFE9), Color(0xFFA5B59B),
+        Color(0xFFE0FF52), Color(0xFF243A32), Color(0xFFFF6688), true
+    )),
+    ThemeOption("black_white", "Black & White", "Чёрная основа с белыми поверхностями и акцентами.", Palette(
+        Color(0xFF000000), Color(0xFF111111), Color(0xFF242424), Color(0xFF444444),
+        Color(0xFFFFFFFF), Color(0xFF000000), Color(0xFFFFFFFF), Color(0xFFBDBDBD),
+        Color(0xFFFFFFFF), Color(0xFF303030), Color(0xFFFF6B6B), true
+    )),
+    ThemeOption("white_black", "White & Black", "Белая основа с чёрными поверхностями и акцентами.", Palette(
+        Color(0xFFFFFFFF), Color(0xFFF5F5F5), Color(0xFFE5E5E5), Color(0xFFD0D0D0),
+        Color(0xFF111111), Color(0xFFFFFFFF), Color(0xFF101010), Color(0xFF666666),
+        Color(0xFF111111), Color(0xFFE0E0E0), Color(0xFFB32635), false
     ))
 )
 
@@ -434,7 +500,6 @@ private fun animatePalette(target: Palette): Palette {
 internal val LocalPalette = androidx.compose.runtime.staticCompositionLocalOf { themeFor("vanilla").palette }
 internal val LocalSettingsCornerRadius = androidx.compose.runtime.staticCompositionLocalOf<Int?> { null }
 internal val LocalBottomNavGlassSettings = androidx.compose.runtime.staticCompositionLocalOf { BottomNavAnimationSettings() }
-internal val LocalPageBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Backdrop?> { null }
 
 private fun typographyFor(family: FontFamily): Typography {
     val base = Typography()
@@ -494,6 +559,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
     var measurementSystem by remember { mutableStateOf(prefs.getString("measurement_system", "auto") ?: "auto") }
     var calculatorResultFormat by remember { mutableStateOf(prefs.getString("calculator_result_format", "fraction") ?: "fraction") }
+    var calculatorAngleMode by remember { mutableStateOf(prefs.getString("calculator_angle_mode", "degrees") ?: "degrees") }
     var keyAnimationSettings by remember {
         mutableStateOf(
             KeyAnimationSettings(
@@ -534,23 +600,22 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var activeConfigId by remember {
         mutableStateOf(prefs.getString("mathflow_active_config", null)?.takeIf { id -> configProfiles.any { it.id == id } })
     }
-    LaunchedEffect(themeId, selectedIconId, iconPackId, fontScale, fontPath, appLanguage, measurementSystem,
-        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, activeConfigId) {
-        val activeId = activeConfigId
-        if (activeId != null) {
-            val snapshot = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId)
-            configProfiles = configProfiles.map { profile ->
-                if (profile.id == activeId) profile.copy(settings = snapshot) else profile
-            }
-            MathFlowConfigProfiles.save(context, configProfiles)
-        }
-    }
-
-    var page by remember { mutableStateOf(Page.HOME) }
+    var page by rememberSaveable { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(emptyList<HistoryEntry>()) }
     val historyScope = rememberCoroutineScope()
     val historyMutex = remember { Mutex() }
+    fun saveCalculation(expression: String, result: String, steps: List<String>) {
+        historyScope.launch {
+            historyMutex.lock()
+            try {
+                history = withContext(Dispatchers.IO) {
+                    HistoryStore.add(context, expression, result, steps)
+                }
+            } finally {
+                historyMutex.unlock()
+            }
+        }
+    }
     LaunchedEffect(context) {
         historyMutex.lock()
         try {
@@ -570,13 +635,29 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             { drawRect(backdropBackground); drawContent() }
         }
     val backdrop = rememberLayerBackdrop(onDraw = backdropDraw)
+    // The full page capture is only consumed by the Liquid Glass navigation.
+    // Avoid recording the entire page for every other global visual style.
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
+    var introEnabled by remember { mutableStateOf(prefs.getBoolean("intro_enabled", true)) }
+    var introSpeed by remember { mutableFloatStateOf(prefs.getFloat("intro_speed", 1f).coerceIn(0.5f, 2f)) }
+
+    LaunchedEffect(themeId, selectedIconId, iconPackId, fontScale, fontPath, appLanguage, measurementSystem,
+        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, calculatorAngleMode, uiStyleId, settingsCornerRadiusDp,
+        introEnabled, introSpeed, activeConfigId) {
+        val activeId = activeConfigId
+        if (activeId != null) {
+            val snapshot = withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
+                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId))
+            configProfiles = configProfiles.map { profile ->
+                if (profile.id == activeId) profile.copy(settings = snapshot) else profile
+            }
+            MathFlowConfigProfiles.save(context, configProfiles)
+        }
+    }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
     }
-    var splashFinished by remember { mutableStateOf(false) }
-    // The first page must be fully laid out behind the intro; only later tab changes animate.
-    var initialPageRendered by remember { mutableStateOf(false) }
+    var splashFinished by remember { mutableStateOf(!introEnabled) }
 
     var customFont by remember { mutableStateOf<FontFamily?>(null) }
     LaunchedEffect(fontPath) {
@@ -589,15 +670,35 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             }
         }
     }
-    val family = when (fontPath) {
-        null -> FontFamily.Default
-        BUILTIN_ARTEGRA_FONT -> FontFamily(Font(R.font.artegra_soft_global_bold_rounded, FontWeight.Normal))
-        else -> customFont ?: FontFamily.Default
+    val family = remember(fontPath, customFont) {
+        when (fontPath) {
+            null -> FontFamily.Default
+            BUILTIN_ARTEGRA_FONT -> FontFamily(Font(R.font.artegra_soft_global_bold_rounded, FontWeight.Normal))
+            else -> customFont ?: FontFamily.Default
+        }
+    }
+    val fontApplyMotion = remember { Animatable(1f) }
+    var fontPathInitialized by remember { mutableStateOf(false) }
+    LaunchedEffect(family) {
+        if (fontPathInitialized) {
+            fontApplyMotion.snapTo(0.992f)
+            fontApplyMotion.animateTo(
+                1f,
+                animationSpec = tween(280, easing = FastOutSlowInEasing)
+            )
+        } else {
+            fontPathInitialized = true
+        }
     }
 
     val baseDensity = LocalDensity.current
-    val density = remember(baseDensity, fontScale) {
-        Density(baseDensity.density, baseDensity.fontScale * fontScale)
+    val animatedFontScale by animateFloatAsState(
+        targetValue = fontScale,
+        animationSpec = tween(360, easing = FastOutSlowInEasing),
+        label = "MathFlowTextScale"
+    )
+    val density = remember(baseDensity, animatedFontScale) {
+        Density(baseDensity.density, baseDensity.fontScale * animatedFontScale)
     }
 
     val colors = remember(palette) { if (palette.dark) {
@@ -645,7 +746,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         LocalMathFlowUiStyle provides MathFlowUiStyle.fromId(uiStyleId),
         LocalAppIconPack provides AppIconPack.fromId(iconPackId),
         LocalBottomNavGlassSettings provides bottomNavAnimationSettings,
-        LocalPageBackdrop provides backdrop,
         // One persisted radius controls settings controls and calculator keys consistently.
         LocalSettingsCornerRadius provides settingsCornerRadiusDp,
         LocalKeyAnimationSettings provides keyAnimationSettings,
@@ -668,13 +768,31 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
             CompositionLocalProvider(
                 androidx.compose.material3.LocalTextStyle provides TextStyle(fontFamily = family)
             ) {
-                Surface(Modifier.fillMaxSize(), color = palette.background, contentColor = palette.text) {
+                Surface(
+                    Modifier.fillMaxSize().graphicsLayer {
+                        alpha = fontApplyMotion.value
+                        scaleX = fontApplyMotion.value
+                        scaleY = fontApplyMotion.value
+                    },
+                    color = palette.background,
+                    contentColor = palette.text
+                ) {
+                    val navScrollConnection = rememberFloatingTabBarScrollConnection(
+                        initialIsInline = false,
+                        inlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
+                    )
+                    // Keep capture enabled for the whole Liquid Glass style; tying it to inline state
+                    // would rebuild the backdrop layer during the dock's fold animation.
+                    val activeUiStyle = MathFlowUiStyle.fromId(uiStyleId)
+                    val capturePageBackdrop = activeUiStyle.liquidGlassNavigation
                     val themeBloom = remember { Animatable(1f) }
                     LaunchedEffect(themeId) {
                         themeBloom.snapTo(0f)
                         themeBloom.animateTo(1f, animationSpec = tween(680, easing = FastOutSlowInEasing))
                     }
-                    Box(Modifier.fillMaxSize()) {
+                    Box(Modifier.fillMaxSize().nestedScroll(navScrollConnection)) {
+                        // Ordinary opaque page background; Liquid Glass is confined to navigation.
+                        Box(Modifier.fillMaxSize().background(backdropBackground))
                         Canvas(Modifier.fillMaxSize()) {
                             val progress = themeBloom.value
                             if (progress < 1f) {
@@ -691,51 +809,52 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                             }
                         }
                         Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-                            // Keep only one full page tree composed on low-memory devices.
-                            key(page) {
-                                pageStateHolder.SaveableStateProvider(page) {
-                                    val enterProgress = remember { Animatable(0f) }
-                                    LaunchedEffect(Unit) {
-                                        if (!initialPageRendered) {
-                                            enterProgress.snapTo(1f)
-                                            initialPageRendered = true
-                                        } else {
-                                            enterProgress.animateTo(
-                                                targetValue = 1f,
-                                                animationSpec = tween(PAGE_ENTER_DURATION_MS, easing = FastOutSlowInEasing)
-                                            )
-                                        }
+                            androidx.compose.animation.AnimatedContent(
+                                targetState = page,
+                                contentKey = { it },
+                                transitionSpec = {
+                                    val forward = targetState.ordinal > initialState.ordinal
+                                    if (!ValueAnimator.areAnimatorsEnabled()) {
+                                        androidx.compose.animation.EnterTransition.None togetherWith
+                                            androidx.compose.animation.ExitTransition.None
+                                    } else {
+                                        (
+                                            slideInHorizontally(
+                                                animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                                initialOffsetX = { width -> if (forward) width / 10 else -width / 10 }
+                                            ) + androidx.compose.animation.fadeIn(tween(150))
+                                        ) togetherWith (
+                                            slideOutHorizontally(
+                                                animationSpec = tween(200, easing = FastOutSlowInEasing),
+                                                targetOffsetX = { width -> if (forward) -width / 12 else width / 12 }
+                                            ) + androidx.compose.animation.fadeOut(tween(130))
+                                        )
                                     }
-                                    Box(
-                                        Modifier.weight(1f).fillMaxWidth()
-                                            .layerBackdrop(backdrop)
-                                            .clipToBounds()
-                                            .graphicsLayer {
-                                                alpha = enterProgress.value
-                                                translationX = (1f - enterProgress.value) * 3.dp.toPx()
-                                            }
-                                    ) {
-                                        when (page) {
+                                },
+                                modifier = Modifier.weight(1f).fillMaxWidth()
+                                    .then(if (capturePageBackdrop) Modifier.layerBackdrop(backdrop) else Modifier)
+                                    .clipToBounds(),
+                                label = "MathFlowPageTransition"
+                            ) { destinationPage ->
+                                pageStateHolder.SaveableStateProvider(destinationPage) {
+                                    Box(Modifier.fillMaxSize()) {
+                                        when (destinationPage) {
                                             Page.HOME -> CalculatorHome(
                                                 resultFormat = calculatorResultFormat,
+                                                angleModeId = calculatorAngleMode,
+                                                onAngleModeChange = { mode ->
+                                                    calculatorAngleMode = mode
+                                                    prefs.edit().putString("calculator_angle_mode", mode).apply()
+                                                },
                                                 onResultFormatChange = { format ->
                                                     calculatorResultFormat = format
                                                     prefs.edit().putString("calculator_result_format", format).apply()
                                                 }
                                             ) { expression, result, steps ->
-                                                historyScope.launch {
-                                                    historyMutex.lock()
-                                                    try {
-                                                        history = withContext(Dispatchers.IO) {
-                                                            HistoryStore.add(context, expression, result, steps)
-                                                        }
-                                                    } finally {
-                                                        historyMutex.unlock()
-                                                    }
-                                                }
+                                                saveCalculation(expression, result, steps)
                                             }
-                                            Page.TOOLS -> ToolsPage()
-                                            Page.SOLVER -> EquationSolverPage()
+                                            Page.TOOLS -> ToolsPage(::saveCalculation)
+                                            Page.SOLVER -> EquationSolverPage(::saveCalculation)
                                             Page.HISTORY -> HistoryPage(history) {
                                                 historyScope.launch {
                                                     historyMutex.lock()
@@ -751,13 +870,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                             }
                                             Page.SETTINGS -> CompositionLocalProvider(LocalSettingsCornerRadius provides settingsCornerRadiusDp) {
                                             SettingsPage(
-                                                currentConfig = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId),
+                                                currentConfig = withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
+                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId)),
                                                 configProfiles = configProfiles,
                                                 activeConfigId = activeConfigId,
                                                 onCreateConfig = { name ->
-                                                    val profile = MathFlowConfigProfiles.create(name, makeConfigSnapshot(themeId, selectedIconId, fontScale,
-                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId))
+                                                    val profile = MathFlowConfigProfiles.create(name, withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale,
+                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId)))
                                                     configProfiles = configProfiles + profile
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
@@ -785,6 +904,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                     appLanguage = cfg.getString("language")
                                                     measurementSystem = cfg.getString("measurement")
                                                     calculatorResultFormat = cfg.getString("resultFormat")
+                                                     calculatorAngleMode = importedPreferencesAngleMode(cfg, calculatorAngleMode)
                                                     val importedFontPath = cfg.optString("fontPath").takeIf { it.isNotBlank() && it != "null" }
                                                     fontPath = importedFontPath
                                                     keyAnimationSettings = KeyAnimationSettings(
@@ -842,6 +962,14 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .putFloat("matte_glass_highlight", bottomNavAnimationSettings.matteHighlight)
                                                         .putFloat("matte_glass_shadow", bottomNavAnimationSettings.matteShadow)
                                                         .putString("calculator_result_format", calculatorResultFormat).apply()
+                                                    val importedPreferences = cfg.optJSONObject("preferences") ?: JSONObject()
+                                                    settingsCornerRadiusDp = importedPreferences.optJSONObject("settings_corner_radius_dp")
+                                                        ?.optInt("value", settingsCornerRadiusDp)?.coerceIn(0, 40) ?: settingsCornerRadiusDp
+                                                    introEnabled = importedPreferences.optJSONObject("intro_enabled")
+                                                        ?.optBoolean("value", introEnabled) ?: introEnabled
+                                                    introSpeed = (importedPreferences.optJSONObject("intro_speed")
+                                                        ?.optDouble("value", introSpeed.toDouble())?.toFloat() ?: introSpeed).coerceIn(0.5f, 2f)
+                                                    restoreConfigPreferences(context, cfg, fontPath)
                                                     runCatching { setLauncherIcon(context, selectedIconId) }
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
@@ -918,6 +1046,16 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .putBoolean("font_selection_initialized", true)
                                                         .apply()
                                                 },
+                                                introEnabled = introEnabled,
+                                                introSpeed = introSpeed,
+                                                onIntroEnabledChange = { enabled ->
+                                                    introEnabled = enabled
+                                                    prefs.edit().putBoolean("intro_enabled", enabled).apply()
+                                                },
+                                                onIntroSpeedChange = { speed ->
+                                                    introSpeed = speed.coerceIn(0.5f, 2f)
+                                                    prefs.edit().putFloat("intro_speed", introSpeed).apply()
+                                                },
                                                 appliedAnimationSettings = keyAnimationSettings,
                                                 onAnimationSettingsApplied = { settings ->
                                                     val normalized = settings.normalized()
@@ -962,7 +1100,18 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                     }
                                 }
                             }
-                            BottomNav(page, bottomNavAnimationSettings, backdrop = backdrop) { page = it }
+                        }
+                        // RX Playa's navigation is a floating overlay, not a bottom-bar
+                        // slot: page content continues behind the glass capsule.
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                            BottomNav(
+                                current = page,
+                                settings = bottomNavAnimationSettings,
+                                backdrop = backdrop,
+                                scrollConnection = navScrollConnection,
+                                liquidGlassEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassNavigation,
+                                liquidGlassPillEnabled = MathFlowUiStyle.fromId(uiStyleId).liquidGlassPill
+                            ) { page = it }
                         }
                         if (showWelcome && splashFinished) {
                             FirstLaunchWelcome(
@@ -1004,8 +1153,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                 }
                             )
                         }
-                        if (!splashFinished) {
-                            MathFlowIntroSplash(palette = palette, onFinished = { splashFinished = true })
+                        if (introEnabled && !splashFinished) {
+                            MathFlowIntroSplash(
+                                palette = palette,
+                                speedMultiplier = introSpeed,
+                                onFinished = { splashFinished = true }
+                            )
                         }
                     }
                 }
@@ -1322,7 +1475,6 @@ private fun FirstLaunchWelcome(
 }
 
 private const val NAV_TRANSITION_DURATION_MS = 180
-private const val PAGE_ENTER_DURATION_MS = 160
 
 @Composable
 private fun BottomNav(
@@ -1330,424 +1482,56 @@ private fun BottomNav(
     settings: BottomNavAnimationSettings,
     backdrop: Backdrop? = null,
     preview: Boolean = false,
+    scrollConnection: FloatingTabBarScrollConnection? = null,
+    liquidGlassEnabled: Boolean = false,
+    liquidGlassPillEnabled: Boolean = liquidGlassEnabled,
     onSelect: (Page) -> Unit
 ) {
-    val p = LocalPalette.current
-    val uiStyle = LocalMathFlowUiStyle.current
-    val navMaterialPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.MATERIAL
-    val navLiquidPanel = uiStyle.glassSurface && settings.surfaceMaterial == BottomNavSurfaceMaterial.LIQUID
-    // The preview is embedded in a settings card, not in the app window. It must
-    // never consume Android system-bar insets or sample a rectangular page backdrop.
-    val useRefractiveLens = uiStyle.glassSurface && backdrop != null && !preview
-    val style = settings.style
-    val duration = if (settings.enabled) settings.durationMs else 0
-
-    val springMotion = settings.enabled && (
-        uiStyle.glassSurface || style in setOf(
-            BottomNavAnimationStyle.FLUID_PILL,
-            BottomNavAnimationStyle.SPRING_MOTION,
-            BottomNavAnimationStyle.ELASTIC_SLIDE
-        )
-    )
-    // Compose springs do not have a fixed duration. Map the duration control to
-    // spring stiffness so slower settings remain visibly slower in spring styles.
-    val springStiffness = bottomNavSpringStiffness(duration)
-    Box(
-        Modifier.fillMaxWidth()
-            // Only the real app navigation observes the Android system inset.
-            // A preview lives inside a bounded card and must remain self-contained.
-            .then(if (preview) Modifier else Modifier.navigationBarsPadding())
-            .padding(start = 28.dp, end = 28.dp, top = 8.dp, bottom = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        val panelShape = RoundedCornerShape(if (uiStyle.glassSurface) 35.dp else uiStyle.cardRadiusDp.dp)
-        Surface(
-            modifier = Modifier
-                .then(
-                    if (navLiquidPanel && useRefractiveLens) {
-                        Modifier.drawBackdrop(
-                            backdrop = backdrop!!,
-                            shape = { panelShape },
-                            effects = {
-                                if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && settings.refractionStrength > 0f) {
-                                    lens(
-                                        (24f * settings.refractionStrength).dp.toPx(),
-                                        (42f * settings.refractionStrength).dp.toPx(),
-                                        depthEffect = settings.glassDepth > 0f,
-                                        chromaticAberration = false
-                                    )
-                                }
-                            },
-                            highlight = { Highlight.Default.copy(alpha = settings.highlightStrength) },
-                            shadow = { Shadow(radius = 18.dp, alpha = settings.shadowStrength) },
-                            onDrawSurface = {
-                                drawRect(p.surface.copy(alpha = 0.28f * settings.opacity))
-                            }
-                        )
-                    } else {
-                        Modifier.clip(panelShape).background(
-                            if (navMaterialPanel) {
-                                androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.surface, p.surface))
-                            } else {
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    listOf(
-                                        p.surface.copy(alpha = if (navLiquidPanel) 0.46f * settings.opacity else settings.matteOpacity),
-                                        p.surface.copy(alpha = if (navLiquidPanel) 0.30f * settings.opacity else settings.matteOpacity * 0.84f)
-                                    )
-                                )
-                            }
-                        )
-                    }
-                )
-                .border(
-                    if (navLiquidPanel) 0.8.dp else 1.dp,
-                    p.text.copy(alpha = if (navLiquidPanel) settings.highlightStrength * 0.22f else settings.matteHighlight * 0.24f),
-                    panelShape
-                ),
-            shape = panelShape,
-            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            // Keep the floating glass capsule clean: the panel itself must not cast
-            // a broad grey halo. The selected droplet retains its own local depth.
-            shadowElevation = if (uiStyle.glassSurface) 0.dp else uiStyle.elevationDp.dp
-        ) {
-            BoxWithConstraints(
-                Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp)
-            ) {
-                val itemWidth = maxWidth / Page.values().size
-                // One capture for the complete tab row replaces five per-icon
-                // captures. The lens samples the glyphs as a single layer, matching
-                // RX Playa's composition with substantially less render-target work.
-                val tabRowBackdrop = if (useRefractiveLens) rememberLayerBackdrop() else null
-                // The indicator samples only the page and the tab-row capture.
-                // Do not feed the panel's exported layer back into a child of that
-                // same panel: on some Android RenderThreads this creates a cyclic
-                // RenderNode display list and overflows the native render stack.
-                val indicatorBackdrop = if (useRefractiveLens && tabRowBackdrop != null) {
-                    rememberCombinedBackdrop(backdrop!!, tabRowBackdrop)
-                } else null
-                val density = LocalDensity.current
-                val layoutDirection = LocalLayoutDirection.current
-                val visualIndex = if (layoutDirection == LayoutDirection.Rtl) {
-                    Page.values().lastIndex - current.ordinal
-                } else current.ordinal
-                val indicatorWidth = minOf(
-                    when {
-                        uiStyle.glassSurface -> 66.dp
-                        style == BottomNavAnimationStyle.SOFT_FOCUS -> 54.dp
-                        style == BottomNavAnimationStyle.RIPPLE_BLOOM -> 66.dp
-                        else -> 72.dp
-                    },
-                    itemWidth * if (uiStyle.glassSurface) 0.84f else 0.92f
-                )
-                val indicatorHeight = when {
-                    uiStyle.glassSurface -> 44.dp
-                    style == BottomNavAnimationStyle.MORPH -> 38.dp
-                    style == BottomNavAnimationStyle.SOFT_FOCUS -> 38.dp
-                    else -> 42.dp
-                }
-                val targetOffset = with(density) {
-                    (itemWidth * visualIndex + (itemWidth - indicatorWidth) / 2).toPx()
-                }
-                // The indicator always follows the duration slider. Spring-like character
-                // is retained by the stretch and icon-scale effects below.
-                val offsetSpec = if (springMotion) {
-                    spring<Float>(dampingRatio = 0.82f, stiffness = springStiffness)
-                } else {
-                    tween<Float>(
-                        durationMillis = duration.coerceAtLeast(1),
-                        easing = FastOutSlowInEasing
-                    )
-                }
-                val indicatorOffset = animateFloatAsState(
-                    targetValue = targetOffset,
-                    animationSpec = offsetSpec,
-                    label = "MathFlowNavIndicatorPosition"
-                )
-                val navScope = rememberCoroutineScope()
-                val pillMotion = remember { LiquidGlassPillMotion(navScope, current.ordinal) }
-                pillMotion.reduceMotion = !settings.enabled
-                val tabStepPx = with(density) { itemWidth.toPx() }.coerceAtLeast(1f)
-                pillMotion.tabStepPx = tabStepPx
-                LaunchedEffect(current, useRefractiveLens, settings.enabled, duration) {
-                    if (useRefractiveLens && settings.enabled) {
-                        pillMotion.animateTo(current.ordinal, duration.coerceAtLeast(100))
-                    } else {
-                        pillMotion.snapTo(current.ordinal)
-                    }
-                }
-                var isDragging by remember { mutableStateOf(false) }
-                var isPressed by remember { mutableStateOf(false) }
-                val pressedScale = animateFloatAsState(
-                    targetValue = if (isDragging || isPressed) 1.085f else 1f,
-                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 520f),
-                    label = "MathFlowDropletPressScale"
-                )
-                // Resting glass stays spatially stable. Motion is reserved for
-                // touch, drag, and the existing navigation transition.
-                val indicatorScaleX = animateFloatAsState(
-                    targetValue = when {
-                        !settings.enabled -> 1f
-                        style == BottomNavAnimationStyle.EXPAND -> 1f + settings.intensity * 0.12f
-                        style == BottomNavAnimationStyle.ELASTIC_SLIDE -> 1f
-                        else -> 1f
-                    },
-                    animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                    label = "MathFlowNavIndicatorScale"
-                )
-                val indicatorAlpha = animateFloatAsState(
-                    targetValue = if (style == BottomNavAnimationStyle.SOFT_FOCUS) {
-                        settings.opacity * 0.62f
-                    } else settings.opacity,
-                    animationSpec = tween(duration),
-                    label = "MathFlowNavIndicatorAlpha"
-                )
-                val bloom = remember(current, style) { Animatable(0.72f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity) {
-                    if (settings.enabled && style in setOf(BottomNavAnimationStyle.RIPPLE_BLOOM, BottomNavAnimationStyle.EXPAND)) {
-                        bloom.snapTo(
-                            if (style == BottomNavAnimationStyle.RIPPLE_BLOOM) 0.08f + settings.intensity * 0.34f
-                            else 0.38f + settings.intensity * 0.36f
-                        )
-                        bloom.animateTo(1f, tween(duration, easing = FastOutSlowInEasing))
-                    } else {
-                        bloom.snapTo(1f)
-                    }
-                }
-                // Restore the original droplet-like elastic travel. The lens and
-                // capsule stretch together, then settle with a soft spring rebound.
-                val stretchAmount = when (style) {
-                    BottomNavAnimationStyle.FLUID_PILL -> 0.28f
-                    BottomNavAnimationStyle.SPRING_MOTION -> 0.16f
-                    BottomNavAnimationStyle.MORPH -> 0.46f
-                    BottomNavAnimationStyle.EXPAND -> 0.22f
-                    BottomNavAnimationStyle.SOFT_FOCUS -> 0.08f
-                    BottomNavAnimationStyle.ELASTIC_SLIDE -> 0.38f
-                    BottomNavAnimationStyle.RIPPLE_BLOOM -> 0.18f
-                }
-                val travelStretch = remember(current, style) { Animatable(1f) }
-                LaunchedEffect(current, style, settings.enabled, duration, settings.intensity, uiStyle.glassSurface, useRefractiveLens) {
-                    if (!useRefractiveLens && settings.enabled && stretchAmount > 0f) {
-                        travelStretch.snapTo(1f + settings.intensity * stretchAmount)
-                        travelStretch.animateTo(
-                            1f,
-                            if (springMotion) {
-                                spring<Float>(dampingRatio = 0.72f, stiffness = springStiffness * 0.72f)
-                            } else {
-                                tween(durationMillis = duration.coerceAtLeast(1), easing = FastOutSlowInEasing)
-                            }
-                        )
-                    } else {
-                        travelStretch.snapTo(1f)
-                    }
-                }
-                if (!useRefractiveLens &&
-                    (style != BottomNavAnimationStyle.SOFT_FOCUS || !settings.enabled)) {
-                    Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .graphicsLayer {
-                                translationX = indicatorOffset.value
-                                scaleX = if (style == BottomNavAnimationStyle.RIPPLE_BLOOM || style == BottomNavAnimationStyle.EXPAND) bloom.value else indicatorScaleX.value * travelStretch.value
-                                alpha = indicatorAlpha.value
-                            }
-                            .size(
-                                width = indicatorWidth,
-                                height = indicatorHeight
-                            )
-                    ) {
-                        Box(
-                            Modifier.fillMaxSize().clip(RoundedCornerShape(percent = 50))
-                                .background(p.navActive)
-                        )
-                    }
-                }
-                if (useRefractiveLens && pillMotion.isFlat) {
-                    Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .graphicsLayer {
-                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
-                                    Page.values().lastIndex - pillMotion.position
-                                } else pillMotion.position
-                                val cellWidthPx = with(density) { itemWidth.toPx() }
-                                val pillWidthPx = with(density) { indicatorWidth.toPx() }
-                                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
-                            }
-                            .size(width = indicatorWidth, height = indicatorHeight)
-                            .clip(RoundedCornerShape(percent = 50))
-                            .background(p.navActive)
-                    )
-                }
-                Row(
-                    Modifier.fillMaxWidth()
-                        .then(if (tabRowBackdrop != null) Modifier.layerBackdrop(tabRowBackdrop) else Modifier)
-                        .then(
-                            if (useRefractiveLens) {
-                                Modifier.pointerInput(current, duration, maxWidth, layoutDirection) {
-                                    var dragStartIndex = current.ordinal.toFloat()
-                                    var dragDistance = 0f
-                                    detectHorizontalDragGestures(
-                                        onDragStart = {
-                                            isDragging = true
-                                            isPressed = true
-                                            dragStartIndex = pillMotion.position
-                                            dragDistance = 0f
-                                            pillMotion.startDrag()
-                                        },
-                                        onDragEnd = {
-                                            isDragging = false
-                                            isPressed = false
-                                            val logicalIndex = (dragStartIndex + dragDistance / tabStepPx)
-                                                .roundToInt().coerceIn(0, Page.values().lastIndex)
-                                            pillMotion.release(logicalIndex, duration.coerceAtLeast(100))
-                                            if (logicalIndex != current.ordinal) onSelect(Page.values()[logicalIndex])
-                                        },
-                                        onDragCancel = {
-                                            isDragging = false
-                                            isPressed = false
-                                            pillMotion.release(current.ordinal, duration.coerceAtLeast(100))
-                                        },
-                                        onHorizontalDrag = { change, dragAmount ->
-                                            change.consume()
-                                            val logicalDirection = if (layoutDirection == LayoutDirection.Rtl) -1f else 1f
-                                            dragDistance += dragAmount * logicalDirection
-                                            pillMotion.dragTo(
-                                                (dragStartIndex + dragDistance / tabStepPx)
-                                                    .coerceIn(0f, Page.values().lastIndex.toFloat())
-                                            )
-                                        }
-                                    )
-                                }
-                            } else Modifier
-                        ),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Page.values().forEach { item ->
-                        val selected = item == current
-                        val tint by animateColorAsState(
-                            targetValue = if (selected) p.accent else p.accent.copy(alpha = 0.74f),
-                            animationSpec = tween(durationMillis = duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconTint"
-                        )
-                        val iconScale by animateFloatAsState(
-                            targetValue = when {
-                                useRefractiveLens && selected -> 1.12f
-                                settings.enabled && selected -> 1f + settings.iconScale * (0.55f + settings.intensity * 0.25f)
-                                else -> 1f
-                            },
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconScale"
-                        )
-                        val morphY by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && !uiStyle.glassSurface && style == BottomNavAnimationStyle.MORPH) {
-                                1f - settings.iconScale * (0.18f + settings.intensity * 0.22f)
-                            } else 1f,
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavigationIconMorph"
-                        )
-                        val focusAlpha by animateFloatAsState(
-                            targetValue = if (settings.enabled && selected && style == BottomNavAnimationStyle.SOFT_FOCUS) {
-                                settings.opacity * 0.72f
-                            } else 0f,
-                            animationSpec = tween(duration, easing = FastOutSlowInEasing),
-                            label = "MathFlowNavSoftFocusAlpha"
-                        )
-                        Box(
-                            Modifier.weight(1f).height(48.dp)
-                                .mathFlowClickable {
-                                    if (!selected) onSelect(item)
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (style == BottomNavAnimationStyle.SOFT_FOCUS && settings.enabled) {
-                                Box(
-                                    Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp)
-                                        .graphicsLayer { alpha = focusAlpha }
-                                        .clip(RoundedCornerShape(percent = 50))
-                                        .background(p.navActive)
-                                )
-                            }
-                            // Fade the sharp glyph according to the moving droplet's actual
-                            // overlap. This crossfades continuously instead of removing it
-                            // as soon as the destination tab becomes selected.
-                            AppIcon(
-                                glyph = item.glyph,
-                                contentDescription = displayText(item.title),
-                                tint = tint,
-                                modifier = Modifier.size(26.dp).graphicsLayer {
-                                    scaleX = iconScale
-                                    scaleY = iconScale * morphY
-                                }
-                            )
-                        }
-                    }
-                }
-                if (useRefractiveLens && !pillMotion.isFlat) {
-                    Box(
-                        Modifier.align(Alignment.CenterStart)
-                            .graphicsLayer {
-                                val visualPosition = if (layoutDirection == LayoutDirection.Rtl) {
-                                    Page.values().lastIndex - pillMotion.position
-                                } else pillMotion.position
-                                val cellWidthPx = with(density) { itemWidth.toPx() }
-                                val pillWidthPx = with(density) { indicatorWidth.toPx() }
-                                translationX = visualPosition * cellWidthPx + (cellWidthPx - pillWidthPx) * 0.5f
-                                val restHeightPx = with(density) { indicatorHeight.toPx() }.coerceAtLeast(1f)
-                                val growFactor = (restHeightPx + with(density) { 12.dp.toPx() }) / restHeightPx
-                                val styleWidth = when (style) {
-                                    BottomNavAnimationStyle.RIPPLE_BLOOM,
-                                    BottomNavAnimationStyle.EXPAND -> bloom.value
-                                    else -> 1f
-                                }
-                                scaleX = (1f + (growFactor - 1f) * pillMotion.liftX) *
-                                    (1f + pillMotion.deviation) * indicatorScaleX.value * styleWidth * pressedScale.value
-                                scaleY = (1f + (growFactor - 1f) * pillMotion.liftY) *
-                                    (1f - pillMotion.deviation) * pressedScale.value
-                                alpha = indicatorAlpha.value
-                            }
-                            .pointerInput(current) {
-                                detectTapGestures(onPress = {
-                                    isPressed = true
-                                    tryAwaitRelease()
-                                    isPressed = false
-                                })
-                            }
-                            .drawBackdrop(
-                                backdrop = indicatorBackdrop ?: backdrop!!,
-                                shape = {
-                                     RoundedCornerShape(percent = (settings.dropletRoundness * 50f).toInt().coerceIn(40, 50))
-                                },
-                                effects = {
-                                     if (settings.glassBlur > 0f) blur(settings.glassBlur.dp.toPx())
-                                     val refraction = settings.refractionStrength
-                                     if (refraction > 0f && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                                         lens(
-                                             (12f * refraction * pillMotion.glassPresence).dp.toPx(),
-                                             (14f * refraction * pillMotion.material).dp.toPx(),
-                                             depthEffect = settings.glassDepth > 0f,
-                                             chromaticAberration = true
-                                         )
-                                     }
-                                 },
-                                 highlight = {
-                                     Highlight.Default.copy(
-                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.highlightStrength
-                                     )
-                                 },
-                                 shadow = {
-                                     Shadow(
-                                         radius = 12.dp,
-                                         alpha = pillMotion.material * pillMotion.glassPresence * settings.shadowStrength
-                                     )
-                                 },
-                                 onDrawSurface = {
-                                    drawRect(p.accent.copy(alpha = 0.035f))
-                                }
-                            )
-                            .size(width = indicatorWidth, height = indicatorHeight)
-                    )
-                }
+    val palette = LocalPalette.current
+    val selectedKey by rememberUpdatedState(current)
+    val paletteState by rememberUpdatedState(palette)
+    val destinations = remember { Page.entries.dropLast(1) }
+    val tabs = destinations.map { destination ->
+        RxDockItem(
+            key = destination,
+            label = displayText(destination.title),
+            icon = {
+                val selected = selectedKey == destination
+                val tint = if (selected) paletteState.accent else paletteState.accent.copy(alpha = 0.74f)
+                AppIcon(glyph = destination.glyph, contentDescription = displayText(destination.title), modifier = Modifier.size(29.dp), tint = tint)
             }
+        )
+    }
+    val standalone = RxDockItem(
+        key = Page.SETTINGS,
+        label = displayText(Page.SETTINGS.title),
+        icon = {
+            val selected = selectedKey == Page.SETTINGS
+            val tint = if (selected) paletteState.accent else paletteState.accent.copy(alpha = 0.74f)
+            AppIcon(glyph = Page.SETTINGS.glyph, contentDescription = displayText(Page.SETTINGS.title), modifier = Modifier.size(26.dp), tint = tint)
         }
+    )
+    val effectiveScrollConnection = scrollConnection
+        ?: rememberFloatingTabBarScrollConnection(
+            initialIsInline = false,
+            inlineBehavior = FloatingTabBarInlineBehavior.Never
+        )
+    MathFlowRxDock(
+        items = tabs,
+        selectedKey = current,
+        standalone = standalone,
+        scrollConnection = effectiveScrollConnection,
+        pageBackdrop = backdrop ?: rememberLayerBackdrop(),
+        dark = palette.dark,
+        accent = palette.accent,
+        reduceMotion = !settings.enabled || !android.animation.ValueAnimator.areAnimatorsEnabled(),
+        animationDurationMs = settings.durationMs,
+        liquidGlassEnabled = liquidGlassEnabled,
+        liquidGlassPillEnabled = liquidGlassPillEnabled,
+        modifier = Modifier.fillMaxWidth(),
+        useSystemInsets = !preview
+    ) { key ->
+        (key as? Page)?.let(onSelect)
     }
 }
 
@@ -1770,12 +1554,13 @@ private val CALCULATOR_SCIENTIFIC_ROWS = listOf(
 @Composable
 private fun CalculatorHome(
     resultFormat: String,
+    angleModeId: String,
+    onAngleModeChange: (String) -> Unit,
     onResultFormatChange: (String) -> Unit,
     onCalculationSaved: (String, String, List<String>) -> Unit
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val calculationScope = rememberCoroutineScope()
     var calculationJob by remember { mutableStateOf<Job?>(null) }
     var expression by rememberSaveable { mutableStateOf("") }
@@ -1786,7 +1571,6 @@ private fun CalculatorHome(
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var showSteps by rememberSaveable { mutableStateOf(true) }
     var scientific by rememberSaveable { mutableStateOf(false) }
-    var degrees by rememberSaveable { mutableStateOf(true) }
     var finished by rememberSaveable { mutableStateOf(false) }
     var continuation by rememberSaveable { mutableStateOf("") }
 
@@ -1816,7 +1600,7 @@ private fun CalculatorHome(
         val input = expression
         val open = input.count { it == '(' } - input.count { it == ')' }
         val source = if (open > 0) input + ")".repeat(open) else input
-        val angleMode = if (degrees) AngleMode.DEGREES else AngleMode.RADIANS
+        val angleMode = if (angleModeId == "degrees") AngleMode.DEGREES else AngleMode.RADIANS
         calculationJob?.cancel()
         calculationJob = calculationScope.launch {
             try {
@@ -1832,7 +1616,7 @@ private fun CalculatorHome(
                     if (it.isInteger()) it.numerator.toString() else "(${it.numerator}/${it.denominator})"
                 } ?: r.displayValue
                 finished = true
-                onCalculationSaved(source, r.displayValue, r.steps)
+                onCalculationSaved(source, result, r.steps)
                 expression = source
             } catch (e: CancellationException) {
                 throw e
@@ -1888,37 +1672,15 @@ private fun CalculatorHome(
 
 
     Column(
-        Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp),
+        Modifier.fillMaxSize().padding(horizontal = 12.dp).padding(top = 10.dp, bottom = 124.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         val displayShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
-        val calculatorBackdrop = LocalPageBackdrop.current
-        val liquidDisplay = uiStyle.glassSurface && calculatorBackdrop != null
         Surface(
-            Modifier.fillMaxWidth().weight(1f)
-                .then(
-                    if (liquidDisplay) Modifier.drawBackdrop(
-                        backdrop = calculatorBackdrop!!,
-                        shape = { displayShape },
-                        effects = {
-                            if (glass.matteBlur > 0f) blur((glass.matteBlur * 0.75f).dp.toPx())
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU && glass.matteDepth > 0f) {
-                                lens((8f * glass.matteDepth).dp.toPx(), (14f * glass.matteDepth).dp.toPx(),
-                                    depthEffect = true, chromaticAberration = false)
-                            }
-                        },
-                        highlight = { Highlight.Default.copy(alpha = glass.matteHighlight * 0.72f) },
-                        shadow = { Shadow(radius = 18.dp, alpha = glass.matteShadow * 0.55f) },
-                        onDrawSurface = { drawRect(p.surface.copy(alpha = 0.10f)) }
-                    ) else if (uiStyle.glassSurface) Modifier
-                        .clip(displayShape)
-                        .background(p.surface.copy(alpha = 0.12f))
-                        .border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.22f), displayShape)
-                    else Modifier
-                ),
+            Modifier.fillMaxWidth().weight(1f),
             shape = displayShape,
-            color = if (uiStyle.glassSurface) Color.Transparent else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-            shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 2f + glass.matteShadow).dp else uiStyle.elevationDp.dp
+            color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+            shadowElevation = uiStyle.elevationDp.dp
         ) {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Row(
@@ -1927,10 +1689,10 @@ private fun CalculatorHome(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Chip("f(x)", scientific) { scientific = !scientific }
-                    if (scientific) Chip(if (degrees) "DEG" else "RAD", false) {
+                    if (scientific) Chip(if (angleModeId == "degrees") "DEG" else "RAD", false) {
                         calculationJob?.cancel()
                         calculationJob = null
-                        degrees = !degrees
+                        onAngleModeChange(if (angleModeId == "degrees") "radians" else "degrees")
                     }
                     if (steps.isNotEmpty()) Chip(tx("steps"), showSteps) { showSteps = !showSteps }
                 }
@@ -1945,23 +1707,10 @@ private fun CalculatorHome(
                 val fractionFormatLabel = tx("fraction_format")
                 Box(Modifier.align(Alignment.TopStart).padding(top = 54.dp).width(220.dp)) {
                     val selectedLabel = if (resultFormat == "decimal") decimalFormatLabel else fractionFormatLabel
-                    if (liquidDisplay) {
-                        GlassFormatSelector(
-                            first = decimalFormatLabel,
-                            second = fractionFormatLabel,
-                            selectedSecond = resultFormat != "decimal",
-                            backdrop = calculatorBackdrop!!,
-                            onSelect = { selectedFormat ->
-                                onResultFormatChange(selectedFormat)
-                                result = if (selectedFormat == "decimal") decimalResult else fractionResult
-                            }
-                        )
-                    } else {
-                        Segmented(listOf(decimalFormatLabel, fractionFormatLabel), selectedLabel) { selected ->
-                            val selectedFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
-                            onResultFormatChange(selectedFormat)
-                            result = if (selectedFormat == "decimal") decimalResult else fractionResult
-                        }
+                    Segmented(listOf(decimalFormatLabel, fractionFormatLabel), selectedLabel) { selected ->
+                        val selectedFormat = if (selected == decimalFormatLabel) "decimal" else "fraction"
+                        onResultFormatChange(selectedFormat)
+                        result = if (selectedFormat == "decimal") decimalResult else fractionResult
                     }
                 }
                 Column(Modifier.align(Alignment.BottomEnd).fillMaxWidth(), horizontalAlignment = Alignment.End) {
@@ -2024,11 +1773,10 @@ private fun CalculatorHome(
                 androidx.compose.animation.shrinkVertically(tween(110))
         ) {
             Surface(
-                Modifier.fillMaxWidth().heightIn(max = 96.dp)
-                    .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), RoundedCornerShape(uiStyle.cardRadiusDp.dp)) else Modifier),
+                Modifier.fillMaxWidth().heightIn(max = 96.dp),
                 shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-                color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-                shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f + glass.matteShadow * 2f).dp else 0.dp
+                color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+                shadowElevation = uiStyle.elevationDp.dp
             ) {
                 Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp)) {
                     steps.forEachIndexed { index, step ->
@@ -2046,7 +1794,7 @@ private fun CalculatorHome(
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     row.forEach { key ->
-                        CalcKey(key, Modifier.weight(1f).fillMaxSize(), compact = scientific) { press(key) }
+                        MathFlowKeyButton(key, Modifier.weight(1f).fillMaxSize(), compact = scientific) { press(key) }
                     }
                 }
             }
@@ -2054,98 +1802,39 @@ private fun CalculatorHome(
     }
 }
 
+private val NavDropletShape = object : androidx.compose.ui.graphics.Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density
+    ): androidx.compose.ui.graphics.Outline {
+        val w = size.width
+        val h = size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.5f, 0f)
+            cubicTo(w * 0.72f, h * 0.12f, w, h * 0.30f, w, h * 0.56f)
+            cubicTo(w, h * 0.82f, w * 0.78f, h, w * 0.5f, h)
+            cubicTo(w * 0.22f, h, 0f, h * 0.82f, 0f, h * 0.56f)
+            cubicTo(0f, h * 0.30f, w * 0.28f, h * 0.12f, w * 0.5f, 0f)
+            close()
+        }
+        return androidx.compose.ui.graphics.Outline.Generic(path)
+    }
+}
+
 @Composable
 private fun Chip(label: String, active: Boolean, onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val chipShape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
     Box(
         Modifier.height(32.dp).clip(chipShape)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.16f), chipShape) else Modifier)
-            .background(
-                if (uiStyle.glassSurface) androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(
-                        (if (active) p.accent else p.surface).copy(alpha = if (active) 0.20f else 0.42f),
-                        p.surface.copy(alpha = if (active) 0.30f else 0.58f)
-                    )
-                ) else androidx.compose.ui.graphics.SolidColor(if (active) p.navActive else p.key)
-            )
+            .background(if (active) p.navActive else p.key)
             .mathFlowClickable(onClick = onClick).padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(displayText(label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (active) p.accent else p.muted)
     }
-}
-
-@Composable
-private fun GlassFormatSelector(
-    first: String,
-    second: String,
-    selectedSecond: Boolean,
-    backdrop: Backdrop,
-    onSelect: (String) -> Unit
-) {
-    val p = LocalPalette.current
-    val shape = RoundedCornerShape(28.dp)
-    val selectedIndex = if (selectedSecond) 1 else 0
-    val animatedIndex by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = selectedIndex.toFloat(),
-        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f),
-        label = "GlassFormatSelection"
-    )
-    BoxWithConstraints(
-        Modifier.fillMaxWidth().height(48.dp)
-            .clip(shape)
-            .background(p.surface.copy(alpha = 0.10f))
-            .border(1.dp, p.text.copy(alpha = 0.12f), shape)
-            .padding(3.dp)
-    ) {
-        val segmentWidth = maxWidth / 2
-        Box(
-            Modifier.offset(x = segmentWidth * animatedIndex)
-                .width(segmentWidth).fillMaxHeight()
-                .drawBackdrop(
-                    backdrop = backdrop,
-                    shape = { RoundedCornerShape(25.dp) },
-                    effects = {
-                        blur(7.dp.toPx())
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                            lens(7.dp.toPx(), 12.dp.toPx(), depthEffect = true, chromaticAberration = false)
-                        }
-                    },
-                    highlight = { Highlight.Default.copy(alpha = 0.72f) },
-                    shadow = { Shadow(radius = 9.dp, alpha = 0.22f) },
-                    onDrawSurface = { drawRect(p.accent.copy(alpha = 0.13f)) }
-                )
-        )
-        Row(Modifier.fillMaxSize()) {
-            listOf(first to "decimal", second to "fraction").forEachIndexed { index, pair ->
-                Box(
-                    Modifier.weight(1f).fillMaxHeight()
-                        .mathFlowClickable { onSelect(pair.second) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        displayText(pair.first),
-                        fontSize = 14.sp,
-                        fontWeight = if (index == selectedIndex) FontWeight.SemiBold else FontWeight.Medium,
-                        color = if (index == selectedIndex) p.accent else p.muted
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalcKey(key: String, modifier: Modifier, compact: Boolean, onClick: () -> Unit) {
-    MathFlowKeyButton(
-        label = key,
-        modifier = modifier,
-        compact = compact,
-        onClick = onClick
-    )
 }
 
 // ---------------------------------------------------------------- shared pieces
@@ -2155,7 +1844,7 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = if (uiStyle.glassSurface) 112.dp else 30.dp),
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp).padding(top = 14.dp, bottom = 132.dp),
         verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 12.dp)
     ) {
         Text(displayText(title), fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = p.text)
@@ -2167,15 +1856,10 @@ private fun PageColumn(title: String, content: @Composable androidx.compose.foun
 private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
-    val pageBackdrop = LocalPageBackdrop.current
     val settingsRadius = LocalSettingsCornerRadius.current
     val neo = uiStyle.id == "neo"
     val skeuo = uiStyle.id == "skeuomorphic"
     val retro = uiStyle.id == "retro_grid"
-    // In the focused Liquid Glass style, only the calculator display and navigation are glass.
-    // Settings panels stay native Material surfaces.
-    val frosted = false
     val shape = RoundedCornerShape(
         (if (neo || skeuo || retro) uiStyle.cardRadiusDp else settingsRadius ?: uiStyle.cardRadiusDp).dp
     )
@@ -2188,65 +1872,22 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
         neo -> p.accent
         retro -> p.accent.copy(alpha = 0.78f)
         skeuo -> p.text.copy(alpha = 0.14f)
-        frosted -> p.text.copy(alpha = 0.12f + glass.matteHighlight * 0.18f)
+        !p.dark -> Color(0xFF777777)
         else -> p.text.copy(alpha = uiStyle.outlineAlpha)
     }
-    val liquidBackdrop = frosted && pageBackdrop != null
-    val panelColor = if (frosted) {
-        // Keep only a restrained glass tint; the page image must remain visible
-        // through the surface instead of being replaced by an opaque matte fill.
-        p.surface.copy(alpha = (glass.matteOpacity * 0.22f).coerceIn(0.06f, 0.22f))
-    } else {
-        p.surface.copy(alpha = uiStyle.surfaceAlpha)
-    }
+    val panelColor = p.surface.copy(alpha = uiStyle.surfaceAlpha)
     Surface(
         modifier = modifier.fillMaxWidth()
-            .then(
-                if (liquidBackdrop) {
-                    Modifier.drawBackdrop(
-                        backdrop = pageBackdrop!!,
-                        shape = { shape },
-                        effects = {
-                            if (glass.matteBlur > 0f) blur(glass.matteBlur.dp.toPx())
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
-                                glass.matteDepth > 0f
-                            ) {
-                                lens(
-                                    (10f * glass.matteDepth).dp.toPx(),
-                                    (18f * glass.matteDepth).dp.toPx(),
-                                    depthEffect = true,
-                                    chromaticAberration = false
-                                )
-                            }
-                        },
-                        highlight = {
-                            Highlight.Default.copy(alpha = glass.matteHighlight.coerceIn(0f, 1f) * 0.55f)
-                        },
-                        shadow = {
-                            Shadow(radius = (8f + glass.matteShadow * 12f).dp, alpha = glass.matteShadow.coerceIn(0f, 1f) * 0.45f)
-                        },
-                        onDrawSurface = {
-                            drawRect(panelColor)
-                        }
-                    )
-                } else {
-                    Modifier.background(panelColor, shape)
-                }
-            )
-            .then(if (neo || retro || skeuo || uiStyle.outlineAlpha > 0f || frosted) {
-                Modifier.border(if (frosted) 0.8.dp else borderWidth, borderColor, shape)
+            .background(panelColor, shape)
+            .then(if (neo || retro || skeuo || uiStyle.outlineAlpha > 0f) {
+                Modifier.border(borderWidth, borderColor, shape)
+            } else if (!p.dark) {
+                Modifier.border(1.dp, borderColor, shape)
             } else Modifier),
         shape = shape,
-        color = if (liquidBackdrop) Color.Transparent else panelColor,
-        shadowElevation = when {
-            frosted -> (0.8f + glass.matteDepth * 1.4f + glass.matteShadow).dp
-            skeuo -> 7.dp
-            else -> uiStyle.elevationDp.dp
-        }
+        color = panelColor,
+        shadowElevation = if (skeuo) 7.dp else uiStyle.elevationDp.dp
     ) {
-        // Surface owns the single clipping boundary. Drawing the tint inside its
-        // content avoids a second rectangular background layer escaping rounded
-        // corners when settings radii are changed at runtime.
         Box(Modifier.fillMaxWidth().clip(shape)) {
             Column(
                 Modifier.fillMaxWidth().padding(when {
@@ -2258,16 +1899,6 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
                 }),
                 verticalArrangement = Arrangement.spacedBy(if (uiStyle.compact) 8.dp else 11.dp)
             ) { content() }
-            if (frosted && glass.matteHighlight > 0f) {
-                Box(
-                    Modifier.align(Alignment.TopCenter).fillMaxWidth().height(28.dp)
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                listOf(p.text.copy(alpha = glass.matteHighlight * 0.075f), Color.Transparent)
-                            )
-                        )
-                )
-            }
         }
     }
 }
@@ -2276,12 +1907,10 @@ private fun Panel(modifier: Modifier = Modifier, content: @Composable () -> Unit
 private fun Segmented(options: List<String>, selected: String, onSelect: (String) -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val segmentShape = RoundedCornerShape(uiStyle.controlRadiusDp.dp)
     BoxWithConstraints(
         Modifier.fillMaxWidth().clip(segmentShape)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), segmentShape) else Modifier)
-            .background(if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key).padding(3.dp)
+            .background(p.key).padding(3.dp)
     ) {
         val itemWidth = maxWidth / options.size
         val selectedIndex = options.indexOf(selected).coerceAtLeast(0)
@@ -2296,13 +1925,13 @@ private fun Segmented(options: List<String>, selected: String, onSelect: (String
                 .graphicsLayer { translationX = indicatorOffset }
                 .size(width = itemWidth, height = 38.dp)
                 .clip(RoundedCornerShape(uiStyle.buttonRadiusDp.dp))
-                .background(if (uiStyle.glassSurface) p.surface.copy(alpha = (glass.matteOpacity + 0.14f).coerceAtMost(1f)) else p.keyEquals)
+                .background(p.keyEquals)
         )
         Row(Modifier.fillMaxWidth()) {
             options.forEach { option ->
                 val active = option == selected
                 val tint by animateColorAsState(
-                    targetValue = if (active) (if (uiStyle.glassSurface) p.accent else p.onKeyEquals) else p.muted,
+                    targetValue = if (active) p.onKeyEquals else p.muted,
                     animationSpec = tween(NAV_TRANSITION_DURATION_MS, easing = FastOutSlowInEasing),
                     label = "SegmentedLabelColor"
                 )
@@ -2339,7 +1968,6 @@ private fun Field(value: String, onChange: (String) -> Unit, label: String, modi
 private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.buttonRadiusDp).dp)
     var pressed by remember { mutableStateOf(false) }
     val pressScale by animateFloatAsState(
@@ -2350,12 +1978,7 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
     Surface(
         modifier = modifier.fillMaxWidth().height(if (uiStyle.compact) 46.dp else 52.dp)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .then(if (uiStyle.glassSurface) Modifier
-                .clip(shape)
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(p.accent.copy(alpha = 0.17f), p.surface.copy(alpha = 0.54f))
-                )) else Modifier)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.30f), shape) else Modifier)
+
             .pointerInput(onClick) {
                 detectTapGestures(onPress = {
                     pressed = true
@@ -2365,8 +1988,8 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
                 })
             },
         shape = shape,
-        color = if (uiStyle.glassSurface) Color.Transparent else p.keyEquals,
-        shadowElevation = if (uiStyle.glassSurface) (1.5f + glass.matteDepth * 3f).dp else 0.dp
+        color = p.keyEquals,
+        shadowElevation = 0.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(displayText(text), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = p.onKeyEquals)
@@ -2378,16 +2001,12 @@ private fun ActionButton(text: String, modifier: Modifier = Modifier, onClick: (
 private fun ResultBox(text: String, error: String?) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val resultShape = RoundedCornerShape(uiStyle.cardRadiusDp.dp)
     Surface(
-        Modifier.fillMaxWidth().then(
-            if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.20f), resultShape)
-            else Modifier
-        ),
+        Modifier.fillMaxWidth(),
         shape = resultShape,
-        color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.key,
-        shadowElevation = if (uiStyle.glassSurface) (glass.matteDepth * 3f).dp else 0.dp
+        color = p.key,
+        shadowElevation = 0.dp
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             androidx.compose.animation.AnimatedVisibility(
@@ -2421,7 +2040,7 @@ private fun ResultBox(text: String, error: String?) {
 // ---------------------------------------------------------------- tools
 
 @Composable
-private fun ToolsPage() {
+private fun ToolsPage(onCalculationSaved: (String, String, List<String>) -> Unit) {
     var tool by rememberSaveable { mutableStateOf("Дроби") }
 
     var fractionA by rememberSaveable { mutableStateOf("3/4") }
@@ -2457,7 +2076,7 @@ private fun ToolsPage() {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                listOf("Дроби", "Проценты", "Геометрия", "Конвертер", "График").forEach { option ->
+                listOf("Дроби", "Проценты", "Геометрия", "Статистика", "Конвертер", "График").forEach { option ->
                     Chip(option, tool == option) { tool = option }
                 }
             }
@@ -2485,7 +2104,7 @@ private fun ToolsPage() {
                             Box(Modifier.weight(1f)) {
                                 ActionButton(op) {
                                     runCatching { FractionTools.calculate(fractionA, fractionB, op) }
-                                        .onSuccess { fractionResult = it; fractionError = null }
+                                        .onSuccess { fractionResult = it; fractionError = null; onCalculationSaved("$fractionA $op $fractionB", it, listOf("Операция: $op", "Первое число: $fractionA", "Второе число: $fractionB")) }
                                         .onFailure { fractionError = friendly(it, fractionFallback); fractionResult = "" }
                                 }
                             }
@@ -2527,7 +2146,7 @@ private fun ToolsPage() {
                                 }
                                 else -> PercentTools.percentOf(percentA, percentB)
                             }
-                        }.onSuccess { percentResult = it; percentError = null }
+                        }.onSuccess { percentResult = it; percentError = null; onCalculationSaved("$percentMode: $percentA; $percentB", it, listOf("Режим: $percentMode", "Входные значения: $percentA и $percentB")) }
                             .onFailure { percentError = friendly(it, valuesFallback); percentResult = "" }
                     }
                     androidx.compose.animation.AnimatedVisibility(
@@ -2540,162 +2159,629 @@ private fun ToolsPage() {
                         ResultBox(percentResult, percentError)
                     }
                 }
-                "Геометрия" -> {
-                    Segmented(listOf("Прямоугольник", "Круг", "Треугольник"), shape) { shape = it }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Field(sideA, { sideA = it }, if (shape == "Круг") "Радиус" else "Сторона a", Modifier.weight(1f))
-                        if (shape != "Круг") Field(sideB, { sideB = it }, "Сторона b", Modifier.weight(1f))
-                        if (shape == "Треугольник") Field(sideC, { sideC = it }, "Сторона c", Modifier.weight(1f))
-                    }
-                    ActionButton(tx("calculate")) {
-                        runCatching {
-                            when (shape) {
-                                "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
-                                "Круг" -> GeometryTools.circle(sideA)
-                                else -> GeometryTools.triangle(sideA, sideB, sideC)
-                            }
-                        }.onSuccess { geometryResult = it; geometryError = null }
-                            .onFailure { geometryError = friendly(it, sizesFallback); geometryResult = "" }
-                    }
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = geometryResult.isNotEmpty() || geometryError != null,
-                        enter = androidx.compose.animation.fadeIn(tween(190)) +
-                            androidx.compose.animation.expandVertically(tween(190)),
-                        exit = androidx.compose.animation.fadeOut(tween(110)) +
-                            androidx.compose.animation.shrinkVertically(tween(110))
-                    ) {
-                        ResultBox(geometryResult, geometryError)
-                    }
-                }
-                "Конвертер" -> UnitConverterContent()
-                "График" -> GraphFunctionContent()
+                "Геометрия" -> GeometryToolsContent(onCalculationSaved)
+                "Статистика" -> StatisticsContent(onCalculationSaved)
+                "Конвертер" -> UnitConverterContent(onCalculationSaved)
+                "График" -> GraphFunctionContent(onCalculationSaved)
                     }
                 }
             }
         }
     }
 }
-private data class GraphSample(val x: Double, val y: Double?)
+@Composable
+private fun StatisticsContent(onCalculationSaved: (String, String, List<String>) -> Unit) {
+    val p = LocalPalette.current
+    val uiStyle = LocalMathFlowUiStyle.current
+    var source by rememberSaveable { mutableStateOf("1; 2; 2; 3; 4; 4; 5") }
+    var chartType by rememberSaveable { mutableStateOf("Полигон частот") }
+    var summary by remember { mutableStateOf<StatisticsSummary?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+    Field(source, { source = it; error = null; summary = null }, "Данные: числа через ; или пробел", Modifier.fillMaxWidth(), numeric = false)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf("Частоты", "Полигон частот", "Гистограмма", "Накопленная частота").forEach { option ->
+            Chip(option, chartType == option) { chartType = option }
+        }
+    }
+    ActionButton("Рассчитать статистику") {
+        runCatching {
+            val engine = StatisticsEngine()
+            engine.analyze(engine.parseValues(source))
+        }.onSuccess {
+            summary = it
+            error = null
+            onCalculationSaved(
+                "Статистика: $source",
+                "Среднее: ${it.mean}; медиана: ${it.median}; размах: ${it.range}",
+                listOf("Количество: ${it.count}", "Сумма: ${it.sum}", "Мода: ${it.mode.joinToString().ifBlank { "нет" }}",
+                    "Дисперсия: ${it.variance}", "Стандартное отклонение: ${it.standardDeviation}")
+            )
+        }.onFailure { summary = null; error = it.message ?: "Ошибка анализа данных" }
+    }
+    error?.let { Text(it, color = p.error, fontSize = 13.sp) }
+    summary?.let { data ->
+        val values = when (chartType) {
+            "Гистограмма" -> data.histogram.map { it.frequency.toDouble() }
+            "Накопленная частота" -> data.cumulativeFrequencies.map { it.second.toDouble() }
+            else -> data.frequencies.map { it.frequency.toDouble() }
+        }
+        val maxValue = (values.maxOrNull() ?: 1.0).coerceAtLeast(1.0)
+        Canvas(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp)).background(p.key)) {
+            val count = values.size.coerceAtLeast(1)
+            val slot = size.width / count
+            for (i in 0..4) {
+                val y = size.height * i / 4f
+                drawLine(p.muted.copy(alpha = 0.16f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+            }
+            if (chartType == "Гистограмма") {
+                values.forEachIndexed { index, value ->
+                    val barHeight = (value / maxValue * (size.height - 12.dp.toPx())).toFloat()
+                    drawRect(p.accent.copy(alpha = 0.78f), Offset(index * slot + 1.dp.toPx(), size.height - barHeight),
+                        Size((slot - 2.dp.toPx()).coerceAtLeast(1f), barHeight))
+                }
+            } else {
+                val path = Path()
+                values.forEachIndexed { index, value ->
+                    val x = if (count == 1) size.width / 2f else slot * (index + 0.5f)
+                    val y = size.height - (value / maxValue * (size.height - 12.dp.toPx())).toFloat()
+                    if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                    drawCircle(p.accent, 3.dp.toPx(), Offset(x, y))
+                }
+                if (chartType != "Частоты") drawPath(path, p.accent, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+                else values.forEachIndexed { index, value ->
+                    val x = slot * (index + 0.5f)
+                    val y = size.height - (value / maxValue * (size.height - 12.dp.toPx())).toFloat()
+                    drawLine(p.accent, Offset(x, size.height), Offset(x, y), 2.dp.toPx())
+                }
+            }
+        }
+        Text("n = ${data.count}   Σx = ${"%.3f".format(Locale.US, data.sum)}   Среднее = ${"%.3f".format(Locale.US, data.mean)}", color = p.text, fontSize = 13.sp)
+        Text("Медиана = ${"%.3f".format(Locale.US, data.median)}   Размах = ${"%.3f".format(Locale.US, data.range)}", color = p.text, fontSize = 13.sp)
+        Text("Дисперсия = ${"%.3f".format(Locale.US, data.variance)}   σ = ${"%.3f".format(Locale.US, data.standardDeviation)}", color = p.text, fontSize = 13.sp)
+        Text("Мода: " + data.mode.joinToString().ifBlank { "нет единственной моды" }, color = p.text, fontSize = 13.sp)
+        Text("Частоты: " + data.frequencies.joinToString { it.value.toString() + " — " + it.frequency }, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+    }
+}
 
 @Composable
-private fun GraphFunctionContent() {
+private fun GeometryToolsContent(onCalculationSaved: (String, String, List<String>) -> Unit) {
+    val p = LocalPalette.current
+    var mode by rememberSaveable { mutableStateOf("Фигуры") }
+    var operation by rememberSaveable { mutableStateOf("Расстояние AB") }
+    var shape by rememberSaveable { mutableStateOf("Прямоугольник") }
+    var sideA by rememberSaveable { mutableStateOf("5") }
+    var sideB by rememberSaveable { mutableStateOf("3") }
+    var sideC by rememberSaveable { mutableStateOf("4") }
+    var ax by rememberSaveable { mutableStateOf("0") }
+    var ay by rememberSaveable { mutableStateOf("0") }
+    var bx by rememberSaveable { mutableStateOf("3") }
+    var byValue by rememberSaveable { mutableStateOf("4") }
+    var cx by rememberSaveable { mutableStateOf("0") }
+    var cy by rememberSaveable { mutableStateOf("3") }
+    var ux by rememberSaveable { mutableStateOf("1") }
+    var uy by rememberSaveable { mutableStateOf("2") }
+    var vx by rememberSaveable { mutableStateOf("3") }
+    var vy by rememberSaveable { mutableStateOf("4") }
+    var result by rememberSaveable { mutableStateOf("") }
+    var error by rememberSaveable { mutableStateOf<String?>(null) }
+    Segmented(listOf("Фигуры", "Координаты", "Векторы"), mode) {
+        mode = it
+        operation = if (it == "Координаты") "Расстояние AB" else if (it == "Векторы") "Сложение" else operation
+        result = ""
+        error = null
+    }
+    if (mode == "Фигуры") {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Прямоугольник", "Квадрат", "Круг", "Треугольник", "Параллелограмм", "Трапеция", "Ромб").forEach { option ->
+                Chip(option, shape == option) { shape = option; result = ""; error = null }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(sideA, { sideA = it; result = "" }, when (shape) {
+                "Круг" -> "Радиус"
+                "Ромб" -> "Диагональ d₁"
+                "Трапеция" -> "Основание a"
+                else -> if (shape == "Квадрат") "Сторона" else "Сторона a"
+            }, Modifier.weight(1f))
+            if (shape in setOf("Прямоугольник", "Треугольник", "Параллелограмм", "Трапеция", "Ромб")) {
+                Field(sideB, { sideB = it; result = "" }, when (shape) {
+                    "Ромб" -> "Диагональ d₂"
+                    "Трапеция" -> "Основание b"
+                    else -> "Сторона b"
+                }, Modifier.weight(1f))
+            }
+            if (shape in setOf("Треугольник", "Параллелограмм", "Трапеция")) {
+                Field(sideC, { sideC = it; result = "" }, if (shape == "Треугольник") "Сторона c" else "Высота", Modifier.weight(1f))
+            }
+        }
+        ActionButton("Рассчитать") {
+            runCatching {
+                val a = sideA.replace(',', '.').toDouble()
+                require(a > 0.0 && a.isFinite()) { "Размеры должны быть положительными" }
+                when (shape) {
+                    "Прямоугольник" -> GeometryTools.rectangle(sideA, sideB)
+                    "Квадрат" -> "Площадь = " + (a * a) + "; периметр = " + (4.0 * a)
+                    "Круг" -> GeometryTools.circle(sideA)
+                    "Треугольник" -> GeometryTools.triangle(sideA, sideB, sideC)
+                    "Параллелограмм" -> {
+                        val side = sideB.replace(',', '.').toDouble()
+                        val height = sideC.replace(',', '.').toDouble()
+                        require(side > 0.0 && height > 0.0) { "Размеры должны быть положительными" }
+                        "Площадь = " + (a * height) + "; периметр = " + (2.0 * (a + side))
+                    }
+                    "Трапеция" -> {
+                        val secondBase = sideB.replace(',', '.').toDouble()
+                        val height = sideC.replace(',', '.').toDouble()
+                        require(secondBase > 0.0 && height > 0.0) { "Размеры должны быть положительными" }
+                        "Площадь = " + ((a + secondBase) * height / 2.0)
+                    }
+                    else -> {
+                        val secondDiagonal = sideB.replace(',', '.').toDouble()
+                        require(secondDiagonal > 0.0) { "Диагонали должны быть положительными" }
+                        val area = a * secondDiagonal / 2.0
+                        val side = Math.sqrt(a * a + secondDiagonal * secondDiagonal) / 2.0
+                        "Площадь = " + area + "; периметр = " + (4.0 * side)
+                    }
+                }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$shape: $sideA, $sideB, $sideC", it, listOf("Фигура: $shape", "Параметры: $sideA; $sideB; $sideC")) }.onFailure { result = ""; error = it.message }
+        }
+    } else if (mode == "Координаты") {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Расстояние AB", "Середина AB", "Прямая AB", "Площадь ABC", "Окружность AB", "Отражение Ox", "Поворот 90°", "Гомотетия ×2").forEach { option ->
+                Chip(option, operation == option) { operation = option; result = ""; error = null }
+            }
+        }
+        Text("Точка A", color = p.muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(ax, { ax = it }, "x₁", Modifier.weight(1f)); Field(ay, { ay = it }, "y₁", Modifier.weight(1f))
+        }
+        Text("Точка B", color = p.muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(bx, { bx = it }, "x₂", Modifier.weight(1f)); Field(byValue, { byValue = it }, "y₂", Modifier.weight(1f))
+        }
+        if (operation == "Площадь ABC") {
+            Text("Точка C", color = p.muted, fontSize = 12.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Field(cx, { cx = it }, "x₃", Modifier.weight(1f)); Field(cy, { cy = it }, "y₃", Modifier.weight(1f))
+            }
+        }
+        ActionButton("Вычислить") {
+            runCatching {
+                val g = CoordinateGeometry()
+                val a = CoordinatePoint(ax.toDouble(), ay.toDouble())
+                val b = CoordinatePoint(bx.toDouble(), byValue.toDouble())
+                when (operation) {
+                    "Расстояние AB" -> "AB = " + "%.4f".format(Locale.US, g.distance(a, b))
+                    "Середина AB" -> g.midpoint(a, b).let { "M(${it.x}; ${it.y})" }
+                    "Прямая AB" -> g.lineThrough(a, b).let { "%.4fx %+.4fy %+.4f = 0".format(Locale.US, it.a, it.b, it.c) }
+                    "Окружность AB" -> g.circleEquation(g.circleThrough(a, b))
+                    "Отражение Ox" -> g.reflectAcrossX(a).let { "A′(${it.x}; ${it.y})" }
+                    "Поворот 90°" -> g.rotate(a, CoordinatePoint(0.0, 0.0), 90.0).let { "A′(${it.x}; ${it.y})" }
+                    "Гомотетия ×2" -> g.homothety(a, CoordinatePoint(0.0, 0.0), 2.0).let { "A′(${it.x}; ${it.y})" }
+                    else -> g.triangle(a, b, CoordinatePoint(cx.toDouble(), cy.toDouble())).let {
+                        "Площадь = %.4f; периметр = %.4f".format(Locale.US, it.area, it.perimeter)
+                    }
+                }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: A($ax; $ay), B($bx; $byValue)", it, listOf("Операция: $operation", "A = ($ax; $ay)", "B = ($bx; $byValue)")) }.onFailure { result = ""; error = it.message }
+        }
+    } else {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Сложение", "Разность", "Скалярное произведение", "Угол").forEach { option ->
+                Chip(option, operation == option) { operation = option; result = ""; error = null }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(ux, { ux = it }, "uₓ", Modifier.weight(1f)); Field(uy, { uy = it }, "uᵧ", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(vx, { vx = it }, "vₓ", Modifier.weight(1f)); Field(vy, { vy = it }, "vᵧ", Modifier.weight(1f))
+        }
+        ActionButton("Вычислить") {
+            runCatching {
+                val g = CoordinateGeometry()
+                val u = GeometryVector(ux.toDouble(), uy.toDouble())
+                val v = GeometryVector(vx.toDouble(), vy.toDouble())
+                when (operation) {
+                    "Сложение" -> g.add(u, v).let { "u + v = (${it.x}; ${it.y})" }
+                    "Разность" -> g.subtract(u, v).let { "u − v = (${it.x}; ${it.y})" }
+                    "Скалярное произведение" -> "u · v = " + g.dot(u, v)
+                    else -> "Угол = %.3f°".format(Locale.US, g.angleDegrees(u, v))
+                }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: u($ux; $uy), v($vx; $vy)", it, listOf("Операция: $operation", "u = ($ux; $uy)", "v = ($vx; $vy)")) }.onFailure { result = ""; error = it.message }
+        }
+    }
+    error?.let { Text(it, color = p.error, fontSize = 13.sp) }
+    if (result.isNotBlank()) ResultBox(result, null)
+}
+
+private data class SelectedGraphPoint(val curveIndex: Int, val point: GraphPoint)
+
+@Composable
+private fun GraphFunctionContent(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     var expression by rememberSaveable { mutableStateOf("x^2") }
     var range by rememberSaveable { mutableStateOf(5) }
-    var samples by remember { mutableStateOf(emptyList<GraphSample>()) }
-    var selectedPoint by remember { mutableStateOf<GraphSample?>(null) }
+    var centerX by rememberSaveable { mutableStateOf(0.0) }
+    var centerY by rememberSaveable { mutableStateOf(0.0) }
+    var graphMode by rememberSaveable { mutableStateOf("Функции") }
+    var relation by rememberSaveable { mutableStateOf("≤") }
+    var parabolaA by rememberSaveable { mutableStateOf("1") }
+    var parabolaH by rememberSaveable { mutableStateOf("0") }
+    var parabolaK by rememberSaveable { mutableStateOf("0") }
+    var presetCategory by rememberSaveable { mutableStateOf("Параболы") }
+    var selectedPreset by rememberSaveable { mutableStateOf("x^2") }
+    var curves by remember { mutableStateOf(emptyList<GraphCurve>()) }
+    var implicitSegments by remember { mutableStateOf(emptyList<GraphSegment>()) }
+    var regionCells by remember { mutableStateOf(emptyList<GraphRegionCell>()) }
+    var intersections by remember { mutableStateOf(emptyList<GraphIntersection>()) }
+    var selectedPoint by remember { mutableStateOf<SelectedGraphPoint?>(null) }
     var isCalculating by remember { mutableStateOf(false) }
-    var hasValidPoints by remember { mutableStateOf(false) }
+    var graphError by remember { mutableStateOf<String?>(null) }
+    var lastSavedGraphKey by remember { mutableStateOf("$graphMode|$expression|$relation") }
+    val graphEngine = remember { MathGraphEngine() }
 
-    LaunchedEffect(expression, range) {
+    LaunchedEffect(expression, range, graphMode, relation, centerX, centerY) {
         selectedPoint = null
+        intersections = emptyList()
+        graphError = null
         if (expression.isBlank()) {
-            samples = emptyList()
-            hasValidPoints = false
+            curves = emptyList()
+            implicitSegments = emptyList()
+            regionCells = emptyList()
             isCalculating = false
             return@LaunchedEffect
         }
-        delay(140L)
+        delay(120L)
         isCalculating = true
-        val computed = withContext(Dispatchers.Default) {
-            val engine = ExpressionEngine(AngleMode.RADIANS)
-            (0..120).map { index ->
-                val x = -range + (range * 2.0 * index / 120.0)
-                val y = runCatching {
-                    engine.calculate(expression, variables = mapOf("x" to BigDecimal.valueOf(x)), includeSteps = false).decimalValue.toDouble()
-                }.getOrNull()?.takeIf { it.isFinite() && abs(it) < 1.0e7 }
-                GraphSample(x, y)
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                val engine = MathGraphEngine()
+                val viewport = GraphViewport(
+                    centerX - range,
+                    centerX + range,
+                    centerY - range,
+                    centerY + range
+                )
+                val computed: Triple<List<GraphCurve>, List<GraphSegment>, List<GraphRegionCell>> =
+                    when (graphMode) {
+                        "Функции" -> {
+                            val expressions = expression.split(";").map { it.trim() }.filter { it.isNotEmpty() }
+                            require(expressions.size in 1..12) { "Введите от 1 до 12 функций через ;" }
+                            Triple(
+                                engine.sampleFunctions(
+                                    expressions,
+                                    viewport.copy(yMin = centerY - 10000.0, yMax = centerY + 10000.0),
+                                    240,
+                                    4000
+                                ),
+                                emptyList(),
+                                emptyList()
+                            )
+                        }
+                        "Неявный график" -> Triple(
+                            emptyList(),
+                            engine.sampleImplicit(expression, viewport, 96, 96),
+                            emptyList()
+                        )
+                        else -> Triple(
+                            emptyList(),
+                            emptyList(),
+                            engine.sampleInequality(
+                                expression,
+                                when (relation) { "≤" -> "<="; "≥" -> ">="; else -> relation },
+                                viewport,
+                                64,
+                                64
+                            )
+                        )
+                    }
+                computed
             }
         }
-        samples = computed
-        hasValidPoints = computed.any { it.y != null }
+        result.onSuccess {
+            curves = it.first
+            implicitSegments = it.second
+            regionCells = it.third
+            val graphKey = "$graphMode|$expression|$relation"
+            if (graphKey != lastSavedGraphKey) {
+                val description = when (graphMode) {
+                    "Функции" -> "Построено графиков: ${it.first.size}"
+                    "Неявный график" -> "Построен неявный график"
+                    else -> "Построена область неравенства"
+                }
+                onCalculationSaved("График ($graphMode): $expression", description,
+                    listOf("Диапазон по x: ${centerX - range} … ${centerX + range}",
+                        if (graphMode == "Неравенство") "Отношение: $relation" else "Режим: $graphMode"))
+                lastSavedGraphKey = graphKey
+            }
+        }.onFailure {
+            curves = emptyList()
+            implicitSegments = emptyList()
+            regionCells = emptyList()
+            graphError = it.message ?: "Не удалось построить график"
+        }
         isCalculating = false
     }
 
-    Field(expression, { expression = it }, tx("graph_input"), Modifier.fillMaxWidth(), numeric = false)
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Chip("x²", false) { expression = "x^2" }
-        Chip("sin(x)", false) { expression = "sin(x)" }
-        Chip("1/x", false) { expression = "1/x" }
-        Chip("2x+1", false) { expression = "2x+1" }
+    LaunchedEffect(curves, graphMode, range, centerX, centerY) {
+        if (graphMode != "Функции" || curves.size < 2) {
+            intersections = emptyList()
+            return@LaunchedEffect
+        }
+        val result = withContext(Dispatchers.Default) {
+            runCatching {
+                MathGraphEngine().findIntersections(
+                    curves[0].expression,
+                    curves[1].expression,
+                    GraphViewport(centerX - range, centerX + range, centerY - 10000.0, centerY + 10000.0)
+                )
+            }
+        }
+        intersections = result.getOrElse { emptyList() }
     }
+
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        listOf("Функции", "Неявный график", "Неравенство").forEach { option ->
+            Chip(option, graphMode == option) { graphMode = option }
+        }
+    }
+    Field(
+        expression,
+        { expression = it },
+        if (graphMode == "Функции") "y=f(x); несколько функций через ;" else "F(x,y)",
+        Modifier.fillMaxWidth(),
+        numeric = false
+    )
+    if (graphMode == "Функции") {
+        val presetGroups = linkedMapOf(
+            "Линейные" to listOf("y=x" to "x", "y=2x+1" to "2x+1", "y=−x+3" to "-x+3", "y=½x" to "0.5x"),
+            "Параболы" to listOf("y=x²" to "x^2", "y=−x²" to "-x^2", "y=½x²" to "0.5x^2", "y=2x²" to "2x^2", "y=(x−2)²" to "(x-2)^2", "y=x²−4x+3" to "x^2-4x+3", "y=−2(x+1)²+3" to "-2(x+1)^2+3"),
+            "Степенные" to listOf("y=x³" to "x^3", "y=−x³" to "-x^3", "y=x⁴" to "x^4", "y=x⁵" to "x^5"),
+            "Обратные" to listOf("y=1/x" to "1/x", "y=2/x" to "2/x", "y=−1/x" to "-1/x", "y=1/x²" to "1/x^2"),
+            "Корни" to listOf("y=√x" to "sqrt(x)", "y=√(x+2)" to "sqrt(x+2)", "y=−√x" to "-sqrt(x)"),
+            "Модуль" to listOf("y=|x|" to "abs(x)", "y=|x−2|" to "abs(x-2)", "y=−|x|+3" to "-abs(x)+3"),
+            "Тригонометрия" to listOf("sin x" to "sin(x)", "cos x" to "cos(x)", "tg x" to "tan(x)", "ctg x" to "cot(x)"),
+            "Логарифмы" to listOf("ln x" to "ln(x)", "lg x" to "log(x)", "eˣ" to "exp(x)")
+        )
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            presetGroups.keys.forEach { category ->
+                Chip(category, presetCategory == category) { presetCategory = category }
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            presetGroups[presetCategory].orEmpty().forEach { (label, value) ->
+                Chip(label, selectedPreset == value) {
+                    selectedPreset = value
+                    expression = value
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActionButton("Добавить к графикам") {
+                val existing = expression.split(";").map { it.trim() }
+                if (selectedPreset !in existing && existing.size < 12) {
+                    expression = if (expression.isBlank()) selectedPreset else "$expression; $selectedPreset"
+                } else if (existing.size >= 12 && selectedPreset !in existing) {
+                    graphError = "Можно сравнить не более 12 функций"
+                }
+            }
+            ActionButton("Очистить") { expression = selectedPreset }
+        }
+        Text("Выберите семейство функций, затем пример. Чтобы сравнить несколько кривых, добавляйте их по одной.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        Text("Семейство парабол y = a(x − h)² + k", color = p.muted, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Field(parabolaA, { parabolaA = it }, "a", Modifier.weight(1f))
+            Field(parabolaH, { parabolaH = it }, "h", Modifier.weight(1f))
+            Field(parabolaK, { parabolaK = it }, "k", Modifier.weight(1f))
+        }
+        ActionButton("Построить параболу") {
+            val a = parabolaA.replace(',', '.').toDoubleOrNull()
+            val h = parabolaH.replace(',', '.').toDoubleOrNull()
+            val k = parabolaK.replace(',', '.').toDoubleOrNull()
+            if (a == null || h == null || k == null || !a.isFinite() || !h.isFinite() || !k.isFinite() || a == 0.0) {
+                graphError = "Введите конечные числа; коэффициент a не должен быть равен нулю"
+            } else {
+                graphMode = "Функции"
+                expression = a.toString() + "*(x-(" + h + "))^2+(" + k + ")"
+            }
+        }
+        val parabolaValues = listOf(parabolaA, parabolaH, parabolaK).map { it.replace(',', '.').toDoubleOrNull() }
+        val parabolaAnalysis = if (parabolaValues.all { it != null && it.isFinite() } && parabolaValues[0] != 0.0) {
+            ParabolaTransformation.explain(parabolaValues[0]!!, parabolaValues[1]!!, parabolaValues[2]!!)
+        } else null
+        if (parabolaAnalysis != null) {
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp))
+                    .background(p.key).padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text("Как изменился график", color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text("Итог: y = ${parabolaAnalysis.formula}", color = p.accent, fontSize = 13.sp)
+                parabolaAnalysis.steps.forEachIndexed { index, step ->
+                    Text("${index + 1}. $step", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+                }
+            }
+        }
+    } else if (graphMode == "Неявный график") {
+        Text("Введите уравнение в виде F(x,y)=0, например x^2+y^2=9.", color = p.muted, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Окружность" to "x^2+y^2=9", "Эллипс" to "x^2/9+y^2/4=1", "Гипербола" to "x^2-y^2=1", "Парабола" to "y=x^2").forEach { (label, value) ->
+                Chip(label, false) { expression = value }
+            }
+        }
+    } else {
+        Text("Область, где F(x,y) удовлетворяет выбранному знаку относительно нуля.", color = p.muted, fontSize = 12.sp)
+        Segmented(listOf("<", "≤", ">", "≥"), relation) { relation = it }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("Круг" to "x^2+y^2-9", "Парабола" to "y-x^2", "Прямая" to "x+y-2").forEach { (label, value) ->
+                Chip(label, false) { expression = value }
+            }
+        }
+    }
+
     Text(tx("graph_range"), color = p.muted, fontSize = 12.sp)
     Segmented(listOf("±5", "±10", "±20"), "±$range") {
         range = it.removePrefix("±").toIntOrNull() ?: 5
     }
+    Text("Перемещение области графика", color = p.muted, fontSize = 12.sp)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Chip("←", false) { centerX -= range / 2.0 }
+        Chip("→", false) { centerX += range / 2.0 }
+        Chip("↑", false) { centerY += range / 2.0 }
+        Chip("↓", false) { centerY -= range / 2.0 }
+        Chip("Сброс", false) { centerX = 0.0; centerY = 0.0 }
+    }
+
+    val validValues = curves.flatMap { it.points.mapNotNull { point -> point.y } }.filter { it.isFinite() }.sorted()
+    val low = if (validValues.isEmpty()) -1.0 else validValues[(validValues.size * 0.05).toInt().coerceIn(0, validValues.lastIndex)]
+    val high = if (validValues.isEmpty()) 1.0 else validValues[((validValues.size * 0.95).toInt()).coerceIn(0, validValues.lastIndex)]
+    val padding = ((high - low) * 0.08).coerceAtLeast(0.5)
+    val yMin = low - padding + centerY
+    val yMax = high + padding + centerY
+    val colors = listOf(p.accent, p.keyEquals, p.text, p.muted, p.onKeyEquals)
+    val viewport = GraphViewport(centerX - range, centerX + range, centerY - range, centerY + range)
+    val tableEntries = remember(curves, centerX, range) {
+        curves.firstOrNull()?.let { curve ->
+            (0..8).map { index ->
+                val x = centerX - range + (2.0 * range * index / 8.0)
+                x to graphEngine.evaluateFunction(curve.expression, x)
+            }
+        }.orEmpty()
+    }
+
     Canvas(
-        Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp)).background(p.key)
-            .pointerInput(samples, range) {
+        Modifier.fillMaxWidth().height(260.dp)
+            .clip(RoundedCornerShape(uiStyle.cardRadiusDp.dp))
+            .background(p.key)
+            .pointerInput(curves, range, centerX) {
                 detectTapGestures { tap ->
-                    val fraction = tap.x.toDouble() / size.width.coerceAtLeast(1).toDouble()
-                    val targetX = -range + fraction * range * 2.0
-                    selectedPoint = samples.filter { it.y != null }.minByOrNull { abs(it.x - targetX) }
+                    val targetX = centerX - range + (tap.x / size.width.coerceAtLeast(1)) * range * 2.0
+                    selectedPoint = curves.mapIndexedNotNull { index, curve ->
+                        curve.points.filter { it.y != null }.minByOrNull { abs(it.x - targetX) }
+                            ?.let { SelectedGraphPoint(index, it) }
+                    }.minByOrNull { abs(it.point.x - targetX) }
                 }
             }
     ) {
-        val validY = samples.mapNotNull { it.y }
-        if (validY.isEmpty()) return@Canvas
-        val rawMin = validY.minOrNull() ?: -1.0
-        val rawMax = validY.maxOrNull() ?: 1.0
-        val padding = ((rawMax - rawMin) * 0.08).coerceAtLeast(0.5)
-        val yMin = rawMin - padding
-        val yMax = rawMax + padding
-        val ySpan = (yMax - yMin).coerceAtLeast(1.0)
-        fun plotX(x: Double) = ((x + range) / (range * 2.0) * size.width.toDouble()).toFloat()
-        fun plotY(y: Double) = (size.height.toDouble() - ((y - yMin) / ySpan * size.height.toDouble())).toFloat()
-        for (i in 0..4) {
-            val x = size.width * i / 4f
-            val y = size.height * i / 4f
-            drawLine(p.muted.copy(alpha = 0.18f), Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
-            drawLine(p.muted.copy(alpha = 0.18f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+        if (curves.isEmpty() && implicitSegments.isEmpty() && regionCells.isEmpty()) return@Canvas
+        fun plotX(x: Double) = ((x - (centerX - range)) / (range * 2.0) * size.width).toFloat()
+        fun plotY(y: Double, minY: Double, maxY: Double) =
+            (size.height - (y - minY) / (maxY - minY).coerceAtLeast(1.0) * size.height).toFloat()
+        for (i in 0..8) {
+            val x = size.width * i / 8f
+            val y = size.height * i / 8f
+            drawLine(p.muted.copy(alpha = 0.15f), Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
+            drawLine(p.muted.copy(alpha = 0.15f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
         }
-        if (yMin <= 0.0 && yMax >= 0.0) {
-            val axisY = plotY(0.0)
+        if (graphMode == "Неравенство") {
+            regionCells.forEach { cell ->
+                val left = plotX(cell.left)
+                val right = plotX(cell.right)
+                val top = plotY(cell.bottom, viewport.yMin, viewport.yMax)
+                val bottom = plotY(cell.top, viewport.yMin, viewport.yMax)
+                drawRect(p.accent.copy(alpha = 0.16f), Offset(left, top), Size(right - left, bottom - top))
+            }
+        }
+        val axisMin = if (graphMode == "Функции") yMin else viewport.yMin
+        val axisMax = if (graphMode == "Функции") yMax else viewport.yMax
+        if (axisMin <= 0.0 && axisMax >= 0.0) {
+            val axisY = plotY(0.0, axisMin, axisMax)
             drawLine(p.muted.copy(alpha = 0.65f), Offset(0f, axisY), Offset(size.width, axisY), 1.dp.toPx())
         }
         val axisX = plotX(0.0)
         drawLine(p.muted.copy(alpha = 0.65f), Offset(axisX, 0f), Offset(axisX, size.height), 1.dp.toPx())
-        val path = Path()
-        var drawingSegment = false
-        samples.forEach { sample ->
-            val y = sample.y
-            if (y == null) drawingSegment = false
-            else {
-                val point = Offset(plotX(sample.x), plotY(y))
-                if (drawingSegment) path.lineTo(point.x, point.y) else path.moveTo(point.x, point.y)
-                drawingSegment = true
+        curves.forEachIndexed { curveIndex, curve ->
+            val path = Path()
+            var drawing = false
+            curve.points.forEach { point ->
+                val y = point.y
+                if (y == null || y < yMin || y > yMax) {
+                    drawing = false
+                } else {
+                    val offset = Offset(plotX(point.x), plotY(y, yMin, yMax))
+                    if (drawing) path.lineTo(offset.x, offset.y) else path.moveTo(offset.x, offset.y)
+                    drawing = true
+                }
+            }
+            drawPath(path, colors[curveIndex % colors.size], style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        if (implicitSegments.isNotEmpty()) {
+            val path = Path()
+            implicitSegments.forEach { segment ->
+                path.moveTo(plotX(segment.startX), plotY(segment.startY, viewport.yMin, viewport.yMax))
+                path.lineTo(plotX(segment.endX), plotY(segment.endY, viewport.yMin, viewport.yMax))
+            }
+            drawPath(path, p.accent, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+        }
+        intersections.forEach { point ->
+            if (point.x in viewport.xMin..viewport.xMax && point.y in yMin..yMax) {
+                val center = Offset(plotX(point.x), plotY(point.y, yMin, yMax))
+                drawCircle(p.keyEquals, 6.dp.toPx(), center)
+                drawCircle(p.key, 2.5.dp.toPx(), center)
             }
         }
-        drawPath(path, p.accent, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
-        selectedPoint?.let { point -> point.y?.let { y ->
-            val center = Offset(plotX(point.x), plotY(y))
-            drawCircle(p.keyEquals, radius = 7.dp.toPx(), center = center)
-            drawCircle(p.onKeyEquals, radius = 3.dp.toPx(), center = center)
-        } }
-    }
-    when {
-        isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
-        !hasValidPoints -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
-        selectedPoint?.y != null -> androidx.compose.animation.AnimatedVisibility(
-            visible = true,
-            enter = androidx.compose.animation.fadeIn(tween(180)) +
-                androidx.compose.animation.expandVertically(tween(180))
-        ) {
-            selectedPoint?.let { point ->
-                point.y?.let { y ->
-                    AnimatedAnswerText(
-                        "x = ${"%.2f".format(Locale.US, point.x)}   y = ${"%.2f".format(Locale.US, y)}",
-                        color = p.accent,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+        selectedPoint?.let { selected ->
+            selected.point.y?.let { y ->
+                if (y in yMin..yMax) {
+                    val center = Offset(plotX(selected.point.x), plotY(y, yMin, yMax))
+                    drawCircle(colors[selected.curveIndex % colors.size], 7.dp.toPx(), center)
+                    drawCircle(p.key, 3.dp.toPx(), center)
                 }
             }
         }
-        else -> Text(tx("graph_hint"), color = p.muted, fontSize = 12.sp)
+    }
+
+    when {
+        isCalculating -> Text(tx("graph_calculating"), color = p.muted, fontSize = 12.sp)
+        graphError != null -> Text(graphError!!, color = p.error, fontSize = 12.sp)
+        graphMode == "Неявный график" && implicitSegments.isEmpty() -> Text("Кривая не найдена в выбранной области.", color = p.muted, fontSize = 12.sp)
+        graphMode == "Неравенство" && regionCells.isEmpty() -> Text("В выбранной области нет ячеек, удовлетворяющих неравенству.", color = p.muted, fontSize = 12.sp)
+        graphMode == "Функции" && curves.isEmpty() -> Text(tx("graph_no_points"), color = p.muted, fontSize = 12.sp)
+        selectedPoint != null && graphMode == "Функции" -> {
+            val selected = selectedPoint!!
+            val y = selected.point.y
+            if (y != null) AnimatedAnswerText(
+                curves[selected.curveIndex].expression + ": x = " +
+                    "%.3f".format(Locale.US, selected.point.x) + ", y = " +
+                    "%.3f".format(Locale.US, y),
+                color = colors[selected.curveIndex % colors.size],
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+    if (graphMode == "Функции" && curves.isNotEmpty()) {
+        Text("Таблица значений: " + curves.first().expression, color = p.muted, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            tableEntries.forEach { (x, y) ->
+                Column(
+                    Modifier.clip(RoundedCornerShape(10.dp)).background(p.key).padding(horizontal = 8.dp, vertical = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("x", color = p.muted, fontSize = 10.sp)
+                    Text("%.2f".format(Locale.US, x), color = p.text, fontSize = 11.sp)
+                    Text("y", color = p.muted, fontSize = 10.sp)
+                    Text(y?.let { "%.3f".format(Locale.US, it) } ?: "—", color = p.text, fontSize = 11.sp)
+                }
+            }
+        }
+        if (curves.size >= 2) {
+            Text("Пересечения первых двух функций", color = p.muted, fontSize = 12.sp)
+            Text(
+                if (intersections.isEmpty()) "Отдельные точки пересечения не найдены (или графики совпадают)."
+                else intersections.joinToString(" · ") {
+                    "(%.3f; %.3f)".format(Locale.US, it.x, it.y)
+                },
+                color = p.text,
+                fontSize = 12.sp,
+                lineHeight = 17.sp
+            )
+        }
     }
 }
+
+
 private fun friendly(error: Throwable, fallback: String): String = when {
     error.message?.contains("Division by zero") == true -> "Деление на ноль"
     error is IllegalArgumentException || error is ArithmeticException -> error.message ?: fallback
@@ -2705,7 +2791,7 @@ private fun friendly(error: Throwable, fallback: String): String = when {
 // ---------------------------------------------------------------- solver
 
 @Composable
-private fun EquationSolverPage() {
+private fun EquationSolverPage(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
     val equationFallback = tx("equation_error")
     var mode by rememberSaveable { mutableStateOf("Уравнение") }
@@ -2718,13 +2804,27 @@ private fun EquationSolverPage() {
     var systemSecond by rememberSaveable { mutableStateOf("x - y = 1") }
     var systemThird by rememberSaveable { mutableStateOf("x + y + z = 6") }
     var expressionToSimplify by rememberSaveable { mutableStateOf("2(x + 3) - x") }
+    var inequalityLeft by rememberSaveable { mutableStateOf("x^2 - 4") }
+    var inequalityRight by rememberSaveable { mutableStateOf("0") }
+    var inequalityRelation by rememberSaveable { mutableStateOf("≤") }
+    var nonlinearFirst by rememberSaveable { mutableStateOf("x^2 + y^2 = 1") }
+    var nonlinearSecond by rememberSaveable { mutableStateOf("x - y = 0") }
+    var isSolvingNumerically by remember { mutableStateOf(false) }
+    val solverScope = rememberCoroutineScope()
 
     PageColumn(tx("solver")) {
-        Segmented(listOf("Уравнение", "Система", "Упростить"), mode) {
-            mode = it
-            answer = null
-            steps = emptyList()
-            error = null
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("Уравнение", "Система", "Неравенство", "Нелинейная система", "Упростить").forEach { option ->
+                Chip(option, mode == option) {
+                    mode = option
+                    answer = null
+                    steps = emptyList()
+                    error = null
+                }
+            }
         }
         if (mode == "Уравнение") {
             Panel {
@@ -2739,7 +2839,7 @@ private fun EquationSolverPage() {
                 }
                 ActionButton(tx("solve")) {
                     runCatching { AlgebraSolver().solve(equation) }
-                        .onSuccess { answer = it.answer; steps = it.steps; error = null }
+                        .onSuccess { answer = it.answer; steps = it.steps; error = null; onCalculationSaved(equation, it.answer, it.steps) }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: equationFallback }
                 }
             }
@@ -2758,12 +2858,12 @@ private fun EquationSolverPage() {
                 ActionButton(displayText("Решить систему")) {
                     val equations = if (systemCount == 2) listOf(systemFirst, systemSecond) else listOf(systemFirst, systemSecond, systemThird)
                     runCatching { LinearSystemSolver().solve(equations) }
-                        .onSuccess { answer = it.answer; steps = it.steps; error = null }
+                        .onSuccess { answer = it.answer; steps = it.steps; error = null; onCalculationSaved(equations.joinToString(" ; "), it.answer, it.steps) }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось решить систему" }
                 }
             }
             Text(displayText("Поддерживаются линейные выражения, скобки, дробные коэффициенты и точные рациональные ответы."), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
-        } else {
+        } else if (mode == "Упростить") {
             Panel {
                 Text(displayText("Упрощение многочленов от одной переменной x (до 4-й степени)."), color = p.muted, fontSize = 12.sp)
                 Field(expressionToSimplify, { expressionToSimplify = it; answer = null; error = null }, "Выражение", Modifier.fillMaxWidth(), numeric = false)
@@ -2774,11 +2874,89 @@ private fun EquationSolverPage() {
                 }
                 ActionButton(displayText("Упростить выражение")) {
                     runCatching { PolynomialSimplifier().simplify(expressionToSimplify) }
-                        .onSuccess { answer = it.expression; steps = it.steps; error = null }
+                        .onSuccess { answer = it.expression; steps = it.steps; error = null; onCalculationSaved(expressionToSimplify, it.expression, it.steps) }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось упростить выражение" }
                 }
             }
             Text(displayText("Поддерживаются точные дробные коэффициенты, скобки, раскрытие произведений и приведение подобных слагаемых. Деление на выражение с x не поддерживается."), color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        } else if (mode == "Неравенство") {
+            Panel {
+                Text("Численное решение неравенств одной переменной", color = p.muted, fontSize = 12.sp)
+                Field(inequalityLeft, { inequalityLeft = it; answer = null; error = null }, "Левая часть", Modifier.fillMaxWidth(), numeric = false)
+                Segmented(listOf("<", "≤", ">", "≥"), inequalityRelation) { inequalityRelation = it; answer = null; error = null }
+                Field(inequalityRight, { inequalityRight = it; answer = null; error = null }, "Правая часть", Modifier.fillMaxWidth(), numeric = false)
+                ActionButton(if (isSolvingNumerically) "Вычисление…" else "Решить неравенство") {
+                    if (!isSolvingNumerically) {
+                        isSolvingNumerically = true
+                        solverScope.launch {
+                            val result = withContext(Dispatchers.Default) {
+                                runCatching {
+                                    InequalitySolver().solve(
+                                        inequalityLeft,
+                                        when (inequalityRelation) { "≤" -> "<="; "≥" -> ">="; else -> inequalityRelation },
+                                        inequalityRight
+                                    )
+                                }
+                            }
+                            result.onSuccess { solution ->
+                                answer = if (solution.intervals.isEmpty()) {
+                                    "На проверенном интервале решений не найдено"
+                                } else {
+                                    "x ∈ " + solution.intervals.joinToString(" ∪ ") { interval ->
+                                        (if (interval.leftIncluded) "[" else "(") +
+                                            "%.4f".format(Locale.US, interval.left) + "; " +
+                                            "%.4f".format(Locale.US, interval.right) +
+                                            (if (interval.rightIncluded) "]" else ")")
+                                    }
+                                }
+                                steps = solution.explanation + listOf(
+                                    "Нули: " + solution.criticalPoints.joinToString { "%.5f".format(Locale.US, it) }.ifBlank { "не обнаружены" },
+                                    "Точки исключения ОДЗ: " + solution.domainExclusions.joinToString { "%.5f".format(Locale.US, it) }.ifBlank { "не обнаружены" }
+                                )
+                                error = null
+                                onCalculationSaved("$inequalityLeft $inequalityRelation $inequalityRight", answer.orEmpty(), steps)
+                            }.onFailure {
+                                answer = null
+                                steps = emptyList()
+                                error = it.message ?: "Не удалось решить неравенство"
+                            }
+                            isSolvingNumerically = false
+                        }
+                    }
+                }
+            }
+            Text("Метод численный: область поиска ограничена от −100 до 100. Для доказательного решения рациональных и квадратных неравенств потребуется отдельная точная процедура.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
+        } else {
+            Panel {
+                Text("Две нелинейные системы с неизвестными x и y", color = p.muted, fontSize = 12.sp)
+                Field(nonlinearFirst, { nonlinearFirst = it; answer = null; error = null }, "Уравнение 1", Modifier.fillMaxWidth(), numeric = false)
+                Field(nonlinearSecond, { nonlinearSecond = it; answer = null; error = null }, "Уравнение 2", Modifier.fillMaxWidth(), numeric = false)
+                ActionButton(if (isSolvingNumerically) "Вычисление…" else "Найти решения") {
+                    if (!isSolvingNumerically) {
+                        isSolvingNumerically = true
+                        solverScope.launch {
+                            val result = withContext(Dispatchers.Default) {
+                                runCatching { NonlinearSystemSolver().solve(nonlinearFirst, nonlinearSecond) }
+                            }
+                            result.onSuccess { solution ->
+                                answer = if (solution.roots.isEmpty()) "На выбранной области решения не найдены" else
+                                    solution.roots.joinToString("; ") {
+                                        "(x = %.5f; y = %.5f)".format(Locale.US, it.x, it.y)
+                                    }
+                                steps = solution.explanation + listOf("Проверено начальных приближений: " + solution.searchedSeeds)
+                                error = null
+                                onCalculationSaved("$nonlinearFirst ; $nonlinearSecond", answer.orEmpty(), steps)
+                            }.onFailure {
+                                answer = null
+                                steps = emptyList()
+                                error = it.message ?: "Не удалось решить систему"
+                            }
+                            isSolvingNumerically = false
+                        }
+                    }
+                }
+            }
+            Text("Используется метод Ньютона с несколькими начальными приближениями в области [−10; 10] × [−10; 10]. Возможны пропущенные решения; результат нужно проверять.", color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
         }
         androidx.compose.animation.AnimatedVisibility(
             visible = error != null,
@@ -2813,9 +2991,8 @@ private fun EquationSolverPage() {
 @Composable
 private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
     val p = LocalPalette.current
-    val glass = LocalBottomNavGlassSettings.current
     val uiStyle = LocalMathFlowUiStyle.current
-    // Compose only visible history rows instead of building the full list at once.
+    var selectedEntry by remember { mutableStateOf<HistoryEntry?>(null) }
     LazyColumn(
         modifier = Modifier.fillMaxSize()
             .padding(horizontal = 14.dp)
@@ -2831,46 +3008,61 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
             }
         } else {
             items(entries, key = { it.id }) { entry ->
-                var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
                 Surface(
-                    modifier = Modifier.fillMaxWidth().then(
-                        if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.18f), RoundedCornerShape(uiStyle.cardRadiusDp.dp))
-                        else Modifier
-                    ),
+                    modifier = Modifier.fillMaxWidth()
+                        .mathFlowClickable { selectedEntry = entry },
                     shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
-                    color = if (uiStyle.glassSurface) p.surface.copy(alpha = glass.matteOpacity) else p.surface.copy(alpha = uiStyle.surfaceAlpha),
-                    shadowElevation = if (uiStyle.glassSurface) (1f + glass.matteDepth * 3f + glass.matteShadow * 2f).dp else uiStyle.elevationDp.dp
+                    color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
+                    shadowElevation = uiStyle.elevationDp.dp
                 ) {
                     Column(
-                        Modifier.fillMaxWidth()
-                            .mathFlowClickable(enabled = entry.steps.isNotEmpty()) { expanded = !expanded }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(entry.expression, fontSize = 15.sp, color = p.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text("= ${MathTextLocalization.translate(entry.result, LocalLanguage.current)}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
-                        Text(
-                            entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) tx("hide_solution") else tx("show_solution")) else "",
-                            fontSize = 12.sp, color = p.muted
-                        )
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = expanded,
-                            enter = androidx.compose.animation.fadeIn(tween(180)) +
-                                androidx.compose.animation.expandVertically(tween(180)),
-                            exit = androidx.compose.animation.fadeOut(tween(110)) +
-                                androidx.compose.animation.shrinkVertically(tween(110))
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                entry.steps.forEachIndexed { index, step ->
-                                    Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
-                                }
-                            }
-                        }
+                        Text("= ${MathTextLocalization.translate(entry.result, LocalLanguage.current)}",
+                            fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
+                        Text(entry.dateLabel + " · " + tx("show_solution"), fontSize = 12.sp, color = p.muted)
                     }
                 }
             }
             item(key = "clear_history") {
                 MathFlowTextButton(tx("clear_history"), p.accent, modifier = Modifier.fillMaxWidth(), onClick = onClear)
+            }
+        }
+    }
+
+    selectedEntry?.let { entry ->
+        Dialog(onDismissRequest = { selectedEntry = null }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 620.dp),
+                shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
+                color = p.surface,
+                contentColor = p.text
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(tx("history"), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(entry.expression, color = p.muted, fontSize = 15.sp, lineHeight = 21.sp)
+                    Text("= ${MathTextLocalization.translate(entry.result, LocalLanguage.current)}",
+                        color = p.accent, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                    Text(entry.dateLabel, color = p.muted, fontSize = 12.sp)
+                    HorizontalDivider(color = p.key)
+                    Text(tx("steps"), color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    if (entry.steps.isEmpty()) {
+                        Text("Для этой операции пошаговое решение не предусмотрено.", color = p.muted, fontSize = 13.sp)
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            entry.steps.forEachIndexed { index, step ->
+                                Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}",
+                                    color = p.text, fontSize = 14.sp, lineHeight = 20.sp)
+                            }
+                        }
+                    }
+                    ActionButton(tx("cancel")) { selectedEntry = null }
+                }
             }
         }
     }
@@ -2888,38 +3080,55 @@ private data class HistoryEntry(
 }
 
 private object HistoryStore {
-    private const val PREFS = "mathflow_history"
-    private const val KEY = "entries"
-    private const val LIMIT = 100
+    private const val LEGACY_PREFS = "mathflow_history"
+    private const val LEGACY_KEY = "entries"
+    private const val FILE_NAME = "mathflow_history.json"
 
     fun load(context: Context): List<HistoryEntry> {
-        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]") ?: "[]"
-        return runCatching {
-            val array = JSONArray(raw)
-            (0 until array.length()).mapNotNull { index ->
-                val item = array.optJSONObject(index) ?: return@mapNotNull null
-                val stepsJson = item.optJSONArray("steps") ?: JSONArray()
-                HistoryEntry(
-                    id = item.optLong("id"),
-                    expression = item.optString("expression"),
-                    result = item.optString("result"),
-                    timestamp = item.optLong("timestamp"),
-                    steps = (0 until stepsJson.length()).map { stepsJson.optString(it) }
-                )
-            }.sortedByDescending { it.timestamp }
-        }.getOrDefault(emptyList())
+        val file = File(context.filesDir, FILE_NAME)
+        val atomic = android.util.AtomicFile(file)
+        val stored = runCatching {
+            atomic.openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
+        }.getOrNull()
+        if (stored != null) return parse(stored)
+
+        val legacyPrefs = context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE)
+        val legacy = legacyPrefs.getString(LEGACY_KEY, null)
+        val migrated = legacy?.let(::parse).orEmpty()
+        if (migrated.isNotEmpty()) {
+            save(context, migrated)
+            legacyPrefs.edit().remove(LEGACY_KEY).apply()
+        }
+        return migrated
     }
 
     fun add(context: Context, expression: String, result: String, steps: List<String>): List<HistoryEntry> {
         val now = System.currentTimeMillis()
-        val entries = (listOf(HistoryEntry(now, expression, result, now, steps)) + load(context)).take(LIMIT)
+        val id = now * 1000L + (System.nanoTime() % 1000L)
+        val entries = listOf(HistoryEntry(id, expression, result, now, steps)) + load(context)
         save(context, entries)
         return entries
     }
 
     fun clear(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+        android.util.AtomicFile(File(context.filesDir, FILE_NAME)).delete()
+        context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE).edit().remove(LEGACY_KEY).apply()
     }
+
+    private fun parse(raw: String): List<HistoryEntry> = runCatching {
+        val array = JSONArray(raw)
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val stepsJson = item.optJSONArray("steps") ?: JSONArray()
+            HistoryEntry(
+                id = item.optLong("id"),
+                expression = item.optString("expression"),
+                result = item.optString("result"),
+                timestamp = item.optLong("timestamp"),
+                steps = (0 until stepsJson.length()).map { stepsJson.optString(it) }
+            )
+        }.sortedByDescending { it.timestamp }
+    }.getOrDefault(emptyList())
 
     private fun save(context: Context, entries: List<HistoryEntry>) {
         val array = JSONArray()
@@ -2935,7 +3144,16 @@ private object HistoryStore {
                     .put("steps", stepArray)
             )
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, array.toString()).apply()
+        val target = File(context.filesDir, FILE_NAME)
+        val atomic = android.util.AtomicFile(target)
+        val stream = atomic.startWrite()
+        try {
+            stream.write(array.toString().toByteArray(Charsets.UTF_8))
+            atomic.finishWrite(stream)
+        } catch (error: Throwable) {
+            atomic.failWrite(stream)
+            throw error
+        }
     }
 }
 
@@ -2959,7 +3177,23 @@ private val AppIconOptions = listOf(
     AppIconOption("sunset", "Sunset", "Градиент заката с белым фирменным знаком.", R.drawable.launcher_sunset, Color(0xFFF04A66)),
     AppIconOption("rose", "Rose", "Нежно-розовый фон и малиновый знак.", R.drawable.launcher_rose, Color(0xFFF4A9D1)),
     AppIconOption("midnight", "Midnight", "Глубокий ночной фон и лавандовый знак.", R.drawable.launcher_midnight, Color(0xFF19002F)),
-    AppIconOption("graphite", "Graphite", "Графитовый фон и светлый холодный знак.", R.drawable.launcher_graphite, Color(0xFF292B3A))
+    AppIconOption("graphite", "Graphite", "Графитовый фон и светлый холодный знак.", R.drawable.launcher_graphite, Color(0xFF292B3A)),
+    AppIconOption("gray", "Gray", "Нейтральный графит.", R.drawable.launcher_gray, Color(0xFF383F4A)),
+    AppIconOption("transparent", "Transparent", "Холодный сине-стальной знак.", R.drawable.launcher_transparent, Color(0xFF17405D)),
+    AppIconOption("arctic", "Arctic", "Ледяной голубой фон.", R.drawable.launcher_arctic, Color(0xFF087FAE)),
+    AppIconOption("cobalt", "Cobalt", "Электрический кобальт.", R.drawable.launcher_cobalt, Color(0xFF174CB0)),
+    AppIconOption("crimson", "Crimson", "Рубиновый оттенок.", R.drawable.launcher_crimson, Color(0xFF8C1D3B)),
+    AppIconOption("amber", "Amber", "Янтарный фон.", R.drawable.launcher_amber, Color(0xFF95600F)),
+    AppIconOption("teal", "Teal", "Морская бирюза.", R.drawable.launcher_teal, Color(0xFF08717B)),
+    AppIconOption("lavender", "Lavender", "Лавандовый фон.", R.drawable.launcher_lavender, Color(0xFF8050D8)),
+    AppIconOption("mint", "Mint", "Мятный зелёный.", R.drawable.launcher_mint, Color(0xFF16865B)),
+    AppIconOption("copper", "Copper", "Медный оттенок.", R.drawable.launcher_copper, Color(0xFF99502E)),
+    AppIconOption("aurora", "Aurora", "Цвет северного сияния.", R.drawable.launcher_aurora, Color(0xFF126B78)),
+    AppIconOption("cherry", "Cherry", "Вишнёвый оттенок.", R.drawable.launcher_cherry, Color(0xFFBF2345)),
+    AppIconOption("sand", "Sand", "Песочно-терракотовый.", R.drawable.launcher_sand, Color(0xFF9B5A22)),
+    AppIconOption("neon", "Neon", "Неоновый зелёный.", R.drawable.launcher_neon, Color(0xFF365047)),
+    AppIconOption("black_white", "Black & White", "Белый знак на чёрном фоне.", R.drawable.launcher_black_white, Color(0xFF000000)),
+    AppIconOption("white_black", "White & Black", "Белый фон и чёрная тема.", R.drawable.launcher_white_black, Color(0xFFFFFFFF))
 )
 
 private fun setLauncherIcon(context: Context, iconId: String) {
@@ -2968,7 +3202,9 @@ private fun setLauncherIcon(context: Context, iconId: String) {
     val changes = AppIconOptions.mapNotNull { option ->
         val component = android.content.ComponentName(
             context,
-            "${context.packageName}.Launcher${option.id.replaceFirstChar { it.uppercase(Locale.ROOT) }}"
+            "${context.packageName}.Launcher" + option.id.split('_').joinToString("") { part ->
+                part.replaceFirstChar { it.uppercase(Locale.ROOT) }
+            }
         )
         val desiredState = if (option.id == selected.id) {
             android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
@@ -3018,8 +3254,70 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 }
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
+private const val MATHFLOW_CONFIG_MIME_TYPE = "application/vnd.mathflow.config"
+private val CONFIG_INTERNAL_PREF_KEYS = setOf("mathflow_config_profiles", "mathflow_active_config", "welcome_version")
 
-private enum class SettingsSection { MAIN, DISPLAY, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, ANIMATIONS, NAVIGATION, FONTS, CONFIGS }
+private fun encodeConfigPreferences(context: Context): JSONObject {
+    val encoded = JSONObject()
+    val prefs = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE)
+    prefs.all.forEach { (key, value) ->
+        if (key in CONFIG_INTERNAL_PREF_KEYS) return@forEach
+        val entry = when (value) {
+            is String -> JSONObject().put("type", "string").put("value", value)
+            is Boolean -> JSONObject().put("type", "boolean").put("value", value)
+            is Int -> JSONObject().put("type", "int").put("value", value)
+            is Long -> JSONObject().put("type", "long").put("value", value)
+            is Float -> JSONObject().put("type", "float").put("value", value.toDouble())
+            is Set<*> -> JSONObject().put("type", "string_set").put("value", JSONArray().apply {
+                value.filterIsInstance<String>().forEach { item -> put(item) }
+            })
+            else -> null
+        }
+        if (entry != null) encoded.put(key, entry)
+    }
+    // Persist these state-backed settings even when the user still uses their defaults.
+    encoded.put("settings_corner_radius_dp",
+        JSONObject().put("type", "int").put("value", prefs.getInt("settings_corner_radius_dp", 18)))
+    encoded.put("intro_enabled",
+        JSONObject().put("type", "boolean").put("value", prefs.getBoolean("intro_enabled", true)))
+    encoded.put("intro_speed",
+        JSONObject().put("type", "float").put("value", prefs.getFloat("intro_speed", 1f).toDouble()))
+    encoded.put("calculator_angle_mode",
+        JSONObject().put("type", "string").put("value", prefs.getString("calculator_angle_mode", "degrees")))
+    return encoded
+}
+
+private fun withConfigPreferences(context: Context, snapshot: JSONObject): JSONObject =
+    JSONObject(snapshot.toString()).put("preferences", encodeConfigPreferences(context))
+
+private fun restoreConfigPreferences(context: Context, snapshot: JSONObject, fontPath: String?) {
+    val prefs = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE)
+    val encoded = snapshot.optJSONObject("preferences") ?: return
+    if (encoded.length() == 0) return
+    val editor = prefs.edit()
+    prefs.all.keys.filterNot { it in CONFIG_INTERNAL_PREF_KEYS }.forEach { editor.remove(it) }
+    val keys = encoded.keys()
+    while (keys.hasNext()) {
+        val key = keys.next()
+        if (key in CONFIG_INTERNAL_PREF_KEYS) continue
+        val entry = encoded.optJSONObject(key) ?: continue
+        when (entry.optString("type")) {
+            "string" -> editor.putString(key, entry.optString("value"))
+            "boolean" -> editor.putBoolean(key, entry.optBoolean("value"))
+            "int" -> editor.putInt(key, entry.optInt("value"))
+            "long" -> editor.putLong(key, entry.optLong("value"))
+            "float" -> editor.putFloat(key, entry.optDouble("value").toFloat())
+            "string_set" -> {
+                val values = entry.optJSONArray("value") ?: JSONArray()
+                editor.putStringSet(key, (0 until values.length()).map { values.optString(it) }.toSet())
+            }
+        }
+    }
+    if (fontPath == null) editor.remove("font_path") else editor.putString("font_path", fontPath)
+    editor.putBoolean("font_selection_initialized", true).apply()
+}
+
+private enum class SettingsSection { MAIN, DISPLAY, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, INTRO, ANIMATIONS, NAVIGATION, FONTS, CONFIGS }
 
 private fun makeConfigSnapshot(
     theme: String, icon: String, fontScale: Float, fontPath: String?, language: String,
@@ -3028,7 +3326,7 @@ private fun makeConfigSnapshot(
     uiStyle: String = MathFlowUiStyle.MATERIAL_YOU.id,
     iconPack: String = "material"
 ): JSONObject = JSONObject()
-    .put("schemaVersion", 6)
+    .put("schemaVersion", 7)
     .put("theme", theme)
     .put("uiStyle", MathFlowUiStyle.fromId(uiStyle).id)
     .put("iconPack", AppIconPack.fromId(iconPack).id)
@@ -3063,8 +3361,12 @@ private fun makeConfigSnapshot(
     .put("matteHighlight", nav.matteHighlight.toDouble())
     .put("matteShadow", nav.matteShadow.toDouble())
 
+private fun importedPreferencesAngleMode(config: JSONObject, fallback: String): String =
+    config.optJSONObject("preferences")?.optJSONObject("calculator_angle_mode")
+        ?.optString("value")?.takeIf { it in setOf("degrees", "radians") } ?: fallback
+
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
-    require(input.optInt("schemaVersion", -1) in 1..6) { "Unsupported settings schema" }
+    require(input.optInt("schemaVersion", -1) in 1..7) { "Unsupported settings schema" }
     val iconPack = AppIconPack.fromId(input.optString("iconPack", "material")).id
     val theme = input.optString("theme", "vanilla")
     val uiStyle = MathFlowUiStyle.fromId(input.optString("uiStyle", "material_you")).id
@@ -3111,8 +3413,10 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
         input.optDouble("matteHighlight", 0.58).toFloat(),
         input.optDouble("matteShadow", 0.32).toFloat()
     ).normalized()
-    return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
+    val validated = makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
         language, measurement, key, nav, resultFormat, uiStyle, iconPack)
+    input.optJSONObject("preferences")?.let { validated.put("preferences", JSONObject(it.toString())) }
+    return validated
 }
 
 @Composable
@@ -3147,6 +3451,10 @@ private fun SettingsPage(
     onLanguageSelected: (String) -> Unit,
     selectedMeasurementSystem: String,
     onMeasurementSystemSelected: (String) -> Unit,
+    introEnabled: Boolean,
+    introSpeed: Float,
+    onIntroEnabledChange: (Boolean) -> Unit,
+    onIntroSpeedChange: (Float) -> Unit,
     appliedAnimationSettings: KeyAnimationSettings,
     onAnimationSettingsApplied: (KeyAnimationSettings) -> Unit,
     appliedNavAnimationSettings: BottomNavAnimationSettings,
@@ -3176,6 +3484,7 @@ private fun SettingsPage(
     var pendingAnimationSettings by remember(appliedAnimationSettings) { mutableStateOf(appliedAnimationSettings) }
     var pendingNavAnimationSettings by remember(appliedNavAnimationSettings) { mutableStateOf(appliedNavAnimationSettings) }
     var navPreviewPage by rememberSaveable { mutableStateOf(Page.HOME) }
+    val navPreviewBackdrop = rememberLayerBackdrop()
     var fontMessage by rememberSaveable { mutableStateOf<String?>(null) }
     var savedFonts by remember {
         mutableStateOf<List<Pair<String, String>>>(
@@ -3212,7 +3521,7 @@ private fun SettingsPage(
             selectedConfigId = configProfiles.firstOrNull()?.id.orEmpty()
         }
     }
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(MATHFLOW_CONFIG_MIME_TYPE)) { uri ->
         val profile = configProfiles.firstOrNull { it.id == selectedConfigId }
         if (uri != null && profile != null) {
             ioScope.launch {
@@ -3379,6 +3688,12 @@ private fun SettingsPage(
                     SettingsEntry("Анимация кнопок", tx("animation_entry_subtitle"), AppGlyph.SETTINGS) {
                         pendingAnimationSettings = appliedAnimationSettings; section = SettingsSection.ANIMATIONS
                     }
+                    HorizontalDivider(color = p.key.copy(alpha = 0.55f))
+                    SettingsEntry(
+                        "Интро приложения",
+                        if (introEnabled) "Включено · ${introSpeed}×" else "Выключено",
+                        AppGlyph.TUNE
+                    ) { section = SettingsSection.INTRO }
                 }
                 Panel {
                     Text("ПЕРСОНАЛИЗАЦИЯ ПРИЛОЖЕНИЯ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
@@ -3482,19 +3797,29 @@ private fun SettingsPage(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(tx("icon_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 }
-                val baseIcons = AppIconOptions.filter { it.id in setOf("vanilla", "black", "white") }
-                val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
+                val baseIcons = AppIconOptions.filter { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
+                val colorIcons = AppIconOptions.filterNot { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    baseIcons.forEach { option ->
-                        IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
-                            Modifier.fillMaxWidth()) { pendingIconId = option.id }
+                    baseIcons.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                                    Modifier.weight(1f)) { pendingIconId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(displayText("ЦВЕТОВЫЕ ИКОНКИ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    colorIcons.forEach { option ->
-                        IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
-                            Modifier.fillMaxWidth()) { pendingIconId = option.id }
+                    colorIcons.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                IconOptionCard(option, pendingIconId == option.id, selectedIconId == option.id,
+                                    Modifier.weight(1f)) { pendingIconId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
                 val selected = AppIconOptions.firstOrNull { it.id == pendingIconId } ?: AppIconOptions.first()
@@ -3552,6 +3877,59 @@ private fun SettingsPage(
                 }
             }
 
+            SettingsSection.INTRO -> PageColumn("Интро приложения") {
+                Text(
+                    "Настрой заставку MathFlow, которая появляется при каждом полноценном запуске приложения.",
+                    color = p.muted, fontSize = 13.sp, lineHeight = 18.sp
+                )
+                Panel {
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(
+                            value = introEnabled,
+                            role = Role.Switch,
+                            onValueChange = onIntroEnabledChange
+                        ).padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text("Показывать интро", color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                if (introEnabled) "Заставка включена" else "Заставка пропускается",
+                                color = p.muted, fontSize = 12.sp
+                            )
+                        }
+                        Switch(checked = introEnabled, onCheckedChange = null)
+                    }
+                }
+                Panel {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Скорость анимации", color = p.text, fontSize = 14.sp)
+                        Text("${"%.1f".format(Locale.ROOT, introSpeed)}×", color = p.accent, fontSize = 14.sp)
+                    }
+                    Slider(
+                        value = introSpeed,
+                        onValueChange = { onIntroSpeedChange((it * 10f).roundToInt() / 10f) },
+                        enabled = introEnabled,
+                        valueRange = 0.5f..2f,
+                        steps = 14,
+                        colors = SliderDefaults.colors(
+                            thumbColor = p.accent, activeTrackColor = p.accent,
+                            inactiveTrackColor = p.key, activeTickColor = Color.Transparent,
+                            inactiveTickColor = Color.Transparent
+                        )
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("0,5× · Медленно", color = p.muted, fontSize = 11.sp)
+                        Text("2,0× · Быстро", color = p.muted, fontSize = 11.sp)
+                    }
+                    Text(
+                        "Скорость меняет все фазы анимации пропорционально. Изменения сохраняются сразу.",
+                        color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
+                    )
+                }
+            }
+
             SettingsSection.ANIMATIONS -> PageColumn(tx("animations")) {
                 Text(tx("animation_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
                 KeyAnimationStyle.values().forEach { style ->
@@ -3560,7 +3938,7 @@ private fun SettingsPage(
                     Column(
                         Modifier.fillMaxWidth().clip(shape)
                             .background(if (selected) p.navActive else p.surface)
-                            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                            .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else if (!p.dark) Color(0xFF777777) else p.key, shape)
                             .mathFlowClickable { pendingAnimationSettings = pendingAnimationSettings.copy(style = style) }
                             .padding(horizontal = 15.dp, vertical = 13.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -3715,56 +4093,25 @@ private fun SettingsPage(
                     }
                 }
                 Panel {
-                    Text("МАТЕРИАЛ ПАНЕЛИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    Text("Материал нижней панели", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    BottomNavSurfaceMaterial.entries.forEach { material ->
-                        val selected = pendingNavAnimationSettings.surfaceMaterial == material
-                        Column(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
-                                .background(if (selected) p.navActive else p.surface)
-                                .border(1.dp, if (selected) p.accent else p.key, RoundedCornerShape(16.dp))
-                                .mathFlowClickable {
-                                    pendingNavAnimationSettings = pendingNavAnimationSettings.copy(surfaceMaterial = material)
-                                }
-                                .padding(13.dp),
-                            verticalArrangement = Arrangement.spacedBy(3.dp)
-                        ) {
-                            Text(material.title, color = if (selected) p.accent else p.text,
-                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Text(material.description, color = p.muted, fontSize = 11.sp, lineHeight = 15.sp)
-                        }
-                    }
+                    Text("СТИЛЬ ПАНЕЛИ НАВИГАЦИИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text(
+                        when {
+                            uiStyle.liquidGlassNavigation ->
+                                "Liquid Glass применяется к панели навигации и движущейся капле. Остальные панели сохраняют обычное оформление."
+                            else ->
+                                "Панель и индикатор используют оформление выбранного стиля: ${uiStyle.title}."
+                        },
+                        color = p.muted, fontSize = 12.sp, lineHeight = 17.sp
+                    )
                 }
                 Panel {
-                    Text("МАТОВЫЕ ПОВЕРХНОСТИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    Text("Матовое стекло · общие поверхности", color = p.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Эти параметры управляют непрозрачностью, глубиной, бликами и тенями матовых поверхностей. Капля на панели настраивается отдельно.",
+                    Text("КОНТУР ОБЫЧНОЙ ПАНЕЛИ", color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+                    Text("Настройка влияет только на контур стандартной панели навигации; Liquid Glass-капля использует собственные параметры RX.",
                         color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
-                    Text("Непрозрачность: ${(pendingNavAnimationSettings.matteOpacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
-                    Slider(
-                        value = pendingNavAnimationSettings.matteOpacity,
-                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteOpacity = it) },
-                        valueRange = 0.25f..0.96f,
-                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
-                    )
-                    Text("Глубина: ${(pendingNavAnimationSettings.matteDepth * 100).toInt()}%", color = p.text, fontSize = 13.sp)
-                    Slider(
-                        value = pendingNavAnimationSettings.matteDepth,
-                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteDepth = it) },
-                        valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
-                    )
-                    Text("Блики: ${(pendingNavAnimationSettings.matteHighlight * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("Выраженность контура: ${(pendingNavAnimationSettings.matteHighlight * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.matteHighlight,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteHighlight = it) },
-                        valueRange = 0f..1f,
-                        colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
-                    )
-                    Text("Тени: ${(pendingNavAnimationSettings.matteShadow * 100).toInt()}%", color = p.text, fontSize = 13.sp)
-                    Slider(
-                        value = pendingNavAnimationSettings.matteShadow,
-                        onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(matteShadow = it) },
                         valueRange = 0f..1f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
@@ -3777,7 +4124,7 @@ private fun SettingsPage(
                         Column(
                             Modifier.fillMaxWidth().clip(shape)
                                 .background(if (selected) p.navActive else p.surface)
-                                .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else p.key, shape)
+                                .border(if (selected) 1.5.dp else 1.dp, if (selected) p.accent else if (!p.dark) Color(0xFF777777) else p.key, shape)
                                 .mathFlowClickable {
                                     pendingNavAnimationSettings = pendingNavAnimationSettings.copy(style = style)
                                 }
@@ -3796,15 +4143,23 @@ private fun SettingsPage(
                         Text(tx("nav_preview"), color = p.muted, fontSize = 13.sp)
                         Box(
                             Modifier.fillMaxWidth().height(80.dp)
-                                .clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp))
-                                .background(p.background),
+                                .clip(RoundedCornerShape((LocalSettingsCornerRadius.current ?: uiStyle.controlRadiusDp).dp)),
                             contentAlignment = Alignment.Center
                         ) {
+                            // Capture only the preview's static background. The glass
+                            // navigation is a sibling and never samples itself.
+                            Box(
+                                Modifier.matchParentSize()
+                                    .layerBackdrop(navPreviewBackdrop)
+                                    .background(p.background)
+                            )
                             BottomNav(
                                 navPreviewPage,
                                 pendingNavAnimationSettings,
-                                backdrop = null,
-                                preview = true
+                                backdrop = navPreviewBackdrop,
+                                preview = true,
+                                 liquidGlassEnabled = MathFlowUiStyle.fromId(pendingUiStyleId).liquidGlassNavigation,
+                                liquidGlassPillEnabled = MathFlowUiStyle.fromId(pendingUiStyleId).liquidGlassPill
                             ) { navPreviewPage = it }
                         }
                     }
@@ -3815,7 +4170,10 @@ private fun SettingsPage(
                         valueRange = 100f..1000f,
                         colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key)
                     )
-                    Text("${if (uiStyle.glassSurface) "Эластичность капли" else tx("animation_intensity")}: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text(
+                        "Интенсивность анимации: ${(pendingNavAnimationSettings.intensity * 100).toInt()}%",
+                        color = p.text, fontSize = 13.sp
+                    )
                     Slider(
                         value = pendingNavAnimationSettings.intensity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(intensity = it) },
@@ -3841,7 +4199,7 @@ private fun SettingsPage(
                     Slider(value = pendingNavAnimationSettings.highlightStrength, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(highlightStrength = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
                     Text("Тень: ${(pendingNavAnimationSettings.shadowStrength * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(value = pendingNavAnimationSettings.shadowStrength, onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(shadowStrength = it) }, valueRange = 0f..1f, colors = SliderDefaults.colors(thumbColor = p.accent, activeTrackColor = p.accent, inactiveTrackColor = p.key))
-                    Text("${if (uiStyle.glassSurface) "Прозрачность стекла" else tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
+                    Text("${tx("nav_indicator_opacity")}: ${(pendingNavAnimationSettings.opacity * 100).toInt()}%", color = p.text, fontSize = 13.sp)
                     Slider(
                         value = pendingNavAnimationSettings.opacity,
                         onValueChange = { pendingNavAnimationSettings = pendingNavAnimationSettings.copy(opacity = it) },
@@ -3946,7 +4304,7 @@ private fun SettingsPage(
                         }
                     }
                     ActionButton(tx("import_profile")) {
-                        importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                        importLauncher.launch(arrayOf(MATHFLOW_CONFIG_MIME_TYPE, "application/octet-stream", "*/*"))
                     }
                 }
                 if (configProfiles.isEmpty()) {
@@ -4096,79 +4454,85 @@ private fun SettingsPage(
             }
 
             SettingsSection.STYLES -> PageColumn("Стиль интерфейса") {
-                Text("Выберите визуальное оформление всего приложения. Цветовая тема останется независимой.", color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
-                MathFlowUiStyle.entries.forEach { style ->
-                    val selected = pendingUiStyleId == style.id
-                    val applied = selectedUiStyleId == style.id
-                    val shape = RoundedCornerShape(style.cardRadiusDp.dp)
-                    Panel {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(style.title, color = p.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                Text(style.description, color = p.muted, fontSize = 12.sp, lineHeight = 17.sp)
-                            }
-                            if (selected) AppIcon(AppGlyph.CHECK, contentDescription = "Выбрано", tint = p.accent)
-                        }
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(style.cardRadiusDp.dp))
-                                .background(p.background).padding(10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                Modifier.weight(1f).height(38.dp).clip(shape)
-                                    .background(p.surface.copy(alpha = style.surfaceAlpha))
-                                    .border(1.dp, p.text.copy(alpha = style.outlineAlpha.coerceAtMost(0.45f)), shape)
-                            )
-                            Box(
-                                Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(style.buttonRadiusDp.dp))
-                                    .background(p.keyEquals),
-                                contentAlignment = Alignment.Center
+                Text("Компактный предпросмотр геометрии и поверхностей. Цветовая тема остаётся независимой.",
+                    color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
+                MathFlowUiStyle.entries.chunked(2).forEach { styleRow ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        styleRow.forEach { style ->
+                            val selected = pendingUiStyleId == style.id
+                            val applied = selectedUiStyleId == style.id
+                            val shape = RoundedCornerShape(style.cardRadiusDp.dp)
+                            Column(
+                                Modifier.weight(1f)
+                                    .clip(shape)
+                                    .background(if (selected) p.navActive else p.surface.copy(alpha = style.surfaceAlpha))
+                                    .border(
+                                        if (selected) 1.7.dp else 1.dp,
+                                        if (selected) p.accent else if (!p.dark) Color(0xFF777777) else p.key,
+                                        shape
+                                    )
+                                    .mathFlowClickable { pendingUiStyleId = style.id }
+                                    .padding(9.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("123", color = p.onKeyEquals, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                Text(style.title, color = p.text, fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(style.description, color = p.muted, fontSize = 10.sp,
+                                    lineHeight = 13.sp, maxLines = 2, minLines = 2, overflow = TextOverflow.Ellipsis)
+                                Row(
+                                    Modifier.fillMaxWidth().height(30.dp)
+                                        .clip(RoundedCornerShape(style.controlRadiusDp.dp))
+                                        .background(p.background).padding(4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box(Modifier.weight(1f).fillMaxHeight()
+                                        .clip(RoundedCornerShape((style.cardRadiusDp / 2).dp))
+                                        .background(p.surface)
+                                        .border(1.dp, p.text.copy(alpha = style.outlineAlpha.coerceAtMost(0.45f)),
+                                            RoundedCornerShape((style.cardRadiusDp / 2).dp)))
+                                    Box(Modifier.weight(1f).fillMaxHeight()
+                                        .clip(RoundedCornerShape(style.buttonRadiusDp.dp))
+                                        .background(p.keyEquals), contentAlignment = Alignment.Center) {
+                                        Text("123", color = p.onKeyEquals, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                                Text(
+                                    when { applied -> "Применён"; selected -> "Выбран"; else -> "Выбрать" },
+                                    color = if (selected) p.accent else p.muted,
+                                    fontSize = 10.sp, fontWeight = FontWeight.Medium
+                                )
                             }
                         }
-                        Text(
-                            when {
-                                applied -> "Применён"
-                                selected -> "Выбран"
-                                else -> "Нажмите, чтобы выбрать"
-                            },
-                            color = if (selected) p.accent else p.muted,
-                            fontSize = 11.sp
-                        )
-                        Box(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(style.buttonRadiusDp.dp))
-                                .background(if (selected) p.navActive else p.key)
-                                .mathFlowClickable { pendingUiStyleId = style.id }
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(if (selected) "Выбрано" else "Выбрать стиль", color = p.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                        }
+                        if (styleRow.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
             }
 
             SettingsSection.THEMES -> PageColumn(tx("themes")) {
                 Text(tx("theme_hint"), color = p.muted, fontSize = 13.sp, lineHeight = 18.sp)
-                val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white") }
-                val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white") }
+                val baseThemes = ThemeOptions.filter { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
+                val colorThemes = ThemeOptions.filterNot { it.id in setOf("vanilla", "black", "white", "black_white", "white_black") }
                 Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text(displayText("ОСНОВНЫЕ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    baseThemes.forEach { option ->
-                        ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
-                            Modifier.fillMaxWidth()) { pendingThemeId = option.id }
+                    baseThemes.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                                    Modifier.weight(1f)) { pendingThemeId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                     Spacer(Modifier.height(3.dp))
                     Text(displayText("ЦВЕТОВЫЕ ТЕМЫ"), color = p.muted, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
-                    colorThemes.forEach { option ->
-                        ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
-                            Modifier.fillMaxWidth()) { pendingThemeId = option.id }
+                    colorThemes.chunked(2).forEach { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { option ->
+                                ThemeOptionCard(option, pendingThemeId == option.id, selectedThemeId == option.id,
+                                    Modifier.weight(1f)) { pendingThemeId = option.id }
+                            }
+                            if (row.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
                 }
                 val selected = themeFor(pendingThemeId)
@@ -4193,7 +4557,7 @@ private fun SettingsPage(
         visible = hasPendingChanges,
         // Settings content already sits above the app's bottom navigation.
         // Do not apply system-bar insets a second time or push the action below the viewport.
-        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 116.dp),
         enter = androidx.compose.animation.fadeIn(tween(170)) +
             androidx.compose.animation.slideInVertically(tween(240, easing = FastOutSlowInEasing)) { it },
         exit = androidx.compose.animation.fadeOut(tween(120)) +
@@ -4309,7 +4673,6 @@ private fun SettingsEntry(
 ) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val settingsRadius = LocalSettingsCornerRadius.current
     val controlRadius = (settingsRadius ?: uiStyle.controlRadiusDp).dp
     val tileShape = RoundedCornerShape(controlRadius)
@@ -4503,7 +4866,6 @@ private fun ApplySelectionButton(text: String, enabled: Boolean, onClick: () -> 
 private fun SettingsApplyBar(onClick: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    val glass = LocalBottomNavGlassSettings.current
     val shape = RoundedCornerShape(uiStyle.buttonRadiusDp.dp)
     var pressed by remember { mutableStateOf(false) }
     val pressScale by animateFloatAsState(
@@ -4514,12 +4876,7 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
     Surface(
         modifier = Modifier.widthIn(min = 176.dp, max = 220.dp).height(52.dp)
             .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .then(if (uiStyle.glassSurface) Modifier
-                .clip(shape)
-                .background(androidx.compose.ui.graphics.Brush.verticalGradient(
-                    listOf(p.accent.copy(alpha = 0.24f), p.surface.copy(alpha = 0.58f))
-                )) else Modifier)
-            .then(if (uiStyle.glassSurface) Modifier.border(1.dp, p.text.copy(alpha = glass.matteHighlight * 0.34f), shape) else Modifier)
+
             .pointerInput(onClick) {
                 detectTapGestures(onPress = {
                     pressed = true
@@ -4529,19 +4886,15 @@ private fun SettingsApplyBar(onClick: () -> Unit) {
                 })
             },
         shape = shape,
-        color = if (uiStyle.glassSurface) Color.Transparent else p.keyEquals,
-        shadowElevation = if (uiStyle.glassSurface) (2f + glass.matteDepth * 3f + glass.matteShadow * 2f).dp else 10.dp
+        color = p.keyEquals,
+        shadowElevation = 10.dp
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            // Palette text animates between themes; choose a stable contrast color from
-            // the target theme so the label never flashes black on a dark glass surface.
-            val applyContentColor = if (uiStyle.glassSurface) {
-                if (p.dark) Color.White else Color(0xFF17131F)
-            } else p.onKeyEquals
+            val applyContentColor = p.onKeyEquals
             AppIcon(AppGlyph.CHECK, contentDescription = null, tint = applyContentColor, modifier = Modifier.size(18.dp))
             Spacer(Modifier.size(9.dp))
             Text(tx("apply"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = applyContentColor)

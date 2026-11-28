@@ -40,9 +40,23 @@ android {
 
     buildTypes {
         getByName("debug") {
-            if (useDistributionSigning) {
-                signingConfig = signingConfigs.getByName("distribution")
-            }
+            signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
+        }
+
+        getByName("release") {
+            signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
+        }
+
+        // R8-optimized primary build. It deliberately shares Release's application ID
+        // and signing identity so installing Benchmark updates the regular MathFlow app.
+        create("benchmark") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName(if (useDistributionSigning) "distribution" else "debug")
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            matchingFallbacks += listOf("release")
         }
     }
 
@@ -69,9 +83,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     // Kyant Backdrop provides GPU-based refraction, lens distortion and glass highlights.
-    implementation("io.github.kyant0:backdrop:1.0.6")
+    // Backdrop 2.0.0 is vendored under Apache-2.0 in com.kyant.backdrop.
     implementation("io.github.kyant0:shapes:1.2.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
