@@ -642,7 +642,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var introSpeed by remember { mutableFloatStateOf(prefs.getFloat("intro_speed", 1f).coerceIn(0.5f, 2f)) }
 
     LaunchedEffect(themeId, selectedIconId, iconPackId, fontScale, fontPath, appLanguage, measurementSystem,
-        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, settingsCornerRadiusDp,
+        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, calculatorAngleMode, uiStyleId, settingsCornerRadiusDp,
         introEnabled, introSpeed, activeConfigId) {
         val activeId = activeConfigId
         if (activeId != null) {
