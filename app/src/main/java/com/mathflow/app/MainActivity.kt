@@ -3293,6 +3293,7 @@ private fun withConfigPreferences(context: Context, snapshot: JSONObject): JSONO
 private fun restoreConfigPreferences(context: Context, snapshot: JSONObject, fontPath: String?) {
     val prefs = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE)
     val encoded = snapshot.optJSONObject("preferences") ?: return
+    if (encoded.length() == 0) return
     val editor = prefs.edit()
     prefs.all.keys.filterNot { it in CONFIG_INTERNAL_PREF_KEYS }.forEach { editor.remove(it) }
     val keys = encoded.keys()
