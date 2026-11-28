@@ -3078,8 +3078,9 @@ private object HistoryStore {
 
     fun load(context: Context): List<HistoryEntry> {
         val file = File(context.filesDir, FILE_NAME)
+        val atomic = android.util.AtomicFile(file)
         val stored = if (file.isFile) {
-            runCatching { file.readText(Charsets.UTF_8) }.getOrNull()
+            runCatching { atomic.openRead().bufferedReader(Charsets.UTF_8).use { it.readText() } }.getOrNull()
         } else null
         if (stored != null) return parse(stored)
 
@@ -3102,7 +3103,7 @@ private object HistoryStore {
     }
 
     fun clear(context: Context) {
-        File(context.filesDir, FILE_NAME).delete()
+        android.util.AtomicFile(File(context.filesDir, FILE_NAME)).delete()
         context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE).edit().remove(LEGACY_KEY).apply()
     }
 
@@ -3274,7 +3275,7 @@ private fun withConfigPreferences(context: Context, snapshot: JSONObject): JSONO
 
 private fun restoreConfigPreferences(context: Context, snapshot: JSONObject, fontPath: String?) {
     val prefs = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE)
-    val encoded = snapshot.optJSONObject("preferences") ?: JSONObject()
+    val encoded = snapshot.optJSONObject("preferences") ?: return
     val editor = prefs.edit()
     prefs.all.keys.filterNot { it in CONFIG_INTERNAL_PREF_KEYS }.forEach { editor.remove(it) }
     val keys = encoded.keys()
