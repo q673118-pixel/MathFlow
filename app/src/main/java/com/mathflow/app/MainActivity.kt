@@ -2154,7 +2154,7 @@ private fun ToolsPage(onCalculationSaved: (String, String, List<String>) -> Unit
                 "Геометрия" -> GeometryToolsContent(onCalculationSaved)
                 "Статистика" -> StatisticsContent(onCalculationSaved)
                 "Конвертер" -> UnitConverterContent(onCalculationSaved)
-                "График" -> GraphFunctionContent()
+                "График" -> GraphFunctionContent(onCalculationSaved)
                     }
                 }
             }
@@ -2389,7 +2389,7 @@ private fun GeometryToolsContent(onCalculationSaved: (String, String, List<Strin
 private data class SelectedGraphPoint(val curveIndex: Int, val point: GraphPoint)
 
 @Composable
-private fun GraphFunctionContent() {
+private fun GraphFunctionContent(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     var expression by rememberSaveable { mutableStateOf("x^2") }
@@ -2410,6 +2410,7 @@ private fun GraphFunctionContent() {
     var selectedPoint by remember { mutableStateOf<SelectedGraphPoint?>(null) }
     var isCalculating by remember { mutableStateOf(false) }
     var graphError by remember { mutableStateOf<String?>(null) }
+    var lastSavedGraphKey by remember { mutableStateOf<String?>(null) }
     val graphEngine = remember { MathGraphEngine() }
 
     LaunchedEffect(expression, range, graphMode, relation, centerX, centerY) {
@@ -2474,6 +2475,18 @@ private fun GraphFunctionContent() {
             curves = it.first
             implicitSegments = it.second
             regionCells = it.third
+            val graphKey = "$graphMode|$expression|$relation"
+            if (graphKey != lastSavedGraphKey) {
+                val description = when (graphMode) {
+                    "Функции" -> "Построено графиков: ${it.first.size}"
+                    "Неявный график" -> "Построен неявный график"
+                    else -> "Построена область неравенства"
+                }
+                onCalculationSaved("График ($graphMode): $expression", description,
+                    listOf("Диапазон по x: ${centerX - range} … ${centerX + range}",
+                        if (graphMode == "Неравенство") "Отношение: $relation" else "Режим: $graphMode"))
+                lastSavedGraphKey = graphKey
+            }
         }.onFailure {
             curves = emptyList()
             implicitSegments = emptyList()
@@ -3029,9 +3042,9 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                         color = p.accent, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
                     Text(entry.dateLabel, color = p.muted, fontSize = 12.sp)
                     HorizontalDivider(color = p.key)
-                    Text(tx("solution_steps"), color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(tx("steps"), color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     if (entry.steps.isEmpty()) {
-                        Text(tx("solution_steps_unavailable"), color = p.muted, fontSize = 13.sp)
+                        Text("Для этой операции пошаговое решение не предусмотрено.", color = p.muted, fontSize = 13.sp)
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                             entry.steps.forEachIndexed { index, step ->
@@ -3040,7 +3053,7 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
                             }
                         }
                     }
-                    ActionButton(tx("close")) { selectedEntry = null }
+                    ActionButton(tx("cancel")) { selectedEntry = null }
                 }
             }
         }
