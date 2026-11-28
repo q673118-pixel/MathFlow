@@ -3251,8 +3251,8 @@ private val CONFIG_INTERNAL_PREF_KEYS = setOf("mathflow_config_profiles", "mathf
 
 private fun encodeConfigPreferences(context: Context): JSONObject {
     val encoded = JSONObject()
-    val all = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE).all
-    all.forEach { (key, value) ->
+    val prefs = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE)
+    prefs.all.forEach { (key, value) ->
         if (key in CONFIG_INTERNAL_PREF_KEYS) return@forEach
         val entry = when (value) {
             is String -> JSONObject().put("type", "string").put("value", value)
@@ -3267,6 +3267,13 @@ private fun encodeConfigPreferences(context: Context): JSONObject {
         }
         if (entry != null) encoded.put(key, entry)
     }
+    // Persist these state-backed settings even when the user still uses their defaults.
+    encoded.put("settings_corner_radius_dp",
+        JSONObject().put("type", "int").put("value", prefs.getInt("settings_corner_radius_dp", 18)))
+    encoded.put("intro_enabled",
+        JSONObject().put("type", "boolean").put("value", prefs.getBoolean("intro_enabled", true)))
+    encoded.put("intro_speed",
+        JSONObject().put("type", "float").put("value", prefs.getFloat("intro_speed", 1f).toDouble()))
     return encoded
 }
 
