@@ -603,6 +603,18 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var history by remember { mutableStateOf(emptyList<HistoryEntry>()) }
     val historyScope = rememberCoroutineScope()
     val historyMutex = remember { Mutex() }
+    fun saveCalculation(expression: String, result: String, steps: List<String>) {
+        historyScope.launch {
+            historyMutex.lock()
+            try {
+                history = withContext(Dispatchers.IO) {
+                    HistoryStore.add(context, expression, result, steps)
+                }
+            } finally {
+                historyMutex.unlock()
+            }
+        }
+    }
     LaunchedEffect(context) {
         historyMutex.lock()
         try {
@@ -833,19 +845,10 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                     prefs.edit().putString("calculator_result_format", format).apply()
                                                 }
                                             ) { expression, result, steps ->
-                                                historyScope.launch {
-                                                    historyMutex.lock()
-                                                    try {
-                                                        history = withContext(Dispatchers.IO) {
-                                                            HistoryStore.add(context, expression, result, steps)
-                                                        }
-                                                    } finally {
-                                                        historyMutex.unlock()
-                                                    }
-                                                }
+                                                saveCalculation(expression, result, steps)
                                             }
-                                            Page.TOOLS -> ToolsPage()
-                                            Page.SOLVER -> EquationSolverPage()
+                                            Page.TOOLS -> ToolsPage(::saveCalculation)
+                                            Page.SOLVER -> EquationSolverPage(::saveCalculation)
                                             Page.HISTORY -> HistoryPage(history) {
                                                 historyScope.launch {
                                                     historyMutex.lock()
@@ -2029,7 +2032,7 @@ private fun ResultBox(text: String, error: String?) {
 // ---------------------------------------------------------------- tools
 
 @Composable
-private fun ToolsPage() {
+private fun ToolsPage(onCalculationSaved: (String, String, List<String>) -> Unit) {
     var tool by rememberSaveable { mutableStateOf("Дроби") }
 
     var fractionA by rememberSaveable { mutableStateOf("3/4") }
@@ -2093,7 +2096,7 @@ private fun ToolsPage() {
                             Box(Modifier.weight(1f)) {
                                 ActionButton(op) {
                                     runCatching { FractionTools.calculate(fractionA, fractionB, op) }
-                                        .onSuccess { fractionResult = it; fractionError = null }
+                                        .onSuccess { fractionResult = it; fractionError = null; onCalculationSaved("$fractionA $op $fractionB", it, emptyList()) }
                                         .onFailure { fractionError = friendly(it, fractionFallback); fractionResult = "" }
                                 }
                             }
@@ -2135,7 +2138,7 @@ private fun ToolsPage() {
                                 }
                                 else -> PercentTools.percentOf(percentA, percentB)
                             }
-                        }.onSuccess { percentResult = it; percentError = null }
+                        }.onSuccess { percentResult = it; percentError = null; onCalculationSaved("$percentMode: $percentA; $percentB", it, emptyList()) }
                             .onFailure { percentError = friendly(it, valuesFallback); percentResult = "" }
                     }
                     androidx.compose.animation.AnimatedVisibility(
@@ -2148,8 +2151,8 @@ private fun ToolsPage() {
                         ResultBox(percentResult, percentError)
                     }
                 }
-                "Геометрия" -> GeometryToolsContent()
-                "Статистика" -> StatisticsContent()
+                "Геометрия" -> GeometryToolsContent(onCalculationSaved)
+                "Статистика" -> StatisticsContent(onCalculationSaved)
                 "Конвертер" -> UnitConverterContent()
                 "График" -> GraphFunctionContent()
                     }
@@ -2159,7 +2162,7 @@ private fun ToolsPage() {
     }
 }
 @Composable
-private fun StatisticsContent() {
+private fun StatisticsContent(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
     var source by rememberSaveable { mutableStateOf("1; 2; 2; 3; 4; 4; 5") }
@@ -2224,7 +2227,7 @@ private fun StatisticsContent() {
 }
 
 @Composable
-private fun GeometryToolsContent() {
+private fun GeometryToolsContent(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
     var mode by rememberSaveable { mutableStateOf("Фигуры") }
     var operation by rememberSaveable { mutableStateOf("Расстояние AB") }
@@ -2758,7 +2761,7 @@ private fun friendly(error: Throwable, fallback: String): String = when {
 // ---------------------------------------------------------------- solver
 
 @Composable
-private fun EquationSolverPage() {
+private fun EquationSolverPage(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
     val equationFallback = tx("equation_error")
     var mode by rememberSaveable { mutableStateOf("Уравнение") }
