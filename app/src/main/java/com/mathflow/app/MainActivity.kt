@@ -3391,9 +3391,10 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
         input.optDouble("matteHighlight", 0.58).toFloat(),
         input.optDouble("matteShadow", 0.32).toFloat()
     ).normalized()
-    return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
+    val validated = makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
         language, measurement, key, nav, resultFormat, uiStyle, iconPack)
-        .put("preferences", JSONObject(input.optJSONObject("preferences")?.toString() ?: "{}"))
+    input.optJSONObject("preferences")?.let { validated.put("preferences", JSONObject(it.toString())) }
+    return validated
 }
 
 @Composable
