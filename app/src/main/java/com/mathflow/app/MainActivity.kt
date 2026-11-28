@@ -3079,9 +3079,9 @@ private object HistoryStore {
     fun load(context: Context): List<HistoryEntry> {
         val file = File(context.filesDir, FILE_NAME)
         val atomic = android.util.AtomicFile(file)
-        val stored = if (file.isFile) {
-            runCatching { atomic.openRead().bufferedReader(Charsets.UTF_8).use { it.readText() } }.getOrNull()
-        } else null
+        val stored = runCatching {
+            atomic.openRead().bufferedReader(Charsets.UTF_8).use { it.readText() }
+        }.getOrNull()
         if (stored != null) return parse(stored)
 
         val legacyPrefs = context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE)
