@@ -1608,7 +1608,7 @@ private fun CalculatorHome(
                     if (it.isInteger()) it.numerator.toString() else "(${it.numerator}/${it.denominator})"
                 } ?: r.displayValue
                 finished = true
-                onCalculationSaved(source, r.displayValue, r.steps)
+                onCalculationSaved(source, result, r.steps)
                 expression = source
             } catch (e: CancellationException) {
                 throw e
@@ -2096,7 +2096,7 @@ private fun ToolsPage(onCalculationSaved: (String, String, List<String>) -> Unit
                             Box(Modifier.weight(1f)) {
                                 ActionButton(op) {
                                     runCatching { FractionTools.calculate(fractionA, fractionB, op) }
-                                        .onSuccess { fractionResult = it; fractionError = null; onCalculationSaved("$fractionA $op $fractionB", it, emptyList()) }
+                                        .onSuccess { fractionResult = it; fractionError = null; onCalculationSaved("$fractionA $op $fractionB", it, listOf("Операция: $op", "Первое число: $fractionA", "Второе число: $fractionB")) }
                                         .onFailure { fractionError = friendly(it, fractionFallback); fractionResult = "" }
                                 }
                             }
@@ -2138,7 +2138,7 @@ private fun ToolsPage(onCalculationSaved: (String, String, List<String>) -> Unit
                                 }
                                 else -> PercentTools.percentOf(percentA, percentB)
                             }
-                        }.onSuccess { percentResult = it; percentError = null; onCalculationSaved("$percentMode: $percentA; $percentB", it, emptyList()) }
+                        }.onSuccess { percentResult = it; percentError = null; onCalculationSaved("$percentMode: $percentA; $percentB", it, listOf("Режим: $percentMode", "Входные значения: $percentA и $percentB")) }
                             .onFailure { percentError = friendly(it, valuesFallback); percentResult = "" }
                     }
                     androidx.compose.animation.AnimatedVisibility(
@@ -2315,7 +2315,7 @@ private fun GeometryToolsContent(onCalculationSaved: (String, String, List<Strin
                         "Площадь = " + area + "; периметр = " + (4.0 * side)
                     }
                 }
-            }.onSuccess { result = it; error = null; onCalculationSaved("$shape: $sideA, $sideB, $sideC", it, emptyList()) }.onFailure { result = ""; error = it.message }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$shape: $sideA, $sideB, $sideC", it, listOf("Фигура: $shape", "Параметры: $sideA; $sideB; $sideC")) }.onFailure { result = ""; error = it.message }
         }
     } else if (mode == "Координаты") {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2354,7 +2354,7 @@ private fun GeometryToolsContent(onCalculationSaved: (String, String, List<Strin
                         "Площадь = %.4f; периметр = %.4f".format(Locale.US, it.area, it.perimeter)
                     }
                 }
-            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: A($ax; $ay), B($bx; $byValue)", it, emptyList()) }.onFailure { result = ""; error = it.message }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: A($ax; $ay), B($bx; $byValue)", it, listOf("Операция: $operation", "A = ($ax; $ay)", "B = ($bx; $byValue)")) }.onFailure { result = ""; error = it.message }
         }
     } else {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2379,7 +2379,7 @@ private fun GeometryToolsContent(onCalculationSaved: (String, String, List<Strin
                     "Скалярное произведение" -> "u · v = " + g.dot(u, v)
                     else -> "Угол = %.3f°".format(Locale.US, g.angleDegrees(u, v))
                 }
-            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: u($ux; $uy), v($vx; $vy)", it, emptyList()) }.onFailure { result = ""; error = it.message }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: u($ux; $uy), v($vx; $vy)", it, listOf("Операция: $operation", "u = ($ux; $uy)", "v = ($vx; $vy)")) }.onFailure { result = ""; error = it.message }
         }
     }
     error?.let { Text(it, color = p.error, fontSize = 13.sp) }
