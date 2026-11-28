@@ -599,20 +599,6 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var activeConfigId by remember {
         mutableStateOf(prefs.getString("mathflow_active_config", null)?.takeIf { id -> configProfiles.any { it.id == id } })
     }
-    LaunchedEffect(themeId, selectedIconId, iconPackId, fontScale, fontPath, appLanguage, measurementSystem,
-        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, settingsCornerRadiusDp,
-        introEnabled, introSpeed, activeConfigId) {
-        val activeId = activeConfigId
-        if (activeId != null) {
-            val snapshot = withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId))
-            configProfiles = configProfiles.map { profile ->
-                if (profile.id == activeId) profile.copy(settings = snapshot) else profile
-            }
-            MathFlowConfigProfiles.save(context, configProfiles)
-        }
-    }
-
     var page by rememberSaveable { mutableStateOf(Page.HOME) }
     var history by remember { mutableStateOf(emptyList<HistoryEntry>()) }
     val historyScope = rememberCoroutineScope()
@@ -641,6 +627,20 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var showWelcome by remember { mutableStateOf(prefs.getInt("welcome_version", 0) < 3) }
     var introEnabled by remember { mutableStateOf(prefs.getBoolean("intro_enabled", true)) }
     var introSpeed by remember { mutableFloatStateOf(prefs.getFloat("intro_speed", 1f).coerceIn(0.5f, 2f)) }
+
+    LaunchedEffect(themeId, selectedIconId, iconPackId, fontScale, fontPath, appLanguage, measurementSystem,
+        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, settingsCornerRadiusDp,
+        introEnabled, introSpeed, activeConfigId) {
+        val activeId = activeConfigId
+        if (activeId != null) {
+            val snapshot = withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
+                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId))
+            configProfiles = configProfiles.map { profile ->
+                if (profile.id == activeId) profile.copy(settings = snapshot) else profile
+            }
+            MathFlowConfigProfiles.save(context, configProfiles)
+        }
+    }
     LaunchedEffect(externalConfigUri, showWelcome) {
         if (externalConfigUri != null && !showWelcome) page = Page.SETTINGS
     }
@@ -952,6 +952,14 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                         .putFloat("matte_glass_highlight", bottomNavAnimationSettings.matteHighlight)
                                                         .putFloat("matte_glass_shadow", bottomNavAnimationSettings.matteShadow)
                                                         .putString("calculator_result_format", calculatorResultFormat).apply()
+                                                    val importedPreferences = cfg.optJSONObject("preferences") ?: JSONObject()
+                                                    settingsCornerRadiusDp = importedPreferences.optJSONObject("settings_corner_radius_dp")
+                                                        ?.optInt("value", settingsCornerRadiusDp)?.coerceIn(0, 40) ?: settingsCornerRadiusDp
+                                                    introEnabled = importedPreferences.optJSONObject("intro_enabled")
+                                                        ?.optBoolean("value", introEnabled) ?: introEnabled
+                                                    introSpeed = (importedPreferences.optJSONObject("intro_speed")
+                                                        ?.optDouble("value", introSpeed.toDouble())?.toFloat() ?: introSpeed).coerceIn(0.5f, 2f)
+                                                    restoreConfigPreferences(context, cfg, fontPath)
                                                     runCatching { setLauncherIcon(context, selectedIconId) }
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
@@ -3229,7 +3237,7 @@ private fun makeConfigSnapshot(
     uiStyle: String = MathFlowUiStyle.MATERIAL_YOU.id,
     iconPack: String = "material"
 ): JSONObject = JSONObject()
-    .put("schemaVersion", 6)
+    .put("schemaVersion", 7)
     .put("theme", theme)
     .put("uiStyle", MathFlowUiStyle.fromId(uiStyle).id)
     .put("iconPack", AppIconPack.fromId(iconPack).id)
