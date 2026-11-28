@@ -136,12 +136,15 @@ internal object MathFlowConfigArchive {
     }
 
     private fun safeFontName(value: String): String {
-        val name = value.substringAfterLast('/').substringAfterLast('\\')
-            .replace(Regex("[^A-Za-z0-9._-]"), "_")
-            .take(80)
-        require(name.matches(Regex("[A-Za-z0-9._-]{1,76}\\.(ttf|otf)", RegexOption.IGNORE_CASE))) {
+        val original = value.substringAfterLast('/').substringAfterLast('\\')
+        val extension = original.substringAfterLast('.', "").lowercase()
+        require(extension == "ttf" || extension == "otf") {
             "Only TTF and OTF fonts are supported"
         }
-        return name
+        val stem = original.substringBeforeLast('.')
+            .replace(Regex("[^A-Za-z0-9_-]"), "_")
+            .take(64)
+            .ifBlank { "custom_font" }
+        return "$stem.$extension"
     }
 }
