@@ -2153,7 +2153,7 @@ private fun ToolsPage(onCalculationSaved: (String, String, List<String>) -> Unit
                 }
                 "Геометрия" -> GeometryToolsContent(onCalculationSaved)
                 "Статистика" -> StatisticsContent(onCalculationSaved)
-                "Конвертер" -> UnitConverterContent()
+                "Конвертер" -> UnitConverterContent(onCalculationSaved)
                 "График" -> GraphFunctionContent()
                     }
                 }
@@ -3247,7 +3247,7 @@ private fun encodeConfigPreferences(context: Context): JSONObject {
             is Long -> JSONObject().put("type", "long").put("value", value)
             is Float -> JSONObject().put("type", "float").put("value", value.toDouble())
             is Set<*> -> JSONObject().put("type", "string_set").put("value", JSONArray().apply {
-                value.filterIsInstance<String>().forEach(::put)
+                value.filterIsInstance<String>().forEach { item -> put(item) }
             })
             else -> null
         }
@@ -3263,7 +3263,7 @@ private fun restoreConfigPreferences(context: Context, snapshot: JSONObject, fon
     val prefs = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE)
     val encoded = snapshot.optJSONObject("preferences") ?: JSONObject()
     val editor = prefs.edit()
-    prefs.all.keys.filterNot { it in CONFIG_INTERNAL_PREF_KEYS }.forEach(editor::remove)
+    prefs.all.keys.filterNot { it in CONFIG_INTERNAL_PREF_KEYS }.forEach { editor.remove(it) }
     val keys = encoded.keys()
     while (keys.hasNext()) {
         val key = keys.next()
