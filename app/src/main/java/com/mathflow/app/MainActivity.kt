@@ -2957,7 +2957,7 @@ private fun EquationSolverPage() {
 private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
     val p = LocalPalette.current
     val uiStyle = LocalMathFlowUiStyle.current
-    // Compose only visible history rows instead of building the full list at once.
+    var selectedEntry by remember { mutableStateOf<HistoryEntry?>(null) }
     LazyColumn(
         modifier = Modifier.fillMaxSize()
             .padding(horizontal = 14.dp)
@@ -2973,43 +2973,61 @@ private fun HistoryPage(entries: List<HistoryEntry>, onClear: () -> Unit) {
             }
         } else {
             items(entries, key = { it.id }) { entry ->
-                var expanded by rememberSaveable(entry.id) { mutableStateOf(false) }
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth()
+                        .mathFlowClickable { selectedEntry = entry },
                     shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
                     color = p.surface.copy(alpha = uiStyle.surfaceAlpha),
                     shadowElevation = uiStyle.elevationDp.dp
                 ) {
                     Column(
-                        Modifier.fillMaxWidth()
-                            .mathFlowClickable(enabled = entry.steps.isNotEmpty()) { expanded = !expanded }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(entry.expression, fontSize = 15.sp, color = p.muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text("= ${MathTextLocalization.translate(entry.result, LocalLanguage.current)}", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
-                        Text(
-                            entry.dateLabel + if (entry.steps.isNotEmpty()) (if (expanded) tx("hide_solution") else tx("show_solution")) else "",
-                            fontSize = 12.sp, color = p.muted
-                        )
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = expanded,
-                            enter = androidx.compose.animation.fadeIn(tween(180)) +
-                                androidx.compose.animation.expandVertically(tween(180)),
-                            exit = androidx.compose.animation.fadeOut(tween(110)) +
-                                androidx.compose.animation.shrinkVertically(tween(110))
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                                entry.steps.forEachIndexed { index, step ->
-                                    Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}", fontSize = 13.sp, color = p.muted, lineHeight = 18.sp)
-                                }
-                            }
-                        }
+                        Text("= ${MathTextLocalization.translate(entry.result, LocalLanguage.current)}",
+                            fontSize = 22.sp, fontWeight = FontWeight.Medium, color = p.text)
+                        Text(entry.dateLabel + " · " + tx("show_solution"), fontSize = 12.sp, color = p.muted)
                     }
                 }
             }
             item(key = "clear_history") {
                 MathFlowTextButton(tx("clear_history"), p.accent, modifier = Modifier.fillMaxWidth(), onClick = onClear)
+            }
+        }
+    }
+
+    selectedEntry?.let { entry ->
+        Dialog(onDismissRequest = { selectedEntry = null }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().heightIn(max = 620.dp),
+                shape = RoundedCornerShape(uiStyle.cardRadiusDp.dp),
+                color = p.surface,
+                contentColor = p.text
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(tx("history"), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(entry.expression, color = p.muted, fontSize = 15.sp, lineHeight = 21.sp)
+                    Text("= ${MathTextLocalization.translate(entry.result, LocalLanguage.current)}",
+                        color = p.accent, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
+                    Text(entry.dateLabel, color = p.muted, fontSize = 12.sp)
+                    HorizontalDivider(color = p.key)
+                    Text(tx("solution_steps"), color = p.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    if (entry.steps.isEmpty()) {
+                        Text(tx("solution_steps_unavailable"), color = p.muted, fontSize = 13.sp)
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            entry.steps.forEachIndexed { index, step ->
+                                Text("${index + 1}. ${MathTextLocalization.translate(step, LocalLanguage.current)}",
+                                    color = p.text, fontSize = 14.sp, lineHeight = 20.sp)
+                            }
+                        }
+                    }
+                    ActionButton(tx("close")) { selectedEntry = null }
+                }
             }
         }
     }
@@ -3027,38 +3045,54 @@ private data class HistoryEntry(
 }
 
 private object HistoryStore {
-    private const val PREFS = "mathflow_history"
-    private const val KEY = "entries"
-    private const val LIMIT = 100
+    private const val LEGACY_PREFS = "mathflow_history"
+    private const val LEGACY_KEY = "entries"
+    private const val FILE_NAME = "mathflow_history.json"
 
     fun load(context: Context): List<HistoryEntry> {
-        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]") ?: "[]"
-        return runCatching {
-            val array = JSONArray(raw)
-            (0 until array.length()).mapNotNull { index ->
-                val item = array.optJSONObject(index) ?: return@mapNotNull null
-                val stepsJson = item.optJSONArray("steps") ?: JSONArray()
-                HistoryEntry(
-                    id = item.optLong("id"),
-                    expression = item.optString("expression"),
-                    result = item.optString("result"),
-                    timestamp = item.optLong("timestamp"),
-                    steps = (0 until stepsJson.length()).map { stepsJson.optString(it) }
-                )
-            }.sortedByDescending { it.timestamp }
-        }.getOrDefault(emptyList())
+        val file = File(context.filesDir, FILE_NAME)
+        val stored = if (file.isFile) {
+            runCatching { file.readText(Charsets.UTF_8) }.getOrNull()
+        } else null
+        if (stored != null) return parse(stored)
+
+        val legacyPrefs = context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE)
+        val legacy = legacyPrefs.getString(LEGACY_KEY, null)
+        val migrated = legacy?.let(::parse).orEmpty()
+        if (migrated.isNotEmpty()) {
+            save(context, migrated)
+            legacyPrefs.edit().remove(LEGACY_KEY).apply()
+        }
+        return migrated
     }
 
     fun add(context: Context, expression: String, result: String, steps: List<String>): List<HistoryEntry> {
         val now = System.currentTimeMillis()
-        val entries = (listOf(HistoryEntry(now, expression, result, now, steps)) + load(context)).take(LIMIT)
+        val id = now * 1000L + (System.nanoTime() % 1000L)
+        val entries = listOf(HistoryEntry(id, expression, result, now, steps)) + load(context)
         save(context, entries)
         return entries
     }
 
     fun clear(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+        File(context.filesDir, FILE_NAME).delete()
+        context.getSharedPreferences(LEGACY_PREFS, Context.MODE_PRIVATE).edit().remove(LEGACY_KEY).apply()
     }
+
+    private fun parse(raw: String): List<HistoryEntry> = runCatching {
+        val array = JSONArray(raw)
+        (0 until array.length()).mapNotNull { index ->
+            val item = array.optJSONObject(index) ?: return@mapNotNull null
+            val stepsJson = item.optJSONArray("steps") ?: JSONArray()
+            HistoryEntry(
+                id = item.optLong("id"),
+                expression = item.optString("expression"),
+                result = item.optString("result"),
+                timestamp = item.optLong("timestamp"),
+                steps = (0 until stepsJson.length()).map { stepsJson.optString(it) }
+            )
+        }.sortedByDescending { it.timestamp }
+    }.getOrDefault(emptyList())
 
     private fun save(context: Context, entries: List<HistoryEntry>) {
         val array = JSONArray()
@@ -3074,7 +3108,16 @@ private object HistoryStore {
                     .put("steps", stepArray)
             )
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, array.toString()).apply()
+        val target = File(context.filesDir, FILE_NAME)
+        val atomic = android.util.AtomicFile(target)
+        val stream = atomic.startWrite()
+        try {
+            stream.write(array.toString().toByteArray(Charsets.UTF_8))
+            atomic.finishWrite(stream)
+        } catch (error: Throwable) {
+            atomic.failWrite(stream)
+            throw error
+        }
     }
 }
 
