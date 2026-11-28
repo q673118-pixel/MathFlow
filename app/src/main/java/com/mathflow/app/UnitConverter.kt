@@ -39,6 +39,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
+import kotlinx.coroutines.delay
 
 internal data class UnitDefinition(val id: String, val label: String, val factorToBase: BigDecimal = BigDecimal.ONE)
 internal data class UnitCategory(val id: String, val title: String, val units: List<UnitDefinition>)
@@ -157,7 +159,7 @@ internal object UnitConverter {
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-internal fun UnitConverterContent() {
+internal fun UnitConverterContent(onCalculationSaved: (String, String, List<String>) -> Unit) {
     val p = LocalPalette.current
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val categories = UnitConverter.categories
@@ -182,6 +184,18 @@ internal fun UnitConverterContent() {
         if (input.isBlank()) null else runCatching { UnitConverter.convert(input, categoryId, from.id, to.id) }
     }
     val converted = result?.getOrNull()
+    var lastSavedConversion by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(input, categoryId, from.id, to.id, converted) {
+        if (converted != null) {
+            val key = "$categoryId|$input|$fromId|$toId|$converted"
+            if (key != lastSavedConversion) {
+                delay(800)
+                onCalculationSaved("$input ${from.label} → ${to.label}", "$converted ${to.label}",
+                    listOf("Категория: ${category.title}", "Исходная величина: $input ${from.label}"))
+                lastSavedConversion = key
+            }
+        }
+    }
     val fieldShape = RoundedCornerShape(19.dp)
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
