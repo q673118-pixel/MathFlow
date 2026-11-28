@@ -2410,7 +2410,7 @@ private fun GraphFunctionContent(onCalculationSaved: (String, String, List<Strin
     var selectedPoint by remember { mutableStateOf<SelectedGraphPoint?>(null) }
     var isCalculating by remember { mutableStateOf(false) }
     var graphError by remember { mutableStateOf<String?>(null) }
-    var lastSavedGraphKey by remember { mutableStateOf<String?>(null) }
+    var lastSavedGraphKey by remember { mutableStateOf("$graphMode|$expression|$relation") }
     val graphEngine = remember { MathGraphEngine() }
 
     LaunchedEffect(expression, range, graphMode, relation, centerX, centerY) {
