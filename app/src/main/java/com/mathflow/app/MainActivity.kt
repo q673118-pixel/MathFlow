@@ -2179,7 +2179,16 @@ private fun StatisticsContent(onCalculationSaved: (String, String, List<String>)
         runCatching {
             val engine = StatisticsEngine()
             engine.analyze(engine.parseValues(source))
-        }.onSuccess { summary = it; error = null }.onFailure { summary = null; error = it.message ?: "Ошибка анализа данных" }
+        }.onSuccess {
+            summary = it
+            error = null
+            onCalculationSaved(
+                "Статистика: $source",
+                "Среднее: ${it.mean}; медиана: ${it.median}; размах: ${it.range}",
+                listOf("Количество: ${it.count}", "Сумма: ${it.sum}", "Мода: ${it.mode.joinToString().ifBlank { "нет" }}",
+                    "Дисперсия: ${it.variance}", "Стандартное отклонение: ${it.standardDeviation}")
+            )
+        }.onFailure { summary = null; error = it.message ?: "Ошибка анализа данных" }
     }
     error?.let { Text(it, color = p.error, fontSize = 13.sp) }
     summary?.let { data ->
@@ -2306,7 +2315,7 @@ private fun GeometryToolsContent(onCalculationSaved: (String, String, List<Strin
                         "Площадь = " + area + "; периметр = " + (4.0 * side)
                     }
                 }
-            }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$shape: $sideA, $sideB, $sideC", it, emptyList()) }.onFailure { result = ""; error = it.message }
         }
     } else if (mode == "Координаты") {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2345,7 +2354,7 @@ private fun GeometryToolsContent(onCalculationSaved: (String, String, List<Strin
                         "Площадь = %.4f; периметр = %.4f".format(Locale.US, it.area, it.perimeter)
                     }
                 }
-            }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: A($ax; $ay), B($bx; $byValue)", it, emptyList()) }.onFailure { result = ""; error = it.message }
         }
     } else {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -2370,7 +2379,7 @@ private fun GeometryToolsContent(onCalculationSaved: (String, String, List<Strin
                     "Скалярное произведение" -> "u · v = " + g.dot(u, v)
                     else -> "Угол = %.3f°".format(Locale.US, g.angleDegrees(u, v))
                 }
-            }.onSuccess { result = it; error = null }.onFailure { result = ""; error = it.message }
+            }.onSuccess { result = it; error = null; onCalculationSaved("$operation: u($ux; $uy), v($vx; $vy)", it, emptyList()) }.onFailure { result = ""; error = it.message }
         }
     }
     error?.let { Text(it, color = p.error, fontSize = 13.sp) }
@@ -2809,7 +2818,7 @@ private fun EquationSolverPage(onCalculationSaved: (String, String, List<String>
                 }
                 ActionButton(tx("solve")) {
                     runCatching { AlgebraSolver().solve(equation) }
-                        .onSuccess { answer = it.answer; steps = it.steps; error = null }
+                        .onSuccess { answer = it.answer; steps = it.steps; error = null; onCalculationSaved(equation, it.answer, it.steps) }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: equationFallback }
                 }
             }
@@ -2828,7 +2837,7 @@ private fun EquationSolverPage(onCalculationSaved: (String, String, List<String>
                 ActionButton(displayText("Решить систему")) {
                     val equations = if (systemCount == 2) listOf(systemFirst, systemSecond) else listOf(systemFirst, systemSecond, systemThird)
                     runCatching { LinearSystemSolver().solve(equations) }
-                        .onSuccess { answer = it.answer; steps = it.steps; error = null }
+                        .onSuccess { answer = it.answer; steps = it.steps; error = null; onCalculationSaved(equations.joinToString(" ; "), it.answer, it.steps) }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось решить систему" }
                 }
             }
@@ -2844,7 +2853,7 @@ private fun EquationSolverPage(onCalculationSaved: (String, String, List<String>
                 }
                 ActionButton(displayText("Упростить выражение")) {
                     runCatching { PolynomialSimplifier().simplify(expressionToSimplify) }
-                        .onSuccess { answer = it.expression; steps = it.steps; error = null }
+                        .onSuccess { answer = it.expression; steps = it.steps; error = null; onCalculationSaved(expressionToSimplify, it.expression, it.steps) }
                         .onFailure { answer = null; steps = emptyList(); error = it.message ?: "Не удалось упростить выражение" }
                 }
             }
@@ -2884,6 +2893,7 @@ private fun EquationSolverPage(onCalculationSaved: (String, String, List<String>
                                     "Точки исключения ОДЗ: " + solution.domainExclusions.joinToString { "%.5f".format(Locale.US, it) }.ifBlank { "не обнаружены" }
                                 )
                                 error = null
+                                onCalculationSaved("$inequalityLeft $inequalityRelation $inequalityRight", answer.orEmpty(), steps)
                             }.onFailure {
                                 answer = null
                                 steps = emptyList()
@@ -2914,6 +2924,7 @@ private fun EquationSolverPage(onCalculationSaved: (String, String, List<String>
                                     }
                                 steps = solution.explanation + listOf("Проверено начальных приближений: " + solution.searchedSeeds)
                                 error = null
+                                onCalculationSaved("$nonlinearFirst ; $nonlinearSecond", answer.orEmpty(), steps)
                             }.onFailure {
                                 answer = null
                                 steps = emptyList()
