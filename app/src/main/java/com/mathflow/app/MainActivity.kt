@@ -600,11 +600,12 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
         mutableStateOf(prefs.getString("mathflow_active_config", null)?.takeIf { id -> configProfiles.any { it.id == id } })
     }
     LaunchedEffect(themeId, selectedIconId, iconPackId, fontScale, fontPath, appLanguage, measurementSystem,
-        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, activeConfigId) {
+        keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, settingsCornerRadiusDp,
+        introEnabled, introSpeed, activeConfigId) {
         val activeId = activeConfigId
         if (activeId != null) {
-            val snapshot = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId)
+            val snapshot = withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
+                appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId))
             configProfiles = configProfiles.map { profile ->
                 if (profile.id == activeId) profile.copy(settings = snapshot) else profile
             }
@@ -860,13 +861,13 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                             }
                                             Page.SETTINGS -> CompositionLocalProvider(LocalSettingsCornerRadius provides settingsCornerRadiusDp) {
                                             SettingsPage(
-                                                currentConfig = makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
-                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId),
+                                                currentConfig = withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale, fontPath,
+                                                    appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId)),
                                                 configProfiles = configProfiles,
                                                 activeConfigId = activeConfigId,
                                                 onCreateConfig = { name ->
-                                                    val profile = MathFlowConfigProfiles.create(name, makeConfigSnapshot(themeId, selectedIconId, fontScale,
-                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId))
+                                                    val profile = MathFlowConfigProfiles.create(name, withConfigPreferences(context, makeConfigSnapshot(themeId, selectedIconId, fontScale,
+                                                        fontPath, appLanguage, measurementSystem, keyAnimationSettings, bottomNavAnimationSettings, calculatorResultFormat, uiStyleId, iconPackId)))
                                                     configProfiles = configProfiles + profile
                                                     activeConfigId = profile.id
                                                     prefs.edit().putString("mathflow_active_config", profile.id).apply()
@@ -3166,6 +3167,58 @@ private fun setLauncherIcon(context: Context, iconId: String) {
 }
 
 private const val BUILTIN_ARTEGRA_FONT = "builtin:artegra_soft_global"
+private const val MATHFLOW_CONFIG_MIME_TYPE = "application/vnd.mathflow.config"
+private val CONFIG_INTERNAL_PREF_KEYS = setOf("mathflow_config_profiles", "mathflow_active_config", "welcome_version")
+
+private fun encodeConfigPreferences(context: Context): JSONObject {
+    val encoded = JSONObject()
+    val all = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE).all
+    all.forEach { (key, value) ->
+        if (key in CONFIG_INTERNAL_PREF_KEYS) return@forEach
+        val entry = when (value) {
+            is String -> JSONObject().put("type", "string").put("value", value)
+            is Boolean -> JSONObject().put("type", "boolean").put("value", value)
+            is Int -> JSONObject().put("type", "int").put("value", value)
+            is Long -> JSONObject().put("type", "long").put("value", value)
+            is Float -> JSONObject().put("type", "float").put("value", value.toDouble())
+            is Set<*> -> JSONObject().put("type", "string_set").put("value", JSONArray().apply {
+                value.filterIsInstance<String>().forEach(::put)
+            })
+            else -> null
+        }
+        if (entry != null) encoded.put(key, entry)
+    }
+    return encoded
+}
+
+private fun withConfigPreferences(context: Context, snapshot: JSONObject): JSONObject =
+    JSONObject(snapshot.toString()).put("preferences", encodeConfigPreferences(context))
+
+private fun restoreConfigPreferences(context: Context, snapshot: JSONObject, fontPath: String?) {
+    val prefs = context.getSharedPreferences("mathflow_settings", Context.MODE_PRIVATE)
+    val encoded = snapshot.optJSONObject("preferences") ?: JSONObject()
+    val editor = prefs.edit()
+    prefs.all.keys.filterNot { it in CONFIG_INTERNAL_PREF_KEYS }.forEach(editor::remove)
+    val keys = encoded.keys()
+    while (keys.hasNext()) {
+        val key = keys.next()
+        if (key in CONFIG_INTERNAL_PREF_KEYS) continue
+        val entry = encoded.optJSONObject(key) ?: continue
+        when (entry.optString("type")) {
+            "string" -> editor.putString(key, entry.optString("value"))
+            "boolean" -> editor.putBoolean(key, entry.optBoolean("value"))
+            "int" -> editor.putInt(key, entry.optInt("value"))
+            "long" -> editor.putLong(key, entry.optLong("value"))
+            "float" -> editor.putFloat(key, entry.optDouble("value").toFloat())
+            "string_set" -> {
+                val values = entry.optJSONArray("value") ?: JSONArray()
+                editor.putStringSet(key, (0 until values.length()).map { values.optString(it) }.toSet())
+            }
+        }
+    }
+    if (fontPath == null) editor.remove("font_path") else editor.putString("font_path", fontPath)
+    editor.putBoolean("font_selection_initialized", true).apply()
+}
 
 private enum class SettingsSection { MAIN, DISPLAY, ICONS, ICON_PACKS, THEMES, STYLES, LANGUAGE, MEASUREMENTS, INTRO, ANIMATIONS, NAVIGATION, FONTS, CONFIGS }
 
@@ -3212,7 +3265,7 @@ private fun makeConfigSnapshot(
     .put("matteShadow", nav.matteShadow.toDouble())
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
-    require(input.optInt("schemaVersion", -1) in 1..6) { "Unsupported settings schema" }
+    require(input.optInt("schemaVersion", -1) in 1..7) { "Unsupported settings schema" }
     val iconPack = AppIconPack.fromId(input.optString("iconPack", "material")).id
     val theme = input.optString("theme", "vanilla")
     val uiStyle = MathFlowUiStyle.fromId(input.optString("uiStyle", "material_you")).id
@@ -3261,6 +3314,7 @@ private fun validateConfigSnapshot(input: JSONObject): JSONObject {
     ).normalized()
     return makeConfigSnapshot(theme, icon, fontScale, input.optString("fontPath").takeIf { it.isNotBlank() && it != "null" },
         language, measurement, key, nav, resultFormat, uiStyle, iconPack)
+        .put("preferences", JSONObject(input.optJSONObject("preferences")?.toString() ?: "{}"))
 }
 
 @Composable
@@ -3365,7 +3419,7 @@ private fun SettingsPage(
             selectedConfigId = configProfiles.firstOrNull()?.id.orEmpty()
         }
     }
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(MATHFLOW_CONFIG_MIME_TYPE)) { uri ->
         val profile = configProfiles.firstOrNull { it.id == selectedConfigId }
         if (uri != null && profile != null) {
             ioScope.launch {
@@ -4148,7 +4202,7 @@ private fun SettingsPage(
                         }
                     }
                     ActionButton(tx("import_profile")) {
-                        importLauncher.launch(arrayOf("application/zip", "application/octet-stream", "*/*"))
+                        importLauncher.launch(arrayOf(MATHFLOW_CONFIG_MIME_TYPE, "application/octet-stream", "*/*"))
                     }
                 }
                 if (configProfiles.isEmpty()) {
