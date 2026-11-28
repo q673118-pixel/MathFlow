@@ -184,8 +184,13 @@ internal fun UnitConverterContent(onCalculationSaved: (String, String, List<Stri
         if (input.isBlank()) null else runCatching { UnitConverter.convert(input, categoryId, from.id, to.id) }
     }
     val converted = result?.getOrNull()
+    var skipInitialConversion by remember { mutableStateOf(true) }
     var lastSavedConversion by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(input, categoryId, from.id, to.id, converted) {
+        if (skipInitialConversion) {
+            skipInitialConversion = false
+            return@LaunchedEffect
+        }
         if (converted != null) {
             val key = "$categoryId|$input|$fromId|$toId|$converted"
             if (key != lastSavedConversion) {
