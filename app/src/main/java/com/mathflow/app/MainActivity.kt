@@ -559,6 +559,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
     var appLanguage by remember { mutableStateOf(prefs.getString("app_language", "ru") ?: "ru") }
     var measurementSystem by remember { mutableStateOf(prefs.getString("measurement_system", "auto") ?: "auto") }
     var calculatorResultFormat by remember { mutableStateOf(prefs.getString("calculator_result_format", "fraction") ?: "fraction") }
+    var calculatorAngleMode by remember { mutableStateOf(prefs.getString("calculator_angle_mode", "degrees") ?: "degrees") }
     var keyAnimationSettings by remember {
         mutableStateOf(
             KeyAnimationSettings(
@@ -840,6 +841,11 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                         when (destinationPage) {
                                             Page.HOME -> CalculatorHome(
                                                 resultFormat = calculatorResultFormat,
+                                                angleModeId = calculatorAngleMode,
+                                                onAngleModeChange = { mode ->
+                                                    calculatorAngleMode = mode
+                                                    prefs.edit().putString("calculator_angle_mode", mode).apply()
+                                                },
                                                 onResultFormatChange = { format ->
                                                     calculatorResultFormat = format
                                                     prefs.edit().putString("calculator_result_format", format).apply()
@@ -898,6 +904,7 @@ private fun MathFlowApp(externalConfigUri: Uri? = null, onExternalConfigHandled:
                                                     appLanguage = cfg.getString("language")
                                                     measurementSystem = cfg.getString("measurement")
                                                     calculatorResultFormat = cfg.getString("resultFormat")
+                                                     calculatorAngleMode = importedPreferencesAngleMode(cfg, calculatorAngleMode)
                                                     val importedFontPath = cfg.optString("fontPath").takeIf { it.isNotBlank() && it != "null" }
                                                     fontPath = importedFontPath
                                                     keyAnimationSettings = KeyAnimationSettings(
@@ -1547,6 +1554,8 @@ private val CALCULATOR_SCIENTIFIC_ROWS = listOf(
 @Composable
 private fun CalculatorHome(
     resultFormat: String,
+    angleModeId: String,
+    onAngleModeChange: (String) -> Unit,
     onResultFormatChange: (String) -> Unit,
     onCalculationSaved: (String, String, List<String>) -> Unit
 ) {
@@ -1562,7 +1571,6 @@ private fun CalculatorHome(
     var steps by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var showSteps by rememberSaveable { mutableStateOf(true) }
     var scientific by rememberSaveable { mutableStateOf(false) }
-    var degrees by rememberSaveable { mutableStateOf(true) }
     var finished by rememberSaveable { mutableStateOf(false) }
     var continuation by rememberSaveable { mutableStateOf("") }
 
@@ -1592,7 +1600,7 @@ private fun CalculatorHome(
         val input = expression
         val open = input.count { it == '(' } - input.count { it == ')' }
         val source = if (open > 0) input + ")".repeat(open) else input
-        val angleMode = if (degrees) AngleMode.DEGREES else AngleMode.RADIANS
+        val angleMode = if (angleModeId == "degrees") AngleMode.DEGREES else AngleMode.RADIANS
         calculationJob?.cancel()
         calculationJob = calculationScope.launch {
             try {
@@ -1681,10 +1689,10 @@ private fun CalculatorHome(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Chip("f(x)", scientific) { scientific = !scientific }
-                    if (scientific) Chip(if (degrees) "DEG" else "RAD", false) {
+                    if (scientific) Chip(if (angleModeId == "degrees") "DEG" else "RAD", false) {
                         calculationJob?.cancel()
                         calculationJob = null
-                        degrees = !degrees
+                        onAngleModeChange(if (angleModeId == "degrees") "radians" else "degrees")
                     }
                     if (steps.isNotEmpty()) Chip(tx("steps"), showSteps) { showSteps = !showSteps }
                 }
@@ -3274,6 +3282,8 @@ private fun encodeConfigPreferences(context: Context): JSONObject {
         JSONObject().put("type", "boolean").put("value", prefs.getBoolean("intro_enabled", true)))
     encoded.put("intro_speed",
         JSONObject().put("type", "float").put("value", prefs.getFloat("intro_speed", 1f).toDouble()))
+    encoded.put("calculator_angle_mode",
+        JSONObject().put("type", "string").put("value", prefs.getString("calculator_angle_mode", "degrees")))
     return encoded
 }
 
@@ -3349,6 +3359,10 @@ private fun makeConfigSnapshot(
     .put("matteDepth", nav.matteDepth.toDouble())
     .put("matteHighlight", nav.matteHighlight.toDouble())
     .put("matteShadow", nav.matteShadow.toDouble())
+
+private fun importedPreferencesAngleMode(config: JSONObject, fallback: String): String =
+    config.optJSONObject("preferences")?.optJSONObject("calculator_angle_mode")
+        ?.optString("value")?.takeIf { it in setOf("degrees", "radians") } ?: fallback
 
 private fun validateConfigSnapshot(input: JSONObject): JSONObject {
     require(input.optInt("schemaVersion", -1) in 1..7) { "Unsupported settings schema" }
